@@ -15,11 +15,91 @@ export interface Store {
   city: string;
   region: string;
   manager: string;
+  supervisor: string;
   /**
      * @minimum 0
      * @maximum 100
      */
   execution: number;
+}
+
+export interface StoreInput {
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 1 */
+  city: string;
+  /** @minLength 1 */
+  region: string;
+  manager?: string;
+  supervisor?: string;
+}
+
+export interface StoreUpdate {
+  /** @minLength 1 */
+  name?: string;
+  /** @minLength 1 */
+  city?: string;
+  /** @minLength 1 */
+  region?: string;
+  manager?: string;
+  supervisor?: string;
+}
+
+export type TeamMemberRole = typeof TeamMemberRole[keyof typeof TeamMemberRole];
+
+
+export const TeamMemberRole = {
+  manager: 'manager',
+  supervisor: 'supervisor',
+} as const;
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: TeamMemberRole;
+  /** @nullable */
+  storeId: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+export type TeamMemberInputRole = typeof TeamMemberInputRole[keyof typeof TeamMemberInputRole];
+
+
+export const TeamMemberInputRole = {
+  manager: 'manager',
+  supervisor: 'supervisor',
+} as const;
+
+export interface TeamMemberInput {
+  /** @minLength 1 */
+  name: string;
+  email: string;
+  phone?: string;
+  role: TeamMemberInputRole;
+  /** @nullable */
+  storeId?: string | null;
+}
+
+export type TeamMemberUpdateRole = typeof TeamMemberUpdateRole[keyof typeof TeamMemberUpdateRole];
+
+
+export const TeamMemberUpdateRole = {
+  manager: 'manager',
+  supervisor: 'supervisor',
+} as const;
+
+export interface TeamMemberUpdate {
+  /** @minLength 1 */
+  name?: string;
+  email?: string;
+  phone?: string;
+  role?: TeamMemberUpdateRole;
+  /** @nullable */
+  storeId?: string | null;
+  active?: boolean;
 }
 
 export type EvidenceType = typeof EvidenceType[keyof typeof EvidenceType];
@@ -245,4 +325,16 @@ status?: string;
 category?: string;
 storeId?: string;
 };
+
+export type ListTeamMembersParams = {
+role?: ListTeamMembersRole;
+};
+
+export type ListTeamMembersRole = typeof ListTeamMembersRole[keyof typeof ListTeamMembersRole];
+
+
+export const ListTeamMembersRole = {
+  manager: 'manager',
+  supervisor: 'supervisor',
+} as const;
 

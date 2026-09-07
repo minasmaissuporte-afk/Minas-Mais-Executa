@@ -12,6 +12,7 @@ import TasksPage from '@/pages/tasks';
 import TaskDetailPage from '@/pages/task-detail';
 import StoresPage from '@/pages/stores';
 import ReportsPage from '@/pages/reports';
+import AdministrationPage from '@/pages/administration';
 import NotFound from '@/pages/not-found';
 import { SignInPage, SignUpPage } from '@/pages/auth';
 import './index.css';
@@ -38,6 +39,7 @@ function AuthenticatedRoutes() {
     <Route path="/tasks/:id" component={TaskDetailPage} />
     <Route path="/stores" component={StoresPage} />
     <Route path="/reports" component={ReportsPage} />
+    <Route path="/cadastros" component={AdministrationPage} />
     <Route component={NotFound} />
   </Switch></AppShell>;
 }

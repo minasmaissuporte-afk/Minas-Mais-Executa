@@ -291,9 +291,175 @@ export const ListStoresResponseItem = zod.object({
   "city": zod.string(),
   "region": zod.string(),
   "manager": zod.string(),
+  "supervisor": zod.string(),
   "execution": zod.number().int().min(listStoresResponseExecutionMin).max(listStoresResponseExecutionMax)
 })
 export const ListStoresResponse = zod.array(ListStoresResponseItem)
+
+
+/**
+ * @summary Create a store
+ */
+
+
+
+
+
+export const CreateStoreBody = zod.object({
+  "name": zod.string().min(1),
+  "city": zod.string().min(1),
+  "region": zod.string().min(1),
+  "manager": zod.string().optional(),
+  "supervisor": zod.string().optional()
+})
+
+export const createStoreResponseExecutionMin = 0;
+export const createStoreResponseExecutionMax = 100;
+
+
+
+export const CreateStoreResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "city": zod.string(),
+  "region": zod.string(),
+  "manager": zod.string(),
+  "supervisor": zod.string(),
+  "execution": zod.number().int().min(createStoreResponseExecutionMin).max(createStoreResponseExecutionMax)
+})
+
+
+/**
+ * @summary Update a store
+ */
+export const UpdateStoreParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+
+
+
+
+export const UpdateStoreBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "city": zod.string().min(1).optional(),
+  "region": zod.string().min(1).optional(),
+  "manager": zod.string().optional(),
+  "supervisor": zod.string().optional()
+})
+
+export const updateStoreResponseExecutionMin = 0;
+export const updateStoreResponseExecutionMax = 100;
+
+
+
+export const UpdateStoreResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "city": zod.string(),
+  "region": zod.string(),
+  "manager": zod.string(),
+  "supervisor": zod.string(),
+  "execution": zod.number().int().min(updateStoreResponseExecutionMin).max(updateStoreResponseExecutionMax)
+})
+
+
+/**
+ * @summary Delete a store
+ */
+export const DeleteStoreParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteStoreResponse = zod.void()
+
+
+/**
+ * @summary List managers and supervisors
+ */
+export const ListTeamMembersQueryParams = zod.object({
+  "role": zod.enum(['manager', 'supervisor']).optional()
+})
+
+export const ListTeamMembersResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string().email(),
+  "phone": zod.string(),
+  "role": zod.enum(['manager', 'supervisor']),
+  "storeId": zod.string().nullable(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const ListTeamMembersResponse = zod.array(ListTeamMembersResponseItem)
+
+
+/**
+ * @summary Create a manager or supervisor
+ */
+
+
+
+export const CreateTeamMemberBody = zod.object({
+  "name": zod.string().min(1),
+  "email": zod.string().email(),
+  "phone": zod.string().optional(),
+  "role": zod.enum(['manager', 'supervisor']),
+  "storeId": zod.string().nullish()
+})
+
+export const CreateTeamMemberResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string().email(),
+  "phone": zod.string(),
+  "role": zod.enum(['manager', 'supervisor']),
+  "storeId": zod.string().nullable(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a manager or supervisor
+ */
+export const UpdateTeamMemberParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+
+
+export const UpdateTeamMemberBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "email": zod.string().email().optional(),
+  "phone": zod.string().optional(),
+  "role": zod.enum(['manager', 'supervisor']).optional(),
+  "storeId": zod.string().nullish(),
+  "active": zod.boolean().optional()
+})
+
+export const UpdateTeamMemberResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string().email(),
+  "phone": zod.string(),
+  "role": zod.enum(['manager', 'supervisor']),
+  "storeId": zod.string().nullable(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Deactivate a manager or supervisor
+ */
+export const DeleteTeamMemberParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteTeamMemberResponse = zod.void()
 
 
 /**

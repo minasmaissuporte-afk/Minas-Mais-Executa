@@ -12,7 +12,21 @@ export const storesTable = pgTable("stores", {
   city: text("city").notNull(),
   region: text("region").notNull(),
   manager: text("manager").notNull(),
+  supervisor: text("supervisor").notNull().default(""),
   execution: integer("execution").notNull().default(0),
+});
+
+export const teamMembersTable = pgTable("team_members", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  phone: text("phone").notNull().default(""),
+  role: text("role").notNull(),
+  storeId: text("store_id"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const tasksTable = pgTable("tasks", {
@@ -62,6 +76,7 @@ export const activityTable = pgTable("activity", {
 });
 
 export type Store = typeof storesTable.$inferSelect;
+export type TeamMember = typeof teamMembersTable.$inferSelect;
 export type Task = typeof tasksTable.$inferSelect;
 export type Evidence = typeof evidencesTable.$inferSelect;
 export type Activity = typeof activityTable.$inferSelect;

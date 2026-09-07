@@ -12,6 +12,7 @@ export interface Store {
   city: string;
   region: string;
   manager: string;
+  supervisor: string;
   /**
      * @minimum 0
      * @maximum 100

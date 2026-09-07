@@ -15,7 +15,9 @@ tags:
   - name: tasks
     description: Task management and evidence
   - name: stores
-    description: Store directory
+    description: Store directory and administration
+  - name: team
+    description: Managers and supervisors
   - name: rankings
     description: Performance rankings
 paths:
@@ -187,6 +189,118 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Store"
+    post:
+      operationId: createStore
+      tags: [stores]
+      summary: Create a store
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreInput"
+      responses:
+        "201":
+          description: Store created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+  /stores/{id}:
+    patch:
+      operationId: updateStore
+      tags: [stores]
+      summary: Update a store
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreUpdate"
+      responses:
+        "200":
+          description: Store updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+    delete:
+      operationId: deleteStore
+      tags: [stores]
+      summary: Delete a store
+      parameters:
+        - $ref: "#/components/parameters/StoreId"
+      responses:
+        "204":
+          description: Store deleted
+  /team-members:
+    get:
+      operationId: listTeamMembers
+      tags: [team]
+      summary: List managers and supervisors
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [manager, supervisor]
+      responses:
+        "200":
+          description: Team members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamMember"
+    post:
+      operationId: createTeamMember
+      tags: [team]
+      summary: Create a manager or supervisor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamMemberInput"
+      responses:
+        "201":
+          description: Team member created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMember"
+  /team-members/{id}:
+    patch:
+      operationId: updateTeamMember
+      tags: [team]
+      summary: Update a manager or supervisor
+      parameters:
+        - $ref: "#/components/parameters/TeamMemberId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamMemberUpdate"
+      responses:
+        "200":
+          description: Team member updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMember"
+    delete:
+      operationId: deleteTeamMember
+      tags: [team]
+      summary: Deactivate a manager or supervisor
+      parameters:
+        - $ref: "#/components/parameters/TeamMemberId"
+      responses:
+        "204":
+          description: Team member deactivated
   /rankings:
     get:
       operationId: getRankings
@@ -227,6 +341,18 @@ components:
       required: true
       schema:
         type: string
+    StoreId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    TeamMemberId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
   schemas:
     HealthStatus:
       type: object
@@ -237,7 +363,7 @@ components:
         - status
     Store:
       type: object
-      required: [id, name, city, region, manager, execution]
+      required: [id, name, city, region, manager, supervisor, execution]
       properties:
         id:
           type: string
@@ -249,10 +375,103 @@ components:
           type: string
         manager:
           type: string
+        supervisor:
+          type: string
         execution:
           type: integer
           minimum: 0
           maximum: 100
+    StoreInput:
+      type: object
+      required: [name, city, region]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        city:
+          type: string
+          minLength: 1
+        region:
+          type: string
+          minLength: 1
+        manager:
+          type: string
+        supervisor:
+          type: string
+    StoreUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        city:
+          type: string
+          minLength: 1
+        region:
+          type: string
+          minLength: 1
+        manager:
+          type: string
+        supervisor:
+          type: string
+    TeamMember:
+      type: object
+      required: [id, name, email, phone, role, storeId, active, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [manager, supervisor]
+        storeId:
+          type: ["string", "null"]
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    TeamMemberInput:
+      type: object
+      required: [name, email, role]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [manager, supervisor]
+        storeId:
+          type: ["string", "null"]
+    TeamMemberUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [manager, supervisor]
+        storeId:
+          type: ["string", "null"]
+        active:
+          type: boolean
     Evidence:
       type: object
       required: [id, taskId, type, fileName, createdAt, userName]

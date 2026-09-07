@@ -6,6 +6,15 @@ import {
   CompleteTaskParams,
   CreateTaskBody,
   GetTaskParams,
+  CreateStoreBody,
+  UpdateStoreBody,
+  UpdateStoreParams,
+  DeleteStoreParams,
+  ListTeamMembersQueryParams,
+  CreateTeamMemberBody,
+  UpdateTeamMemberBody,
+  UpdateTeamMemberParams,
+  DeleteTeamMemberParams,
   ListTasksQueryParams,
   UpdateTaskBody,
   UpdateTaskParams,
@@ -14,6 +23,7 @@ import {
   activityTable,
   db,
   evidencesTable,
+  teamMembersTable,
   storesTable,
   tasksTable,
 } from "@workspace/db";
@@ -35,6 +45,7 @@ async function ensureSeedData() {
           city: "Belo Horizonte",
           region: "Metropolitana",
           manager: "João Mendes",
+          supervisor: "Fernanda Lima",
           execution: 98,
         },
         {
@@ -43,6 +54,7 @@ async function ensureSeedData() {
           city: "Belo Horizonte",
           region: "Metropolitana",
           manager: "Mariana Alves",
+          supervisor: "Fernanda Lima",
           execution: 94,
         },
         {
@@ -51,6 +63,7 @@ async function ensureSeedData() {
           city: "Contagem",
           region: "Metropolitana",
           manager: "Carlos Eduardo",
+          supervisor: "Rafael Nunes",
           execution: 91,
         },
         {
@@ -59,7 +72,80 @@ async function ensureSeedData() {
           city: "Betim",
           region: "Metropolitana",
           manager: "Ana Paula",
+          supervisor: "Rafael Nunes",
           execution: 87,
+        },
+      ])
+      .onConflictDoNothing();
+  }
+
+  const supervisorDefaults = [
+    ["store-centro", "Fernanda Lima"],
+    ["store-savassi", "Fernanda Lima"],
+    ["store-contagem", "Rafael Nunes"],
+    ["store-betim", "Rafael Nunes"],
+  ] as const;
+  for (const [storeId, supervisor] of supervisorDefaults) {
+    await db
+      .update(storesTable)
+      .set({ supervisor })
+      .where(and(eq(storesTable.id, storeId), eq(storesTable.supervisor, "")));
+  }
+
+  const existingTeamMembers = await db
+    .select({ id: teamMembersTable.id })
+    .from(teamMembersTable);
+  if (existingTeamMembers.length === 0) {
+    await db
+      .insert(teamMembersTable)
+      .values([
+        {
+          id: "member-joao-mendes",
+          name: "João Mendes",
+          email: "joao.mendes@minasmais.com.br",
+          phone: "(31) 99999-1001",
+          role: "manager",
+          storeId: "store-centro",
+        },
+        {
+          id: "member-mariana-alves",
+          name: "Mariana Alves",
+          email: "mariana.alves@minasmais.com.br",
+          phone: "(31) 99999-1002",
+          role: "manager",
+          storeId: "store-savassi",
+        },
+        {
+          id: "member-carlos-eduardo",
+          name: "Carlos Eduardo",
+          email: "carlos.eduardo@minasmais.com.br",
+          phone: "(31) 99999-1003",
+          role: "manager",
+          storeId: "store-contagem",
+        },
+        {
+          id: "member-ana-paula",
+          name: "Ana Paula",
+          email: "ana.paula@minasmais.com.br",
+          phone: "(31) 99999-1004",
+          role: "manager",
+          storeId: "store-betim",
+        },
+        {
+          id: "member-fernanda-lima",
+          name: "Fernanda Lima",
+          email: "fernanda.lima@minasmais.com.br",
+          phone: "(31) 99999-2001",
+          role: "supervisor",
+          storeId: null,
+        },
+        {
+          id: "member-rafael-nunes",
+          name: "Rafael Nunes",
+          email: "rafael.nunes@minasmais.com.br",
+          phone: "(31) 99999-2002",
+          role: "supervisor",
+          storeId: null,
         },
       ])
       .onConflictDoNothing();
@@ -418,6 +504,198 @@ router.post("/tasks/:id/complete", async (req, res) => {
 router.get("/stores", async (_req, res) => {
   await seedPromise;
   res.json(await db.select().from(storesTable).orderBy(desc(storesTable.execution)));
+});
+
+router.post("/stores", async (req, res) => {
+  await seedPromise;
+  const parsed = CreateStoreBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Dados da loja inválidos." });
+    return;
+  }
+  const store = {
+    id: `store-${crypto.randomUUID()}`,
+    name: parsed.data.name,
+    city: parsed.data.city,
+    region: parsed.data.region,
+    manager: parsed.data.manager ?? "",
+    supervisor: parsed.data.supervisor ?? "",
+    execution: 0,
+  };
+  await db.insert(storesTable).values(store);
+  res.status(201).json(store);
+});
+
+router.patch("/stores/:id", async (req, res) => {
+  await seedPromise;
+  const params = UpdateStoreParams.safeParse(req.params);
+  const body = UpdateStoreBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: "Atualização da loja inválida." });
+    return;
+  }
+  const [existing] = await db
+    .select({ id: storesTable.id })
+    .from(storesTable)
+    .where(eq(storesTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Loja não encontrada." });
+    return;
+  }
+  await db
+    .update(storesTable)
+    .set(body.data)
+    .where(eq(storesTable.id, params.data.id));
+  const [updated] = await db
+    .select()
+    .from(storesTable)
+    .where(eq(storesTable.id, params.data.id));
+  res.json(updated);
+});
+
+router.delete("/stores/:id", async (req, res) => {
+  await seedPromise;
+  const params = DeleteStoreParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Identificador da loja inválido." });
+    return;
+  }
+  const [existing] = await db
+    .select({ id: storesTable.id })
+    .from(storesTable)
+    .where(eq(storesTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Loja não encontrada." });
+    return;
+  }
+  const linkedTasks = await db
+    .select({ id: tasksTable.id })
+    .from(tasksTable)
+    .where(eq(tasksTable.storeId, params.data.id))
+    .limit(1);
+  if (linkedTasks.length > 0) {
+    res.status(409).json({ error: "A loja possui tarefas vinculadas e não pode ser excluída." });
+    return;
+  }
+  await db.delete(storesTable).where(eq(storesTable.id, params.data.id));
+  res.status(204).send();
+});
+
+router.get("/team-members", async (req, res) => {
+  await seedPromise;
+  const parsed = ListTeamMembersQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Filtro de equipe inválido." });
+    return;
+  }
+  const members = await db
+    .select()
+    .from(teamMembersTable)
+    .where(parsed.data.role ? eq(teamMembersTable.role, parsed.data.role) : undefined)
+    .orderBy(teamMembersTable.name);
+  res.json(members.map((member) => ({
+    ...member,
+    createdAt: member.createdAt.toISOString(),
+  })));
+});
+
+router.post("/team-members", async (req, res) => {
+  await seedPromise;
+  const parsed = CreateTeamMemberBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Dados do colaborador inválidos." });
+    return;
+  }
+  const [duplicate] = await db
+    .select({ id: teamMembersTable.id })
+    .from(teamMembersTable)
+    .where(eq(teamMembersTable.email, parsed.data.email));
+  if (duplicate) {
+    res.status(409).json({ error: "Já existe um colaborador com este e-mail." });
+    return;
+  }
+  const member = {
+    id: `member-${crypto.randomUUID()}`,
+    name: parsed.data.name,
+    email: parsed.data.email,
+    phone: parsed.data.phone ?? "",
+    role: parsed.data.role,
+    storeId: parsed.data.storeId ?? null,
+    active: true,
+  };
+  await db.insert(teamMembersTable).values(member);
+  if (member.storeId) {
+    await db
+      .update(storesTable)
+      .set(member.role === "manager" ? { manager: member.name } : { supervisor: member.name })
+      .where(eq(storesTable.id, member.storeId));
+  }
+  res.status(201).json({ ...member, createdAt: new Date().toISOString() });
+});
+
+router.patch("/team-members/:id", async (req, res) => {
+  await seedPromise;
+  const params = UpdateTeamMemberParams.safeParse(req.params);
+  const body = UpdateTeamMemberBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: "Atualização do colaborador inválida." });
+    return;
+  }
+  const [existing] = await db
+    .select()
+    .from(teamMembersTable)
+    .where(eq(teamMembersTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Colaborador não encontrado." });
+    return;
+  }
+  if (body.data.email && body.data.email !== existing.email) {
+    const [duplicate] = await db
+      .select({ id: teamMembersTable.id })
+      .from(teamMembersTable)
+      .where(eq(teamMembersTable.email, body.data.email));
+    if (duplicate) {
+      res.status(409).json({ error: "Já existe um colaborador com este e-mail." });
+      return;
+    }
+  }
+  await db
+    .update(teamMembersTable)
+    .set(body.data)
+    .where(eq(teamMembersTable.id, params.data.id));
+  const [updated] = await db
+    .select()
+    .from(teamMembersTable)
+    .where(eq(teamMembersTable.id, params.data.id));
+  if (updated?.storeId) {
+    await db
+      .update(storesTable)
+      .set(updated.role === "manager" ? { manager: updated.name } : { supervisor: updated.name })
+      .where(eq(storesTable.id, updated.storeId));
+  }
+  res.json(updated ? { ...updated, createdAt: updated.createdAt.toISOString() } : updated);
+});
+
+router.delete("/team-members/:id", async (req, res) => {
+  await seedPromise;
+  const params = DeleteTeamMemberParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Identificador do colaborador inválido." });
+    return;
+  }
+  const [existing] = await db
+    .select({ id: teamMembersTable.id })
+    .from(teamMembersTable)
+    .where(eq(teamMembersTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Colaborador não encontrado." });
+    return;
+  }
+  await db
+    .update(teamMembersTable)
+    .set({ active: false, storeId: null })
+    .where(eq(teamMembersTable.id, params.data.id));
+  res.status(204).send();
 });
 
 router.get("/rankings", async (_req, res) => {
