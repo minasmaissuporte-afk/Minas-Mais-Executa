@@ -34,11 +34,11 @@ Responsive operational execution platform for Minas Mais stores, connecting task
 - API contracts are defined in OpenAPI and regenerated into typed React Query hooks and Zod schemas.
 - Task completion is enforced server-side: a task with required evidence cannot transition to completed until evidence exists.
 - Evidence metadata is stored in PostgreSQL and binary uploads are prepared for Replit App Storage through presigned URLs.
-- Clerk is provisioned for secure sign-in, while the MVP keeps a public dashboard preview to make the product flow easy to evaluate.
+- Clerk is provisioned for secure sign-in, and operational routes are gated behind authentication.
 
 ## Product
 
-The MVP supports a role-aware dashboard, task queue and creation, task execution detail, photo/video evidence metadata capture, overdue status, store directory, ranking, reports, activity feed, Clerk sign-in/sign-up routes, and responsive mobile navigation.
+The MVP supports a role-aware dashboard, task queue and creation, task execution detail, photo/video evidence metadata capture, overdue status, store directory, ranking, reports, activity feed, Clerk sign-in/sign-up routes, and responsive mobile navigation. The interface is split into focused shell, page, UI-kit, and demo-data modules.
 
 ## User preferences
 

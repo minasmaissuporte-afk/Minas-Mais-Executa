@@ -1,23 +1,6 @@
-import { Card, CardContent } from '@/components/ui/card';
-import { AlertCircle } from 'lucide-react';
+import { ArrowLeft, Compass } from 'lucide-react';
+import { Link } from 'wouter';
 
 export default function NotFound() {
-  return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md mx-4">
-        <CardContent className="pt-6">
-          <div className="flex mb-4 gap-2">
-            <AlertCircle className="h-8 w-8 text-red-500" />
-            <h1 className="text-2xl font-bold text-gray-900">
-              404 Page Not Found
-            </h1>
-          </div>
-
-          <p className="mt-4 text-sm text-gray-600">
-            Did you forget to add the page to the router?
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return <main className="content" style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}><div className="card card-pad" style={{ width: 'min(460px, 100%)', textAlign: 'center' }}><Compass size={34} color="hsl(var(--primary))" style={{ margin: '0 auto 15px' }} /><div className="eyebrow">Rota não encontrada</div><h1 className="page-title" style={{ fontSize: 34 }}>Essa página saiu do mapa.</h1><p className="page-intro" style={{ margin: '0 auto 20px' }}>Volte para a visão geral e continue acompanhando a operação.</p><Link href="/" className="button button-primary" data-testid="link-not-found-home"><ArrowLeft size={15} /> Voltar ao início</Link></div></main>;
 }

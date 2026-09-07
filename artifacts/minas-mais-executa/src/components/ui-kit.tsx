@@ -1,0 +1,68 @@
+import { ArrowDownRight, ArrowUpRight, Camera, CheckCircle2, ChevronRight, CircleAlert, FileVideo, Search } from 'lucide-react';
+import type { ComponentType, ReactNode } from 'react';
+import type { Activity, Task } from '@workspace/api-client-react';
+import { Link } from 'wouter';
+
+export function formatDate(date?: string | null) {
+  if (!date) return 'Hoje';
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(new Date(date));
+}
+export function formatTime(date?: string | null) {
+  if (!date) return '';
+  return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(date));
+}
+export function initials(name: string) {
+  return name.split(' ').slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+}
+export function roleLabel(role: string) {
+  return ({ manager: 'Gerente de loja', supervisor: 'Supervisão', admin: 'Administração' } as Record<string, string>)[role] || role;
+}
+export function statusLabel(status: string) {
+  return ({ pending: 'Pendente', in_progress: 'Em execução', completed: 'Concluída', overdue: 'Atrasada' } as Record<string, string>)[status] || status;
+}
+export function priorityLabel(priority: string) {
+  return ({ high: 'Alta', medium: 'Média', low: 'Baixa' } as Record<string, string>)[priority] || priority;
+}
+
+export function LoadingBlocks({ rows = 3 }: { rows?: number }) {
+  return <div className="card card-pad" aria-label="Carregando" data-testid="status-loading">{Array.from({ length: rows }).map((_, index) => <div key={index}><div className="skeleton" /><div className="skeleton short" /><div className="skeleton line" /></div>)}</div>;
+}
+export function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return <div className="error-state" data-testid="status-error">Não foi possível carregar os dados agora.<button className="button button-danger" onClick={onRetry} data-testid="button-retry">Tentar novamente</button></div>;
+}
+export function EmptyState({ icon: Icon = CheckCircle2, title, copy, action }: { icon?: ComponentType<{ size?: number }>; title: string; copy: string; action?: ReactNode }) {
+  return <div className="empty-state" data-testid="status-empty"><Icon size={25} /><h3>{title}</h3><p>{copy}</p>{action}</div>;
+}
+export function StatusPill({ status }: { status: string }) {
+  return <span className={`status-chip status-${status}`} data-testid={`status-pill-${status}`}>{statusLabel(status)}</span>;
+}
+export function PriorityPill({ priority }: { priority: string }) {
+  return <span className={`priority priority-${priority}`} data-testid={`priority-pill-${priority}`}>{priorityLabel(priority)}</span>;
+}
+export function TaskRow({ task }: { task: Task }) {
+  return <div className="task-row" data-testid={`row-task-${task.id}`}>
+    <span className={`task-status-dot dot-${task.status}`} aria-hidden="true" />
+    <Link href={`/tasks/${task.id}`} className="task-main" data-testid={`link-task-${task.id}`}>
+      <div className="task-title">{task.title}</div><div className="task-sub">{task.category} · {task.storeName} · {task.assignee}</div>
+    </Link>
+    <PriorityPill priority={task.priority} /><span className="task-time">{task.dueTime}</span><ChevronRight size={15} color="hsl(var(--muted-foreground))" />
+  </div>;
+}
+export function ActivityItem({ activity }: { activity: Activity }) {
+  return <div className="activity-item" data-testid={`activity-${activity.id}`}><span className={`activity-mark mark-${activity.tone}`} /><div><div className="activity-title">{activity.title}</div><div className="activity-detail">{activity.detail}</div><div className="activity-date">{formatDate(activity.createdAt)} · {formatTime(activity.createdAt)}</div></div></div>;
+}
+export function MetricCard({ label, value, meta, tone = '' }: { label: string; value: string | number; meta: string; tone?: string }) {
+  return <div className={`card stat-card ${tone}`} data-testid={`metric-${label.toLowerCase().replace(/\s+/g, '-')}`}><span className="stat-label">{label}</span><span className="stat-value">{value}</span><span className="stat-meta">{meta}</span></div>;
+}
+export function TrendIcon({ trend }: { trend: string }) {
+  if (trend === 'up') return <ArrowUpRight size={15} />;
+  if (trend === 'down') return <ArrowDownRight size={15} />;
+  return <span aria-hidden="true">—</span>;
+}
+export function SearchEmpty({ title = 'Nenhum resultado', copy = 'Tente outro termo ou ajuste os filtros.' }: { title?: string; copy?: string }) {
+  return <EmptyState icon={Search} title={title} copy={copy} />;
+}
+export function EvidenceIcon({ type }: { type: string }) {
+  return type === 'video' ? <FileVideo size={15} /> : <Camera size={15} />;
+}
+export function AlertIcon() { return <CircleAlert size={17} />; }
