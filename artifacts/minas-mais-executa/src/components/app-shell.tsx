@@ -1,7 +1,7 @@
 import { BarChart3, Bell, ClipboardCheck, LayoutDashboard, LogOut, Settings2, Store as StoreIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
-import { useClerk } from '@clerk/react';
+import { useClerk, useUser } from '@clerk/react';
 import { initials, roleLabel } from '@/components/ui-kit';
 
 export type Role = 'manager' | 'supervisor' | 'admin';
@@ -17,6 +17,8 @@ function NavItem({ href, label, icon: Icon, testId }: { href: string; label: str
 export function AppShell({ children, role, onRoleChange }: { children: ReactNode; role: Role; onRoleChange: (role: Role) => void }) {
   const [location] = useLocation();
   const { signOut } = useClerk();
+  const { user } = useUser();
+  const userName = user?.fullName || user?.firstName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'Usuário';
   const segment = location.split('/')[1];
   const pageName = location === '/' ? 'Visão geral' : segment === 'tasks' ? 'Tarefas' : segment === 'stores' ? 'Lojas' : segment === 'cadastros' ? 'Cadastros' : 'Relatórios';
   return <div className="app-shell">
@@ -31,7 +33,7 @@ export function AppShell({ children, role, onRoleChange }: { children: ReactNode
         <NavItem href="/cadastros" label="Cadastros" icon={Settings2} testId="link-nav-cadastros" />
       </nav>
       <div className="sidebar-spacer" />
-      <div className="sidebar-footer"><div className="user-row"><span className="avatar">{initials('Marina Alves')}</span><span><div className="user-name">Marina Alves</div><div className="user-role">{roleLabel(role)}</div></span></div></div>
+      <div className="sidebar-footer"><div className="user-row"><span className="avatar">{initials(userName)}</span><span><div className="user-name">{userName}</div><div className="user-role">{roleLabel(role)}</div></span></div></div>
     </aside>
     <main className="main-area">
       <header className="topbar"><div className="breadcrumb">Minas Mais <span>/</span> <strong>{pageName}</strong></div><div className="top-actions"><select className="role-switch" value={role} onChange={(event) => onRoleChange(event.target.value as Role)} aria-label="Selecionar papel de demonstração" data-testid="select-role"><option value="manager">Gerente de loja</option><option value="supervisor">Supervisão</option><option value="admin">Administração</option></select><button className="icon-button" aria-label="Notificações" data-testid="button-notifications"><Bell size={16} /></button><button className="icon-button" aria-label="Sair" data-testid="button-logout" onClick={() => signOut({ redirectUrl: basePath || '/' })}><LogOut size={16} /></button></div></header>

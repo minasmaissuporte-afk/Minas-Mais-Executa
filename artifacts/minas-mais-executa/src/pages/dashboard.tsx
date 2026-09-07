@@ -4,8 +4,11 @@ import type { Role } from '@/components/app-shell';
 import { fallbackActivities, fallbackSummary, fallbackTasks } from '@/lib/demo-data';
 import { ActivityItem, EmptyState, ErrorState, LoadingBlocks, MetricCard, TaskRow } from '@/components/ui-kit';
 import { Link } from 'wouter';
+import { useUser } from '@clerk/react';
 
 export default function DashboardPage({ role }: { role: Role }) {
+  const { user } = useUser();
+  const firstName = user?.firstName || user?.fullName?.split(' ')[0] || 'Usuário';
   const summaryQuery = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey() } });
   const activityQuery = useGetActivity({ query: { queryKey: getGetActivityQueryKey() } });
   const tasksQuery = useListTasks({ status: 'pending' }, { query: { queryKey: getListTasksQueryKey({ status: 'pending' }) } });
@@ -14,7 +17,7 @@ export default function DashboardPage({ role }: { role: Role }) {
   const activities = activityQuery.data ?? fallbackActivities;
   const isNetwork = role !== 'manager';
   return <div className="content">
-    <div className="page-head"><div><div className="eyebrow">{isNetwork ? 'Pulso da rede' : 'Acompanhamento de hoje'}</div><h1 className="page-title">{isNetwork ? 'A operação, sem ruído.' : 'Bom dia, Marina.'}</h1><p className="page-intro">{isNetwork ? <>Acompanhe a execução das <strong>{summary.storesCount} lojas</strong> e encontre o próximo ponto de atenção.</> : <>Sua loja está em ritmo de execução. <strong>{summary.pending} tarefas</strong> pedem atenção antes do fim do dia.</>}</p></div><Link className="button button-primary" href="/tasks" data-testid="link-open-tasks"><ListChecks size={15} /> Abrir tarefas</Link></div>
+    <div className="page-head"><div><div className="eyebrow">{isNetwork ? 'Pulso da rede' : 'Acompanhamento de hoje'}</div><h1 className="page-title">{isNetwork ? 'A operação, sem ruído.' : `Bom dia, ${firstName}.`}</h1><p className="page-intro">{isNetwork ? <>Acompanhe a execução das <strong>{summary.storesCount} lojas</strong> e encontre o próximo ponto de atenção.</> : <>Sua loja está em ritmo de execução. <strong>{summary.pending} tarefas</strong> pedem atenção antes do fim do dia.</>}</p></div><Link className="button button-primary" href="/tasks" data-testid="link-open-tasks"><ListChecks size={15} /> Abrir tarefas</Link></div>
     {summaryQuery.isError && <ErrorState onRetry={() => summaryQuery.refetch()} />}
     <div className="stats-grid">
       <MetricCard label={isNetwork ? 'Execução da rede' : 'Execução da loja'} value={`${summary.execution.toFixed(1)}%`} meta="+4,2 pts esta semana" tone="stat-accent" />
