@@ -21,10 +21,10 @@ export const fallbackActivities: Activity[] = [
 ];
 
 export const fallbackStores: Store[] = [
-  { id: 'store-01', name: 'Savassi 01', city: 'Belo Horizonte', region: 'Centro-Sul', manager: 'Marina Alves', execution: 94.8 },
-  { id: 'store-02', name: 'Centro 03', city: 'Belo Horizonte', region: 'Centro', manager: 'João Silva', execution: 88.1 },
-  { id: 'store-03', name: 'Uberlândia 02', city: 'Uberlândia', region: 'Triângulo', manager: 'Letícia Rocha', execution: 84.6 },
-  { id: 'store-04', name: 'Juiz de Fora 01', city: 'Juiz de Fora', region: 'Zona da Mata', manager: 'Rafael Costa', execution: 79.3 },
+  { id: 'store-01', name: 'Savassi 01', city: 'Belo Horizonte', region: 'Centro-Sul', manager: 'Marina Alves', supervisor: 'Fernanda Lima', execution: 94.8 },
+  { id: 'store-02', name: 'Centro 03', city: 'Belo Horizonte', region: 'Centro', manager: 'João Silva', supervisor: 'Fernanda Lima', execution: 88.1 },
+  { id: 'store-03', name: 'Uberlândia 02', city: 'Uberlândia', region: 'Triângulo', manager: 'Letícia Rocha', supervisor: 'Rafael Nunes', execution: 84.6 },
+  { id: 'store-04', name: 'Juiz de Fora 01', city: 'Juiz de Fora', region: 'Zona da Mata', manager: 'Rafael Costa', supervisor: 'Rafael Nunes', execution: 79.3 },
 ];
 
 export const fallbackRankings: RankingEntry[] = fallbackStores.map((store, index) => ({
