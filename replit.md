@@ -1,6 +1,6 @@
-# [Project name]
+# Minas Mais Executa
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Responsive operational execution platform for Minas Mais stores, connecting task assignment, evidence capture, and network performance follow-up.
 
 ## Run & Operate
 
@@ -22,23 +22,33 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/minas-mais-executa` — primary React/Vite web app and responsive manager/supervisor/admin surfaces.
+- `artifacts/api-server` — Express API for dashboard data, tasks, evidence metadata, rankings, and storage routes.
+- `lib/api-spec/openapi.yaml` — source of truth for API contracts and generated hooks.
+- `lib/db/src/schema/index.ts` — Drizzle schema for stores, tasks, evidence, and activity.
+- `lib/object-storage-web` — browser upload helpers prepared for evidence files.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The first delivery is a responsive web MVP so the manager flow works on a phone without requiring a native binary.
+- API contracts are defined in OpenAPI and regenerated into typed React Query hooks and Zod schemas.
+- Task completion is enforced server-side: a task with required evidence cannot transition to completed until evidence exists.
+- Evidence metadata is stored in PostgreSQL and binary uploads are prepared for Replit App Storage through presigned URLs.
+- Clerk is provisioned for secure sign-in, while the MVP keeps a public dashboard preview to make the product flow easy to evaluate.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+The MVP supports a role-aware dashboard, task queue and creation, task execution detail, photo/video evidence metadata capture, overdue status, store directory, ranking, reports, activity feed, Clerk sign-in/sign-up routes, and responsive mobile navigation.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+The user selected a responsive web MVP as the first delivery path; native mobile work should be continued from replit.com.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Run API codegen after changing `lib/api-spec/openapi.yaml`.
+- Restart the managed API and web workflows after backend, package, or routing changes.
+- The app uses the managed `/api` proxy path; do not hardcode service ports in frontend code.
 
 ## Pointers
 

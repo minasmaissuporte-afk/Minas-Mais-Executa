@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Minas Mais Executa"
+description = "MVP responsivo para gestão operacional de uma rede de drogarias, com tarefas, evidências, dashboards e acompanhamento por perfil de acesso."
+version = "1.0.0"
+id = "artifacts/minas-mais-executa"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24563
+
+[services.development]
+run = "pnpm --filter @workspace/minas-mais-executa run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/minas-mais-executa", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/minas-mais-executa/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24563"
+BASE_PATH = "/"

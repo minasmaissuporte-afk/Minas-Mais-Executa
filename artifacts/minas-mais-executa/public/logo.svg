@@ -1,0 +1,6 @@
+<svg width="120" height="36" viewBox="0 0 120 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="36" height="36" rx="10" fill="#F0A64B"/>
+  <path d="M9 25V11h3.3l6.2 8.1 6.2-8.1H28v14h-3.7v-8.2l-5.8 7.4-5.8-7.4V25H9Z" fill="#172634"/>
+  <text x="45" y="16" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#172634">MINAS MAIS</text>
+  <text x="45" y="29" font-family="Arial, sans-serif" font-size="10" fill="#172634">EXECUTA</text>
+</svg>

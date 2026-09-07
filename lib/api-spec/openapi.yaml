@@ -10,6 +10,14 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: dashboard
+    description: Operational overview and activity
+  - name: tasks
+    description: Task management and evidence
+  - name: stores
+    description: Store directory
+  - name: rankings
+    description: Performance rankings
 paths:
   /healthz:
     get:
@@ -24,7 +32,201 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /activity:
+    get:
+      operationId: getActivity
+      tags: [dashboard]
+      summary: Get recent activity
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Activity"
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List operational tasks
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: storeId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Create an operational task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+  /tasks/{id}:
+    get:
+      operationId: getTask
+      tags: [tasks]
+      summary: Get one task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Task not found
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Update a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdate"
+      responses:
+        "200":
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+  /tasks/{id}/evidence:
+    post:
+      operationId: addTaskEvidence
+      tags: [tasks]
+      summary: Add evidence to a task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidenceInput"
+      responses:
+        "201":
+          description: Evidence registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Evidence"
+  /tasks/{id}/complete:
+    post:
+      operationId: completeTask
+      tags: [tasks]
+      summary: Complete a task when required evidence exists
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Task completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: Required evidence missing
+  /stores:
+    get:
+      operationId: listStores
+      tags: [stores]
+      summary: List stores
+      responses:
+        "200":
+          description: Stores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Store"
+  /rankings:
+    get:
+      operationId: getRankings
+      tags: [rankings]
+      summary: Get store performance rankings
+      responses:
+        "200":
+          description: Rankings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RankingEntry"
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [tasks]
+      summary: Request a private evidence upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlInput"
+      responses:
+        "200":
+          description: Presigned upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
 components:
+  parameters:
+    TaskId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +235,233 @@ components:
           type: string
       required:
         - status
+    Store:
+      type: object
+      required: [id, name, city, region, manager, execution]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        city:
+          type: string
+        region:
+          type: string
+        manager:
+          type: string
+        execution:
+          type: integer
+          minimum: 0
+          maximum: 100
+    Evidence:
+      type: object
+      required: [id, taskId, type, fileName, createdAt, userName]
+      properties:
+        id:
+          type: string
+        taskId:
+          type: string
+        type:
+          type: string
+          enum: [photo, video]
+        fileName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        userName:
+          type: string
+        location:
+          type: ["string", "null"]
+    EvidenceInput:
+      type: object
+      required: [type, fileName]
+      properties:
+        type:
+          type: string
+          enum: [photo, video]
+        fileName:
+          type: string
+          minLength: 1
+        location:
+          type: string
+    Task:
+      type: object
+      required: [id, title, description, storeId, storeName, assignee, category, priority, dueDate, dueTime, status, evidenceRequired, evidence, instructions]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        storeId:
+          type: string
+        storeName:
+          type: string
+        assignee:
+          type: string
+        category:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high]
+        dueDate:
+          type: string
+          format: date
+        dueTime:
+          type: string
+        status:
+          type: string
+          enum: [pending, in_progress, completed, overdue]
+        evidenceRequired:
+          type: boolean
+        evidenceTypes:
+          type: array
+          items:
+            type: string
+            enum: [photo, video]
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/Evidence"
+        instructions:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+        completedBy:
+          type: ["string", "null"]
+    TaskInput:
+      type: object
+      required: [title, description, storeId, storeName, assignee, category, priority, dueDate, dueTime, evidenceRequired, instructions]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        storeId:
+          type: string
+        storeName:
+          type: string
+        assignee:
+          type: string
+        category:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high]
+        dueDate:
+          type: string
+          format: date
+        dueTime:
+          type: string
+        evidenceRequired:
+          type: boolean
+        evidenceTypes:
+          type: array
+          items:
+            type: string
+            enum: [photo, video]
+        instructions:
+          type: string
+    TaskUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, in_progress, completed, overdue]
+        priority:
+          type: string
+          enum: [low, medium, high]
+        notes:
+          type: string
+    Activity:
+      type: object
+      required: [id, title, detail, createdAt, tone]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        tone:
+          type: string
+          enum: [success, warning, info]
+    DashboardSummary:
+      type: object
+      required: [role, storeName, tasksToday, completed, pending, overdue, execution, storesCount, campaignsActive, actionPlans]
+      properties:
+        role:
+          type: string
+          enum: [manager, supervisor, admin]
+        storeName:
+          type: string
+        tasksToday:
+          type: integer
+        completed:
+          type: integer
+        pending:
+          type: integer
+        overdue:
+          type: integer
+        execution:
+          type: integer
+        storesCount:
+          type: integer
+        campaignsActive:
+          type: integer
+        actionPlans:
+          type: integer
+    RankingEntry:
+      type: object
+      required: [position, storeName, manager, execution, trend]
+      properties:
+        position:
+          type: integer
+        storeName:
+          type: string
+        manager:
+          type: string
+        execution:
+          type: integer
+        trend:
+          type: string
+          enum: [up, down, stable]
+    UploadUrlInput:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath, metadata]
+      properties:
+        uploadURL:
+          type: string
+          format: uri
+        objectPath:
+          type: string
+        metadata:
+          type: object
+          required: [name, size, contentType]
+          properties:
+            name:
+              type: string
+            size:
+              type: integer
+            contentType:
+              type: string
 
