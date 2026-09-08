@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import {
   AddTaskEvidenceBody,
   AddTaskEvidenceParams,
@@ -62,8 +62,13 @@ async function canAccessTask(req: import("express").Request, task: { storeId: st
 
 async function resolveActiveMember(name: string, role: "manager" | "supervisor") {
   if (!name.trim()) return null;
+  const normalizedName = name.trim().toLowerCase();
   const matches = await db.select().from(teamMembersTable).where(
-    and(eq(teamMembersTable.name, name.trim()), eq(teamMembersTable.role, role), eq(teamMembersTable.active, true)),
+    and(
+      sql`lower(trim(${teamMembersTable.name})) = ${normalizedName}`,
+      eq(teamMembersTable.role, role),
+      eq(teamMembersTable.active, true),
+    ),
   );
   return matches.length === 1 ? matches[0] : undefined;
 }
@@ -75,7 +80,7 @@ async function applyMemberStoreAssignment(
   if (member.role !== "manager" || !storeId) return;
   await db.update(storesTable)
     .set({ manager: "", managerMemberId: null })
-    .where(eq(storesTable.managerMemberId, member.id));
+    .where(and(eq(storesTable.managerMemberId, member.id), ne(storesTable.id, storeId)));
   await db.update(teamMembersTable).set({ storeId }).where(eq(teamMembersTable.id, member.id));
 }
 
@@ -353,6 +358,46 @@ async function ensureSeedData() {
       })
       .onConflictDoNothing();
   }
+
+  const storesNeedingLinks = await db.select().from(storesTable);
+  for (const store of storesNeedingLinks) {
+    const manager = store.managerMemberId ? null : await resolveActiveMember(store.manager, "manager");
+    const supervisor = store.supervisorMemberId ? null : await resolveActiveMember(store.supervisor, "supervisor");
+    if (manager && manager.storeId === store.id) {
+      await db.update(storesTable)
+        .set({ managerMemberId: manager.id, manager: manager.name.trim() })
+        .where(and(
+          eq(storesTable.id, store.id),
+          isNull(storesTable.managerMemberId),
+          sql`lower(trim(${storesTable.manager})) = ${store.manager.trim().toLowerCase()}`,
+        ));
+    }
+    if (supervisor) {
+      await db.update(storesTable)
+        .set({ supervisorMemberId: supervisor.id, supervisor: supervisor.name.trim() })
+        .where(and(
+          eq(storesTable.id, store.id),
+          isNull(storesTable.supervisorMemberId),
+          sql`lower(trim(${storesTable.supervisor})) = ${store.supervisor.trim().toLowerCase()}`,
+        ));
+    }
+  }
+
+  const tasksNeedingLinks = await db.select().from(tasksTable);
+  for (const task of tasksNeedingLinks) {
+    if (task.assigneeMemberId || (task.assigneeRole !== "manager" && task.assigneeRole !== "supervisor")) continue;
+    const assignee = await resolveActiveMember(task.assignee, task.assigneeRole);
+    if (assignee && (task.assigneeRole !== "manager" || assignee.storeId === task.storeId)) {
+      await db.update(tasksTable)
+        .set({ assigneeMemberId: assignee.id, assignee: assignee.name.trim() })
+        .where(and(
+          eq(tasksTable.id, task.id),
+          isNull(tasksTable.assigneeMemberId),
+          eq(tasksTable.assigneeRole, task.assigneeRole),
+          sql`lower(trim(${tasksTable.assignee})) = ${task.assignee.trim().toLowerCase()}`,
+        ));
+    }
+  }
 }
 
 const seedPromise = ensureSeedData().catch((error) => {
@@ -484,17 +529,27 @@ router.post("/tasks", async (req, res) => {
     res.status(400).json({ error: "Dados da tarefa inválidos." });
     return;
   }
+  const [selectedStore] = await db.select().from(storesTable).where(eq(storesTable.id, parsed.data.storeId));
+  if (!selectedStore) {
+    res.status(400).json({ error: "Loja não encontrada." });
+    return;
+  }
   const task = {
     id: `task-${crypto.randomUUID()}`,
     ...parsed.data,
+    storeName: selectedStore.name,
     assigneeRole: parsed.data.assigneeRole ?? "manager",
     dueDate: parsed.data.dueDate.toISOString().slice(0, 10),
     evidenceTypes: parsed.data.evidenceTypes ?? [],
     status: "pending",
   };
-  const [assigneeMember] = await db.select({ id: teamMembersTable.id, role: teamMembersTable.role, active: teamMembersTable.active }).from(teamMembersTable).where(eq(teamMembersTable.name, task.assignee));
+  const assigneeMember = await resolveActiveMember(task.assignee, task.assigneeRole);
   if (!assigneeMember || !assigneeMember.active || assigneeMember.role !== task.assigneeRole) {
     res.status(400).json({ error: "Responsável não encontrado." });
+    return;
+  }
+  if (task.assigneeRole === "manager" && assigneeMember.storeId !== selectedStore.id) {
+    res.status(400).json({ error: "O gerente responsável não está vinculado à loja selecionada." });
     return;
   }
   (task as typeof task & { assigneeMemberId: string }).assigneeMemberId = assigneeMember.id;
@@ -547,9 +602,13 @@ router.post("/tasks/bulk", async (req, res) => {
     status: "pending",
   }));
   for (const task of tasks) {
-    const [assigneeMember] = await db.select({ id: teamMembersTable.id, role: teamMembersTable.role, active: teamMembersTable.active }).from(teamMembersTable).where(eq(teamMembersTable.name, task.assignee));
+    const assigneeMember = await resolveActiveMember(task.assignee, task.assigneeRole);
     if (!assigneeMember || !assigneeMember.active || assigneeMember.role !== task.assigneeRole) {
       res.status(400).json({ error: "Responsável não encontrado." });
+      return;
+    }
+    if (task.assigneeRole === "manager" && assigneeMember.storeId !== task.storeId) {
+      res.status(400).json({ error: `A loja ${task.storeName} não possui um gerente ativo vinculado.` });
       return;
     }
     (task as typeof task & { assigneeMemberId: string }).assigneeMemberId = assigneeMember.id;
@@ -647,9 +706,13 @@ router.post("/tasks/recurring", async (req, res) => {
     }));
   });
   for (const task of tasks) {
-    const [assigneeMember] = await db.select({ id: teamMembersTable.id, role: teamMembersTable.role, active: teamMembersTable.active }).from(teamMembersTable).where(eq(teamMembersTable.name, task.assignee));
+    const assigneeMember = await resolveActiveMember(task.assignee, task.assigneeRole);
     if (!assigneeMember || !assigneeMember.active || assigneeMember.role !== task.assigneeRole) {
       res.status(400).json({ error: "Responsável não encontrado." });
+      return;
+    }
+    if (task.assigneeRole === "manager" && assigneeMember.storeId !== task.storeId) {
+      res.status(400).json({ error: `A loja ${task.storeName} não possui um gerente ativo vinculado.` });
       return;
     }
     (task as typeof task & { assigneeMemberId: string }).assigneeMemberId = assigneeMember.id;
@@ -808,9 +871,9 @@ router.post("/stores", async (req, res) => {
     name: parsed.data.name,
     city: parsed.data.city,
     region: parsed.data.region,
-    manager: parsed.data.manager ?? "",
+    manager: parsed.data.manager?.trim() ?? "",
     managerMemberId: manager?.id ?? null,
-    supervisor: parsed.data.supervisor ?? "",
+    supervisor: parsed.data.supervisor?.trim() ?? "",
     supervisorMemberId: supervisor?.id ?? null,
     execution: 0,
   };
@@ -836,8 +899,8 @@ router.patch("/stores/:id", async (req, res) => {
     res.status(404).json({ error: "Loja não encontrada." });
     return;
   }
-  const managerName = body.data.manager === undefined ? existing.manager : body.data.manager;
-  const supervisorName = body.data.supervisor === undefined ? existing.supervisor : body.data.supervisor;
+  const managerName = body.data.manager === undefined ? existing.manager : body.data.manager.trim();
+  const supervisorName = body.data.supervisor === undefined ? existing.supervisor : body.data.supervisor.trim();
   const manager = await resolveActiveMember(managerName, "manager");
   const supervisor = await resolveActiveMember(supervisorName, "supervisor");
   if (manager === undefined || supervisor === undefined) {
@@ -929,7 +992,7 @@ router.post("/team-members", async (req, res) => {
   }
   const member = {
     id: `member-${crypto.randomUUID()}`,
-    name: parsed.data.name,
+    name: parsed.data.name.trim(),
     email: parsed.data.email.trim().toLowerCase(),
     phone: parsed.data.phone ?? "",
     role: parsed.data.role,
@@ -1013,7 +1076,11 @@ router.patch("/team-members/:id", async (req, res) => {
   }
   await db
     .update(teamMembersTable)
-    .set({ ...body.data, ...(body.data.email ? { email: body.data.email.trim().toLowerCase() } : {}) })
+    .set({
+      ...body.data,
+      ...(body.data.name ? { name: body.data.name.trim() } : {}),
+      ...(body.data.email ? { email: body.data.email.trim().toLowerCase() } : {}),
+    })
     .where(eq(teamMembersTable.id, params.data.id));
   const [updated] = await db
     .select()

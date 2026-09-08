@@ -1,5 +1,5 @@
 import { Filter, Plus, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { getGetDashboardSummaryQueryKey, getListStoresQueryKey, getListTasksQueryKey, getListTeamMembersQueryKey, useCreateBulkTasks, useCreateRecurringTasks, useCreateTask, useGetMe, useListStores, useListTasks, useListTeamMembers } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -9,12 +9,14 @@ import { ErrorState, LoadingBlocks, SearchEmpty, TaskGroupRow, TaskRow } from '@
 function TaskCreateModal({ onClose }: { onClose: () => void }) {
   const client = useQueryClient();
   const storesQuery = useListStores({ query: { queryKey: getListStoresQueryKey() } });
-  const supervisorsQuery = useListTeamMembers({ role: 'supervisor' }, { query: { queryKey: getListTeamMembersQueryKey({ role: 'supervisor' }) } });
+  const membersQuery = useListTeamMembers(undefined, { query: { queryKey: getListTeamMembersQueryKey() } });
   const createTask = useCreateTask();
   const createBulkTasks = useCreateBulkTasks();
   const createRecurringTasks = useCreateRecurringTasks();
   const stores = storesQuery.data ?? [];
-  const supervisors = (supervisorsQuery.data ?? []).filter((member) => member.active);
+  const members = membersQuery.data ?? [];
+  const supervisors = members.filter((member) => member.role === 'supervisor' && member.active);
+  const activeManagerForStore = (storeId: string) => members.find((member) => member.role === 'manager' && member.active && member.storeId === storeId);
   const [notice, setNotice] = useState('');
   const [repeat, setRepeat] = useState(false);
   const [recurrenceMode, setRecurrenceMode] = useState<'daily_count' | 'weekdays_until'>('daily_count');
@@ -22,14 +24,36 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
   const [weekdays, setWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [endDate, setEndDate] = useState(todayInput);
   const [draft, setDraft] = useState({
-    title: '', description: '', storeId: stores[0]?.id ?? 'store-01', storeName: stores[0]?.name ?? 'Savassi 01',
-    assignee: stores[0]?.manager ?? 'Marina Alves', assigneeRole: 'manager' as 'manager' | 'supervisor', scope: 'single' as 'single' | 'all', category: 'Operação', priority: 'medium' as 'low' | 'medium' | 'high',
+    title: '', description: '', storeId: '', storeName: '',
+    assignee: '', assigneeRole: 'manager' as 'manager' | 'supervisor', scope: 'single' as 'single' | 'all', category: 'Operação', priority: 'medium' as 'low' | 'medium' | 'high',
     dueDate: todayInput, dueTime: '17:00', evidenceRequired: true, evidenceTypes: ['photo'] as ('photo' | 'video')[], instructions: '',
   });
+  useEffect(() => {
+    if (!stores.length) return;
+    setDraft((current) => {
+      const selectedStore = stores.find((store) => store.id === current.storeId) ?? stores[0];
+      const canonicalAssignee = current.assigneeRole === 'manager'
+        ? activeManagerForStore(selectedStore.id)?.name ?? ''
+        : current.assignee;
+      if (
+        current.storeId === selectedStore.id
+        && current.storeName === selectedStore.name
+        && current.assignee === canonicalAssignee
+      ) return current;
+      return {
+        ...current,
+        storeId: selectedStore.id,
+        storeName: selectedStore.name,
+        assignee: canonicalAssignee,
+      };
+    });
+  }, [stores, members]);
   const set = (key: string, value: string) => setDraft((current) => ({ ...current, [key]: value }));
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (!draft.title.trim()) { setNotice('Dê um nome para a tarefa antes de salvar.'); return; }
+    if (!stores.length || !draft.storeId) { setNotice('Aguarde o carregamento das lojas e selecione uma unidade.'); return; }
+    if (draft.assigneeRole === 'manager' && draft.scope === 'single' && !draft.assignee.trim()) { setNotice('A loja selecionada ainda não possui um gerente ativo.'); return; }
     if (draft.assigneeRole === 'supervisor' && !draft.assignee) { setNotice('Selecione o supervisor responsável.'); return; }
     if (repeat && recurrenceMode === 'weekdays_until' && weekdays.length === 0) { setNotice('Escolha pelo menos um dia da semana.'); return; }
     if (repeat && recurrenceMode === 'weekdays_until' && endDate < draft.dueDate) { setNotice('A data final deve ser posterior à data inicial.'); return; }
@@ -63,8 +87,8 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
     <div className="field full"><label htmlFor="task-title">Título</label><input id="task-title" className="input" value={draft.title} onChange={(event) => set('title', event.target.value)} placeholder="Ex.: Conferir exposição da campanha" data-testid="input-task-title" /></div>
     <div className="field full"><label htmlFor="task-description">Descrição</label><textarea id="task-description" className="textarea" value={draft.description} onChange={(event) => set('description', event.target.value)} placeholder="O que precisa ser feito?" data-testid="input-task-description" /></div>
     <div className="field"><label htmlFor="task-scope">Abrangência</label><select id="task-scope" className="select" value={draft.scope} onChange={(event) => setDraft((current) => ({ ...current, scope: event.target.value as 'single' | 'all' }))} data-testid="select-task-scope"><option value="single">Uma loja</option><option value="all">Todas as lojas</option></select></div>
-    <div className="field"><label htmlFor="task-store">Loja</label><select id="task-store" className="select" value={draft.storeId} disabled={draft.scope === 'all'} onChange={(event) => { const store = stores.find((item) => item.id === event.target.value); setDraft((current) => ({ ...current, storeId: event.target.value, storeName: store?.name ?? current.storeName, assignee: current.assigneeRole === 'manager' ? store?.manager ?? current.assignee : current.assignee })); }} data-testid="select-task-store">{draft.scope === 'all' && <option value={draft.storeId}>Todas as {stores.length} lojas</option>}{stores.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select></div>
-    <div className="field"><label htmlFor="task-assignee-role">Responsável</label><select id="task-assignee-role" className="select" value={draft.assigneeRole} onChange={(event) => { const role = event.target.value as 'manager' | 'supervisor'; const selectedStore = stores.find((store) => store.id === draft.storeId); setDraft((current) => ({ ...current, assigneeRole: role, assignee: role === 'manager' ? selectedStore?.manager ?? '' : supervisors[0]?.name ?? '' })); }} data-testid="select-task-assignee-role"><option value="manager">Gerente de cada loja</option><option value="supervisor">Supervisor</option></select></div>
+    <div className="field"><label htmlFor="task-store">Loja</label><select id="task-store" className="select" value={draft.storeId} disabled={draft.scope === 'all'} onChange={(event) => { const store = stores.find((item) => item.id === event.target.value); setDraft((current) => ({ ...current, storeId: event.target.value, storeName: store?.name ?? current.storeName, assignee: current.assigneeRole === 'manager' ? activeManagerForStore(event.target.value)?.name ?? '' : current.assignee })); }} data-testid="select-task-store">{draft.scope === 'all' && <option value={draft.storeId}>Todas as {stores.length} lojas</option>}{stores.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select></div>
+    <div className="field"><label htmlFor="task-assignee-role">Responsável</label><select id="task-assignee-role" className="select" value={draft.assigneeRole} onChange={(event) => { const role = event.target.value as 'manager' | 'supervisor'; setDraft((current) => ({ ...current, assigneeRole: role, assignee: role === 'manager' ? activeManagerForStore(current.storeId)?.name ?? '' : supervisors[0]?.name ?? '' })); }} data-testid="select-task-assignee-role"><option value="manager">Gerente de cada loja</option><option value="supervisor">Supervisor</option></select></div>
     <div className="field"><label htmlFor="task-assignee">{draft.assigneeRole === 'supervisor' ? 'Supervisor escolhido' : 'Gerente responsável'}</label>{draft.assigneeRole === 'supervisor' ? <select id="task-assignee" className="select" value={draft.assignee} onChange={(event) => set('assignee', event.target.value)} data-testid="select-task-supervisor"><option value="">Selecione</option>{supervisors.map((member) => <option key={member.id} value={member.name}>{member.name}</option>)}</select> : <input id="task-assignee" className="input" value={draft.scope === 'all' ? 'Gerente de cada loja' : draft.assignee} readOnly data-testid="input-task-manager" />}</div>
     <div className="field"><label htmlFor="task-category">Categoria</label><select id="task-category" className="select" value={draft.category} onChange={(event) => set('category', event.target.value)} data-testid="select-task-category"><option>Operação</option><option>Campanhas</option><option>Qualidade</option><option>Abastecimento</option></select></div>
     <div className="field"><label htmlFor="task-priority">Prioridade</label><select id="task-priority" className="select" value={draft.priority} onChange={(event) => setDraft((current) => ({ ...current, priority: event.target.value as 'low' | 'medium' | 'high' }))} data-testid="select-task-priority"><option value="high">Alta</option><option value="medium">Média</option><option value="low">Baixa</option></select></div>
