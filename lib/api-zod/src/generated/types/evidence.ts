@@ -12,6 +12,8 @@ export interface Evidence {
   taskId: string;
   type: EvidenceType;
   fileName: string;
+  /** @nullable */
+  objectPath: string | null;
   createdAt: Date;
   userName: string;
   /** @nullable */

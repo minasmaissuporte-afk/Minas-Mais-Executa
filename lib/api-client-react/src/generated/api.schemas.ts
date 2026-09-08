@@ -133,6 +133,8 @@ export interface Evidence {
   taskId: string;
   type: EvidenceType;
   fileName: string;
+  /** @nullable */
+  objectPath: string | null;
   createdAt: string;
   userName: string;
   /** @nullable */
@@ -151,6 +153,8 @@ export interface EvidenceInput {
   type: EvidenceInputType;
   /** @minLength 1 */
   fileName: string;
+  /** @minLength 10 */
+  objectPath: string;
   location?: string;
 }
 

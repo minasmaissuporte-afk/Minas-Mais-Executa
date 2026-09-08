@@ -546,7 +546,7 @@ components:
           type: boolean
     Evidence:
       type: object
-      required: [id, taskId, type, fileName, createdAt, userName]
+      required: [id, taskId, type, fileName, objectPath, createdAt, userName]
       properties:
         id:
           type: string
@@ -557,6 +557,8 @@ components:
           enum: [photo, video]
         fileName:
           type: string
+        objectPath:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
@@ -566,7 +568,7 @@ components:
           type: ["string", "null"]
     EvidenceInput:
       type: object
-      required: [type, fileName]
+      required: [type, fileName, objectPath]
       properties:
         type:
           type: string
@@ -574,6 +576,9 @@ components:
         fileName:
           type: string
           minLength: 1
+        objectPath:
+          type: string
+          minLength: 10
         location:
           type: string
     Task:

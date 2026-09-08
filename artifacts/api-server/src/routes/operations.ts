@@ -31,11 +31,21 @@ import {
 } from "@workspace/db";
 import { actor, requireAdmin } from "../middlewares/authorization";
 import { logger } from "../lib/logger";
+import { ObjectStorageService } from "../lib/objectStorage";
 
 const router: IRouter = Router();
 
 const now = new Date();
 const today = now.toISOString().slice(0, 10);
+const objectStorageService = new ObjectStorageService();
+
+function isNormalizedPrivateObjectPath(path: string): boolean {
+  return path.startsWith("/objects/")
+    && path.length > "/objects/".length
+    && !path.includes("\\")
+    && !path.split("/").some((segment) => segment === "." || segment === "..")
+    && objectStorageService.normalizeObjectEntityPath(path) === path;
+}
 
 async function scopedStoreIds(req: import("express").Request): Promise<string[] | null> {
   const member = actor(req);
@@ -378,6 +388,7 @@ async function getTaskWithEvidence(id: string) {
       taskId: item.taskId,
       type: item.type,
       fileName: item.fileName,
+      objectPath: item.objectPath,
       createdAt: item.createdAt.toISOString(),
       userName: item.userName,
       location: item.location,
@@ -705,6 +716,10 @@ router.post("/tasks/:id/evidence", async (req, res) => {
     res.status(400).json({ error: "Evidência inválida." });
     return;
   }
+  if (!isNormalizedPrivateObjectPath(body.data.objectPath)) {
+    res.status(400).json({ error: "Caminho de evidência inválido." });
+    return;
+  }
   const task = await getTaskWithEvidence(params.data.id);
   if (!task) {
     res.status(404).json({ error: "Tarefa não encontrada." });
@@ -719,6 +734,7 @@ router.post("/tasks/:id/evidence", async (req, res) => {
     taskId: params.data.id,
     type: body.data.type,
     fileName: body.data.fileName,
+    objectPath: body.data.objectPath,
     userName: actor(req).name,
     location: body.data.location ?? null,
   };

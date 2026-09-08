@@ -11,5 +11,7 @@ export interface EvidenceInput {
   type: EvidenceInputType;
   /** @minLength 1 */
   fileName: string;
+  /** @minLength 10 */
+  objectPath: string;
   location?: string;
 }

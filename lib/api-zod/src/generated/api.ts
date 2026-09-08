@@ -90,6 +90,7 @@ export const ListTasksResponseItem = zod.object({
   "taskId": zod.string(),
   "type": zod.enum(['photo', 'video']),
   "fileName": zod.string(),
+  "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
   "location": zod.string().nullish()
@@ -145,6 +146,7 @@ export const CreateTaskResponse = zod.object({
   "taskId": zod.string(),
   "type": zod.enum(['photo', 'video']),
   "fileName": zod.string(),
+  "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
   "location": zod.string().nullish()
@@ -184,6 +186,7 @@ export const GetTaskResponse = zod.object({
   "taskId": zod.string(),
   "type": zod.enum(['photo', 'video']),
   "fileName": zod.string(),
+  "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
   "location": zod.string().nullish()
@@ -229,6 +232,7 @@ export const UpdateTaskResponse = zod.object({
   "taskId": zod.string(),
   "type": zod.enum(['photo', 'video']),
   "fileName": zod.string(),
+  "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
   "location": zod.string().nullish()
@@ -247,11 +251,14 @@ export const AddTaskEvidenceParams = zod.object({
 })
 
 
+export const addTaskEvidenceBodyObjectPathMin = 10;
+
 
 
 export const AddTaskEvidenceBody = zod.object({
   "type": zod.enum(['photo', 'video']),
   "fileName": zod.string().min(1),
+  "objectPath": zod.string().min(addTaskEvidenceBodyObjectPathMin),
   "location": zod.string().optional()
 })
 
@@ -260,6 +267,7 @@ export const AddTaskEvidenceResponse = zod.object({
   "taskId": zod.string(),
   "type": zod.enum(['photo', 'video']),
   "fileName": zod.string(),
+  "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
   "location": zod.string().nullish()
@@ -295,6 +303,7 @@ export const CompleteTaskResponse = zod.object({
   "taskId": zod.string(),
   "type": zod.enum(['photo', 'video']),
   "fileName": zod.string(),
+  "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
   "location": zod.string().nullish()
@@ -349,6 +358,7 @@ export const CreateBulkTasksResponseItem = zod.object({
   "taskId": zod.string(),
   "type": zod.enum(['photo', 'video']),
   "fileName": zod.string(),
+  "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
   "location": zod.string().nullish()
@@ -413,6 +423,7 @@ export const CreateRecurringTasksResponseItem = zod.object({
   "taskId": zod.string(),
   "type": zod.enum(['photo', 'video']),
   "fileName": zod.string(),
+  "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
   "location": zod.string().nullish()
