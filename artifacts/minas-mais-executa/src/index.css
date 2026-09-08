@@ -149,3 +149,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .button-primary:hover{background:hsl(1 73% 40%)}
 .login-page{background:hsl(0 0% 18%)}
 .login-brand{background:linear-gradient(145deg,hsl(0 0% 13%),hsl(0 0% 26%))}
+.button-success{color:white;background:hsl(145 58% 34%)}
+.button-success:hover{background:hsl(145 58% 28%)}
+.capture-button{border-color:hsl(145 45% 50%);color:hsl(145 58% 30%);background:hsl(145 45% 95%)}
+.capture-button:hover{background:hsl(145 42% 91%)}
+.dot-completed,.mark-success{background:hsl(145 58% 34%)}
+.status-completed{color:hsl(145 58% 28%);background:hsl(145 45% 91%)}
+.completion-state{color:hsl(145 58% 28%);background:hsl(145 45% 91%)}
+.podium .rank,.podium .score,.podium .store-name{font-weight:800}
+.podium-1 .rank,.podium-1 .score{color:hsl(145 58% 34%)}
+.podium-1{background:hsl(145 45% 96%)}
+.podium-2 .rank,.podium-2 .score{color:hsl(0 0% 42%)}
+.podium-2{background:hsl(0 0% 96%)}
+.podium-3 .rank,.podium-3 .score{color:hsl(25 58% 40%)}
+.podium-3{background:hsl(25 58% 95%)}
