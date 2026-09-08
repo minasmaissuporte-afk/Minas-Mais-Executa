@@ -43,7 +43,7 @@ export function TaskRow({ task }: { task: Task }) {
   return <div className="task-row" data-testid={`row-task-${task.id}`}>
     <span className={`task-status-dot dot-${task.status}`} aria-hidden="true" />
     <Link href={`/tasks/${task.id}`} className="task-main" data-testid={`link-task-${task.id}`}>
-      <div className="task-title">{task.title}</div><div className="task-sub">{task.category} · {task.storeName} · {task.assignee}</div>
+      <div className="task-title">{task.title}</div><div className="task-sub">{task.category} · {task.storeName} · {task.assigneeRole === 'supervisor' ? 'Supervisor: ' : ''}{task.assignee}</div>
     </Link>
     <PriorityPill priority={task.priority} /><span className="task-time">{task.dueTime}</span><ChevronRight size={15} color="hsl(var(--muted-foreground))" />
   </div>;

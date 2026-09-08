@@ -1,9 +1,10 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import {
   AddTaskEvidenceBody,
   AddTaskEvidenceParams,
   CompleteTaskParams,
+  CreateBulkTasksBody,
   CreateTaskBody,
   GetTaskParams,
   CreateStoreBody,
@@ -396,6 +397,7 @@ router.post("/tasks", async (req, res) => {
   const task = {
     id: `task-${crypto.randomUUID()}`,
     ...parsed.data,
+    assigneeRole: parsed.data.assigneeRole ?? "manager",
     dueDate: parsed.data.dueDate.toISOString().slice(0, 10),
     evidenceTypes: parsed.data.evidenceTypes ?? [],
     status: "pending",
@@ -403,6 +405,55 @@ router.post("/tasks", async (req, res) => {
   await db.insert(tasksTable).values(task);
   const result = await getTaskWithEvidence(task.id);
   res.status(201).json(result);
+});
+
+router.post("/tasks/bulk", async (req, res) => {
+  await seedPromise;
+  const parsed = CreateBulkTasksBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Dados da tarefa em massa inválidos." });
+    return;
+  }
+  if (parsed.data.assigneeRole === "supervisor" && !parsed.data.assignee?.trim()) {
+    res.status(400).json({ error: "Selecione o supervisor responsável." });
+    return;
+  }
+  const requestedStoreIds = [...new Set(parsed.data.storeIds)];
+  const stores = await db
+    .select()
+    .from(storesTable)
+    .where(inArray(storesTable.id, requestedStoreIds));
+  if (stores.length !== requestedStoreIds.length) {
+    res.status(400).json({ error: "Uma ou mais lojas não foram encontradas." });
+    return;
+  }
+  const batchGroupId = `batch-${crypto.randomUUID()}`;
+  const dueDate = parsed.data.dueDate.toISOString().slice(0, 10);
+  const tasks = stores.map((store) => ({
+    id: `task-${crypto.randomUUID()}`,
+    title: parsed.data.title,
+    description: parsed.data.description,
+    storeId: store.id,
+    storeName: store.name,
+    assignee: parsed.data.assigneeRole === "supervisor"
+      ? parsed.data.assignee!.trim()
+      : store.manager || "Gerente não definido",
+    assigneeRole: parsed.data.assigneeRole,
+    batchGroupId,
+    category: parsed.data.category,
+    priority: parsed.data.priority,
+    dueDate,
+    dueTime: parsed.data.dueTime,
+    evidenceRequired: parsed.data.evidenceRequired,
+    evidenceTypes: parsed.data.evidenceTypes ?? [],
+    instructions: parsed.data.instructions,
+    status: "pending",
+  }));
+  await db.transaction(async (tx) => {
+    await tx.insert(tasksTable).values(tasks);
+  });
+  const created = await Promise.all(tasks.map((task) => getTaskWithEvidence(task.id)));
+  res.status(201).json(created.filter(Boolean));
 });
 
 router.get("/tasks/:id", async (req, res) => {

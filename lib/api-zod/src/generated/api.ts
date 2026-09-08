@@ -63,6 +63,8 @@ export const ListTasksResponseItem = zod.object({
   "storeId": zod.string(),
   "storeName": zod.string(),
   "assignee": zod.string(),
+  "assigneeRole": zod.enum(['manager', 'supervisor']).optional(),
+  "batchGroupId": zod.string().nullish(),
   "category": zod.string(),
   "priority": zod.enum(['low', 'medium', 'high']),
   "dueDate": zod.coerce.date(),
@@ -98,6 +100,7 @@ export const CreateTaskBody = zod.object({
   "storeId": zod.string(),
   "storeName": zod.string(),
   "assignee": zod.string(),
+  "assigneeRole": zod.enum(['manager', 'supervisor']).optional(),
   "category": zod.string(),
   "priority": zod.enum(['low', 'medium', 'high']),
   "dueDate": zod.coerce.date(),
@@ -114,6 +117,8 @@ export const CreateTaskResponse = zod.object({
   "storeId": zod.string(),
   "storeName": zod.string(),
   "assignee": zod.string(),
+  "assigneeRole": zod.enum(['manager', 'supervisor']).optional(),
+  "batchGroupId": zod.string().nullish(),
   "category": zod.string(),
   "priority": zod.enum(['low', 'medium', 'high']),
   "dueDate": zod.coerce.date(),
@@ -150,6 +155,8 @@ export const GetTaskResponse = zod.object({
   "storeId": zod.string(),
   "storeName": zod.string(),
   "assignee": zod.string(),
+  "assigneeRole": zod.enum(['manager', 'supervisor']).optional(),
+  "batchGroupId": zod.string().nullish(),
   "category": zod.string(),
   "priority": zod.enum(['low', 'medium', 'high']),
   "dueDate": zod.coerce.date(),
@@ -192,6 +199,8 @@ export const UpdateTaskResponse = zod.object({
   "storeId": zod.string(),
   "storeName": zod.string(),
   "assignee": zod.string(),
+  "assigneeRole": zod.enum(['manager', 'supervisor']).optional(),
+  "batchGroupId": zod.string().nullish(),
   "category": zod.string(),
   "priority": zod.enum(['low', 'medium', 'high']),
   "dueDate": zod.coerce.date(),
@@ -255,6 +264,8 @@ export const CompleteTaskResponse = zod.object({
   "storeId": zod.string(),
   "storeName": zod.string(),
   "assignee": zod.string(),
+  "assigneeRole": zod.enum(['manager', 'supervisor']).optional(),
+  "batchGroupId": zod.string().nullish(),
   "category": zod.string(),
   "priority": zod.enum(['low', 'medium', 'high']),
   "dueDate": zod.coerce.date(),
@@ -275,6 +286,60 @@ export const CompleteTaskResponse = zod.object({
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
 })
+
+
+/**
+ * @summary Create one independent task for each selected store
+ */
+
+
+
+
+export const CreateBulkTasksBody = zod.object({
+  "title": zod.string().min(1),
+  "description": zod.string(),
+  "storeIds": zod.array(zod.string()).min(1),
+  "assignee": zod.string().optional(),
+  "assigneeRole": zod.enum(['manager', 'supervisor']),
+  "category": zod.string(),
+  "priority": zod.enum(['low', 'medium', 'high']),
+  "dueDate": zod.coerce.date(),
+  "dueTime": zod.string(),
+  "evidenceRequired": zod.boolean(),
+  "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
+  "instructions": zod.string()
+})
+
+export const CreateBulkTasksResponseItem = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "storeId": zod.string(),
+  "storeName": zod.string(),
+  "assignee": zod.string(),
+  "assigneeRole": zod.enum(['manager', 'supervisor']).optional(),
+  "batchGroupId": zod.string().nullish(),
+  "category": zod.string(),
+  "priority": zod.enum(['low', 'medium', 'high']),
+  "dueDate": zod.coerce.date(),
+  "dueTime": zod.string(),
+  "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']),
+  "evidenceRequired": zod.boolean(),
+  "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
+  "evidence": zod.array(zod.object({
+  "id": zod.string(),
+  "taskId": zod.string(),
+  "type": zod.enum(['photo', 'video']),
+  "fileName": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "userName": zod.string(),
+  "location": zod.string().nullish()
+})),
+  "instructions": zod.string(),
+  "completedAt": zod.string().nullish(),
+  "completedBy": zod.string().nullish()
+})
+export const CreateBulkTasksResponse = zod.array(CreateBulkTasksResponseItem)
 
 
 /**

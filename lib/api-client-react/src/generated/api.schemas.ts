@@ -136,6 +136,14 @@ export interface EvidenceInput {
   location?: string;
 }
 
+export type TaskAssigneeRole = typeof TaskAssigneeRole[keyof typeof TaskAssigneeRole];
+
+
+export const TaskAssigneeRole = {
+  manager: 'manager',
+  supervisor: 'supervisor',
+} as const;
+
 export type TaskPriority = typeof TaskPriority[keyof typeof TaskPriority];
 
 
@@ -170,6 +178,9 @@ export interface Task {
   storeId: string;
   storeName: string;
   assignee: string;
+  assigneeRole?: TaskAssigneeRole;
+  /** @nullable */
+  batchGroupId?: string | null;
   category: string;
   priority: TaskPriority;
   dueDate: string;
@@ -184,6 +195,14 @@ export interface Task {
   /** @nullable */
   completedBy?: string | null;
 }
+
+export type TaskInputAssigneeRole = typeof TaskInputAssigneeRole[keyof typeof TaskInputAssigneeRole];
+
+
+export const TaskInputAssigneeRole = {
+  manager: 'manager',
+  supervisor: 'supervisor',
+} as const;
 
 export type TaskInputPriority = typeof TaskInputPriority[keyof typeof TaskInputPriority];
 
@@ -209,12 +228,55 @@ export interface TaskInput {
   storeId: string;
   storeName: string;
   assignee: string;
+  assigneeRole?: TaskInputAssigneeRole;
   category: string;
   priority: TaskInputPriority;
   dueDate: string;
   dueTime: string;
   evidenceRequired: boolean;
   evidenceTypes?: TaskInputEvidenceTypesItem[];
+  instructions: string;
+}
+
+export type BulkTaskInputAssigneeRole = typeof BulkTaskInputAssigneeRole[keyof typeof BulkTaskInputAssigneeRole];
+
+
+export const BulkTaskInputAssigneeRole = {
+  manager: 'manager',
+  supervisor: 'supervisor',
+} as const;
+
+export type BulkTaskInputPriority = typeof BulkTaskInputPriority[keyof typeof BulkTaskInputPriority];
+
+
+export const BulkTaskInputPriority = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+} as const;
+
+export type BulkTaskInputEvidenceTypesItem = typeof BulkTaskInputEvidenceTypesItem[keyof typeof BulkTaskInputEvidenceTypesItem];
+
+
+export const BulkTaskInputEvidenceTypesItem = {
+  photo: 'photo',
+  video: 'video',
+} as const;
+
+export interface BulkTaskInput {
+  /** @minLength 1 */
+  title: string;
+  description: string;
+  /** @minItems 1 */
+  storeIds: string[];
+  assignee?: string;
+  assigneeRole: BulkTaskInputAssigneeRole;
+  category: string;
+  priority: BulkTaskInputPriority;
+  dueDate: string;
+  dueTime: string;
+  evidenceRequired: boolean;
+  evidenceTypes?: BulkTaskInputEvidenceTypesItem[];
   instructions: string;
 }
 

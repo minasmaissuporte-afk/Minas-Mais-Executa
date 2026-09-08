@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Evidence } from './evidence';
+import type { TaskAssigneeRole } from './taskAssigneeRole';
 import type { TaskEvidenceTypesItem } from './taskEvidenceTypesItem';
 import type { TaskPriority } from './taskPriority';
 import type { TaskStatus } from './taskStatus';
@@ -17,6 +18,9 @@ export interface Task {
   storeId: string;
   storeName: string;
   assignee: string;
+  assigneeRole?: TaskAssigneeRole;
+  /** @nullable */
+  batchGroupId?: string | null;
   category: string;
   priority: TaskPriority;
   dueDate: Date;

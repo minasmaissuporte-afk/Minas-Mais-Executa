@@ -8,6 +8,10 @@
 
 export * from './activity';
 export * from './activityTone';
+export * from './bulkTaskInput';
+export * from './bulkTaskInputAssigneeRole';
+export * from './bulkTaskInputEvidenceTypesItem';
+export * from './bulkTaskInputPriority';
 export * from './dashboardSummary';
 export * from './dashboardSummaryRole';
 export * from './evidence';
@@ -24,8 +28,10 @@ export * from './store';
 export * from './storeInput';
 export * from './storeUpdate';
 export * from './task';
+export * from './taskAssigneeRole';
 export * from './taskEvidenceTypesItem';
 export * from './taskInput';
+export * from './taskInputAssigneeRole';
 export * from './taskInputEvidenceTypesItem';
 export * from './taskInputPriority';
 export * from './taskPriority';

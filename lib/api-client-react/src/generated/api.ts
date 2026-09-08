@@ -21,6 +21,7 @@ import type {
 
 import type {
   Activity,
+  BulkTaskInput,
   DashboardSummary,
   Evidence,
   EvidenceInput,
@@ -745,6 +746,77 @@ export const useCompleteTask = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCompleteTaskMutationOptions(options));
+    }
+
+export const getCreateBulkTasksUrl = () => {
+
+
+
+
+  return `/api/tasks/bulk`
+}
+
+/**
+ * @summary Create one independent task for each selected store
+ */
+export const createBulkTasks = async (bulkTaskInput: BulkTaskInput, options?: Parameters<typeof customFetch>[1]): Promise<Task[]> => {
+
+  return customFetch<Task[]>(getCreateBulkTasksUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bulkTaskInput)
+  }
+);}
+
+
+
+
+
+export const getCreateBulkTasksMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBulkTasks>>, TError,{data: BodyType<BulkTaskInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBulkTasks>>, TError,{data: BodyType<BulkTaskInput>}, TContext> => {
+
+const mutationKey = ['createBulkTasks'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBulkTasks>>, {data: BodyType<BulkTaskInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createBulkTasks(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBulkTasksMutationResult = NonNullable<Awaited<ReturnType<typeof createBulkTasks>>>
+    export type CreateBulkTasksMutationBody = BodyType<BulkTaskInput>
+    export type CreateBulkTasksMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create one independent task for each selected store
+ */
+export const useCreateBulkTasks = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBulkTasks>>, TError,{data: BodyType<BulkTaskInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBulkTasks>>,
+        TError,
+        {data: BodyType<BulkTaskInput>},
+        TContext
+      > => {
+      return useMutation(getCreateBulkTasksMutationOptions(options));
     }
 
 export const getListStoresUrl = () => {

@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { TaskInputAssigneeRole } from './taskInputAssigneeRole';
 import type { TaskInputEvidenceTypesItem } from './taskInputEvidenceTypesItem';
 import type { TaskInputPriority } from './taskInputPriority';
 
@@ -15,6 +16,7 @@ export interface TaskInput {
   storeId: string;
   storeName: string;
   assignee: string;
+  assigneeRole?: TaskInputAssigneeRole;
   category: string;
   priority: TaskInputPriority;
   dueDate: Date;
