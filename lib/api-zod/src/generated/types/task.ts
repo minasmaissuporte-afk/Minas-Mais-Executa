@@ -18,6 +18,8 @@ export interface Task {
   storeId: string;
   storeName: string;
   assignee: string;
+  /** @nullable */
+  assigneeMemberId?: string | null;
   assigneeRole?: TaskAssigneeRole;
   /** @nullable */
   batchGroupId?: string | null;

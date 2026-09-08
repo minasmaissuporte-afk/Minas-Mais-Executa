@@ -12,7 +12,9 @@ export const storesTable = pgTable("stores", {
   city: text("city").notNull(),
   region: text("region").notNull(),
   manager: text("manager").notNull(),
+  managerMemberId: text("manager_member_id"),
   supervisor: text("supervisor").notNull().default(""),
+  supervisorMemberId: text("supervisor_member_id"),
   execution: integer("execution").notNull().default(0),
 });
 
@@ -20,6 +22,7 @@ export const teamMembersTable = pgTable("team_members", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
+  clerkUserId: text("clerk_user_id").unique(),
   phone: text("phone").notNull().default(""),
   role: text("role").notNull(),
   storeId: text("store_id"),
@@ -36,6 +39,7 @@ export const tasksTable = pgTable("tasks", {
   storeId: text("store_id").notNull(),
   storeName: text("store_name").notNull(),
   assignee: text("assignee").notNull(),
+  assigneeMemberId: text("assignee_member_id"),
   assigneeRole: text("assignee_role").notNull().default("manager"),
   batchGroupId: text("batch_group_id"),
   category: text("category").notNull(),

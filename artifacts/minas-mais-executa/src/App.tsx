@@ -1,12 +1,12 @@
-import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ClerkProvider, Show } from '@clerk/react';
+import { ClerkProvider, Show, useClerk } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { Redirect, Route, Router as WouterRouter, Switch, useLocation } from 'wouter';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { AppShell, type Role } from '@/components/app-shell';
+import { AppShell } from '@/components/app-shell';
+import { useGetMe } from '@workspace/api-client-react';
 import DashboardPage from '@/pages/dashboard';
 import TasksPage from '@/pages/tasks';
 import TaskDetailPage from '@/pages/task-detail';
@@ -32,14 +32,22 @@ function AuthRoutes() {
 }
 
 function AuthenticatedRoutes() {
-  const [role, setRole] = useState<Role>('manager');
-  return <AppShell role={role} onRoleChange={setRole}><Switch>
-    <Route path="/" component={() => <DashboardPage role={role} />} />
+  const me = useGetMe();
+  const { signOut } = useClerk();
+  if (me.isLoading) return <div className="access-screen"><div className="access-card"><div className="brand-mark">M</div><h1>Preparando sua operação</h1><p>Estamos validando seu acesso com segurança.</p><div className="access-loader" /></div></div>;
+  if (me.isError || !me.data) {
+    const status = (me.error as { status?: number } | undefined)?.status;
+    const pending = status === 403;
+    return <div className="access-screen"><div className="access-card"><div className="brand-mark">M</div><h1>{pending ? 'Acesso pendente' : 'Não foi possível validar seu acesso'}</h1><p>{pending ? 'Sua conta está autenticada, mas ainda não foi liberada para Minas Mais Executa. Peça ao administrador para cadastrar seu e-mail verificado.' : 'Sua sessão não pôde ser autorizada. Entre novamente e, se o problema continuar, contate a administração.'}</p><button className="button button-primary" onClick={() => signOut({ redirectUrl: basePath || '/' })} data-testid="button-access-logout">Sair</button></div></div>;
+  }
+  const member = me.data;
+  return <AppShell member={member}><Switch>
+    <Route path="/" component={() => <DashboardPage member={member} />} />
     <Route path="/tasks" component={TasksPage} />
     <Route path="/tasks/:id" component={TaskDetailPage} />
     <Route path="/stores" component={StoresPage} />
     <Route path="/reports" component={ReportsPage} />
-    <Route path="/cadastros" component={AdministrationPage} />
+    <Route path="/cadastros" component={() => member.role === 'admin' ? <AdministrationPage /> : <Redirect to="/" />} />
     <Route component={NotFound} />
   </Switch></AppShell>;
 }

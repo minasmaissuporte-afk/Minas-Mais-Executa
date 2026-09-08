@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: dashboard
     description: Operational overview and activity
+  - name: auth
+    description: Authenticated identity and access scope
   - name: tasks
     description: Task management and evidence
   - name: stores
@@ -21,6 +23,18 @@ tags:
   - name: rankings
     description: Performance rankings
 paths:
+  /me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get the authenticated member and server-authorized scope
+      responses:
+        "200":
+          description: Authenticated member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentMember"
   /healthz:
     get:
       operationId: healthCheck
@@ -469,7 +483,7 @@ components:
           type: string
         role:
           type: string
-          enum: [manager, supervisor]
+          enum: [manager, supervisor, admin]
         storeId:
           type: ["string", "null"]
         active:
@@ -477,6 +491,24 @@ components:
         createdAt:
           type: string
           format: date-time
+    CurrentMember:
+      type: object
+      required: [id, name, email, role, storeIds]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [manager, supervisor, admin]
+        storeIds:
+          type: array
+          items:
+            type: string
     TeamMemberInput:
       type: object
       required: [name, email, role]
@@ -560,6 +592,8 @@ components:
           type: string
         assignee:
           type: string
+        assigneeMemberId:
+          type: ["string", "null"]
         assigneeRole:
           type: string
           enum: [manager, supervisor]

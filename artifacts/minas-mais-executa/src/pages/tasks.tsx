@@ -1,9 +1,9 @@
 import { Filter, Plus, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { getGetDashboardSummaryQueryKey, getListStoresQueryKey, getListTasksQueryKey, getListTeamMembersQueryKey, useCreateBulkTasks, useCreateRecurringTasks, useCreateTask, useListStores, useListTasks, useListTeamMembers } from '@workspace/api-client-react';
+import { getGetDashboardSummaryQueryKey, getListStoresQueryKey, getListTasksQueryKey, getListTeamMembersQueryKey, useCreateBulkTasks, useCreateRecurringTasks, useCreateTask, useGetMe, useListStores, useListTasks, useListTeamMembers } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { fallbackStores, fallbackTasks, todayInput } from '@/lib/demo-data';
+import { todayInput } from '@/lib/demo-data';
 import { ErrorState, LoadingBlocks, SearchEmpty, TaskGroupRow, TaskRow } from '@/components/ui-kit';
 
 function TaskCreateModal({ onClose }: { onClose: () => void }) {
@@ -13,7 +13,7 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
   const createTask = useCreateTask();
   const createBulkTasks = useCreateBulkTasks();
   const createRecurringTasks = useCreateRecurringTasks();
-  const stores = storesQuery.data ?? fallbackStores;
+  const stores = storesQuery.data ?? [];
   const supervisors = (supervisorsQuery.data ?? []).filter((member) => member.active);
   const [notice, setNotice] = useState('');
   const [repeat, setRepeat] = useState(false);
@@ -83,7 +83,8 @@ export default function TasksPage() {
   const [search, setSearch] = useState(''); const [status, setStatus] = useState('all'); const [category, setCategory] = useState('all'); const [creating, setCreating] = useState(false);
   const params = { status: status === 'all' ? undefined : status, category: category === 'all' ? undefined : category };
   const query = useListTasks(params, { query: { queryKey: getListTasksQueryKey(params) } });
-  const data = (query.data ?? fallbackTasks).filter((task) => task.dueDate <= todayInput);
+  const me = useGetMe();
+  const data = (query.data ?? []).filter((task) => task.dueDate <= todayInput);
   const tasks = useMemo(() => data.filter((task) => `${task.title} ${task.storeName} ${task.assignee}`.toLowerCase().includes(search.toLowerCase())), [data, search]);
   const taskRows = useMemo(() => {
     const rows: Array<{ key: string; tasks: typeof tasks }> = [];
@@ -104,9 +105,10 @@ export default function TasksPage() {
     return rows;
   }, [tasks]);
   const categories = [...new Set(data.map((task) => task.category))];
-  return <div className="content"><div className="page-head"><div><div className="eyebrow">Ritmo operacional</div><h1 className="page-title">Tarefas</h1><p className="page-intro">Veja, execute e comprove cada combinado da rede.</p></div><button className="button button-primary" onClick={() => setCreating(true)} data-testid="button-new-task"><Plus size={15} /> Nova tarefa</button></div>
+  const canCreate = me.data?.role === 'admin';
+  return <div className="content"><div className="page-head"><div><div className="eyebrow">Ritmo operacional</div><h1 className="page-title">Tarefas</h1><p className="page-intro">Veja, execute e comprove cada combinado da rede.</p></div>{canCreate && <button className="button button-primary" onClick={() => setCreating(true)} data-testid="button-new-task"><Plus size={15} /> Nova tarefa</button>}</div>
     <div className="card filters"><div className="search-wrap"><Search size={15} /><input className="input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por tarefa, loja ou responsável" aria-label="Buscar tarefas" data-testid="input-search-tasks" /></div><select className="select" value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filtrar por status" data-testid="select-filter-status"><option value="all">Todos os status</option><option value="pending">Pendentes</option><option value="in_progress">Em execução</option><option value="completed">Concluídas</option><option value="overdue">Atrasadas</option></select><select className="select" value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Filtrar por categoria" data-testid="select-filter-category"><option value="all">Todas categorias</option>{categories.map((item) => <option value={item} key={item}>{item}</option>)}</select><button className="icon-button" aria-label="Filtros adicionais" data-testid="button-filter"><Filter size={15} /></button></div>
     {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isLoading ? <LoadingBlocks rows={2} /> : taskRows.length ? <div className="task-list">{taskRows.map((row) => row.tasks.length > 1 ? <TaskGroupRow key={row.key} tasks={row.tasks} /> : <TaskRow key={row.key} task={row.tasks[0]} />)}</div> : <div className="card"><SearchEmpty /></div>}
-    {creating && <TaskCreateModal onClose={() => setCreating(false)} />}
+    {creating && canCreate && <TaskCreateModal onClose={() => setCreating(false)} />}
   </div>;
 }

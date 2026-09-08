@@ -12,6 +12,8 @@ export * from './bulkTaskInput';
 export * from './bulkTaskInputAssigneeRole';
 export * from './bulkTaskInputEvidenceTypesItem';
 export * from './bulkTaskInputPriority';
+export * from './currentMember';
+export * from './currentMemberRole';
 export * from './dashboardSummary';
 export * from './dashboardSummaryRole';
 export * from './evidence';

@@ -29,11 +29,50 @@ import {
   storesTable,
   tasksTable,
 } from "@workspace/db";
+import { actor, requireAdmin } from "../middlewares/authorization";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
 const now = new Date();
 const today = now.toISOString().slice(0, 10);
+
+async function scopedStoreIds(req: import("express").Request): Promise<string[] | null> {
+  const member = actor(req);
+  if (member.role === "admin") return null;
+  if (member.role === "manager") return member.storeId ? [member.storeId] : [];
+  const stores = await db.select({ id: storesTable.id, supervisorMemberId: storesTable.supervisorMemberId }).from(storesTable);
+  return stores.filter((store) => store.supervisorMemberId === member.id).map((store) => store.id);
+}
+
+async function canAccessTask(req: import("express").Request, task: { storeId: string }): Promise<boolean> {
+  const storeIds = await scopedStoreIds(req);
+  return storeIds === null || storeIds.includes(task.storeId);
+}
+
+async function resolveActiveMember(name: string, role: "manager" | "supervisor") {
+  if (!name.trim()) return null;
+  const matches = await db.select().from(teamMembersTable).where(
+    and(eq(teamMembersTable.name, name.trim()), eq(teamMembersTable.role, role), eq(teamMembersTable.active, true)),
+  );
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+async function applyMemberStoreAssignment(
+  member: { id: string; name: string; role: string },
+  storeId: string | null,
+): Promise<void> {
+  if (member.role !== "manager" || !storeId) return;
+  await db.update(storesTable)
+    .set({ manager: "", managerMemberId: null })
+    .where(eq(storesTable.managerMemberId, member.id));
+  await db.update(teamMembersTable).set({ storeId }).where(eq(teamMembersTable.id, member.id));
+}
+
+function canExecuteTask(req: import("express").Request, task: { assignee: string; assigneeMemberId: string | null }): boolean {
+  const member = actor(req);
+  return member.role === "admin" || task.assigneeMemberId === member.id;
+}
 
 async function ensureSeedData() {
   const existingStores = await db.select({ id: storesTable.id }).from(storesTable);
@@ -152,6 +191,17 @@ async function ensureSeedData() {
       ])
       .onConflictDoNothing();
   }
+  await db
+    .insert(teamMembersTable)
+    .values({
+      id: "member-admin-david",
+      name: "David",
+      email: "david@drogariasminasmais.com.br",
+      phone: "",
+      role: "admin",
+      active: true,
+    })
+    .onConflictDoNothing();
 
   const existingTasks = await db.select({ id: tasksTable.id }).from(tasksTable);
   if (existingTasks.length === 0) {
@@ -296,7 +346,19 @@ async function ensureSeedData() {
 }
 
 const seedPromise = ensureSeedData().catch((error) => {
-  console.error("Failed to seed operational data", error);
+  logger.error({ err: error }, "Failed to seed operational data");
+});
+
+router.get("/me", async (req, res) => {
+  await seedPromise;
+  const member = actor(req);
+  res.json({
+    id: member.id,
+    name: member.name,
+    email: member.email,
+    role: member.role,
+    storeIds: (await scopedStoreIds(req)) ?? [],
+  });
 });
 
 async function getTaskWithEvidence(id: string) {
@@ -325,39 +387,46 @@ async function getTaskWithEvidence(id: string) {
   };
 }
 
-router.get("/dashboard/summary", async (_req, res) => {
+router.get("/dashboard/summary", async (req, res) => {
   await seedPromise;
   const [tasks, stores] = await Promise.all([
     db.select().from(tasksTable),
     db.select().from(storesTable),
   ]);
-  const todaysTasks = tasks.filter((task) => task.dueDate === today);
+  const visibleStoreIds = await scopedStoreIds(req);
+  const visibleTasks = visibleStoreIds === null ? tasks : tasks.filter((task) => visibleStoreIds.includes(task.storeId));
+  const visibleStores = visibleStoreIds === null ? stores : stores.filter((store) => visibleStoreIds.includes(store.id));
+  const todaysTasks = visibleTasks.filter((task) => task.dueDate === today);
   const completed = todaysTasks.filter((task) => task.status === "completed").length;
-  const overdue = tasks.filter((task) => task.status === "overdue").length;
+  const overdue = visibleTasks.filter((task) => task.status === "overdue").length;
   const execution = todaysTasks.length
     ? Math.round((completed / todaysTasks.length) * 100)
     : 0;
   res.json({
-    role: "manager",
-    storeName: "Loja Centro",
+    role: actor(req).role,
+    storeName: actor(req).role === "manager" ? visibleStores[0]?.name ?? "" : "",
     tasksToday: todaysTasks.length,
     completed,
     pending: todaysTasks.filter((task) => task.status !== "completed").length,
     overdue,
     execution,
-    storesCount: stores.length,
+    storesCount: visibleStores.length,
     campaignsActive: 2,
     actionPlans: 3,
   });
 });
 
-router.get("/activity", async (_req, res) => {
+router.get("/activity", async (req, res) => {
   await seedPromise;
   const rows = await db
     .select()
     .from(activityTable)
     .orderBy(desc(activityTable.createdAt))
     .limit(10);
+  if (actor(req).role !== "admin") {
+    res.json([]);
+    return;
+  }
   res.json(
     rows.map((item) => ({
       ...item,
@@ -379,6 +448,14 @@ router.get("/tasks", async (req, res) => {
     filters.push(eq(tasksTable.category, parsed.data.category));
   }
   if (parsed.data.storeId) filters.push(eq(tasksTable.storeId, parsed.data.storeId));
+  const storeIds = await scopedStoreIds(req);
+  if (storeIds !== null) {
+    if (!storeIds.length || (parsed.data.storeId && !storeIds.includes(parsed.data.storeId))) {
+      res.json([]);
+      return;
+    }
+    filters.push(inArray(tasksTable.storeId, storeIds));
+  }
   const tasks = await db
     .select()
     .from(tasksTable)
@@ -390,6 +467,7 @@ router.get("/tasks", async (req, res) => {
 
 router.post("/tasks", async (req, res) => {
   await seedPromise;
+  if (!requireAdmin(req, res)) return;
   const parsed = CreateTaskBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Dados da tarefa inválidos." });
@@ -403,6 +481,12 @@ router.post("/tasks", async (req, res) => {
     evidenceTypes: parsed.data.evidenceTypes ?? [],
     status: "pending",
   };
+  const [assigneeMember] = await db.select({ id: teamMembersTable.id, role: teamMembersTable.role, active: teamMembersTable.active }).from(teamMembersTable).where(eq(teamMembersTable.name, task.assignee));
+  if (!assigneeMember || !assigneeMember.active || assigneeMember.role !== task.assigneeRole) {
+    res.status(400).json({ error: "Responsável não encontrado." });
+    return;
+  }
+  (task as typeof task & { assigneeMemberId: string }).assigneeMemberId = assigneeMember.id;
   await db.insert(tasksTable).values(task);
   const result = await getTaskWithEvidence(task.id);
   res.status(201).json(result);
@@ -410,6 +494,7 @@ router.post("/tasks", async (req, res) => {
 
 router.post("/tasks/bulk", async (req, res) => {
   await seedPromise;
+  if (!requireAdmin(req, res)) return;
   const parsed = CreateBulkTasksBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Dados da tarefa em massa inválidos." });
@@ -450,6 +535,14 @@ router.post("/tasks/bulk", async (req, res) => {
     instructions: parsed.data.instructions,
     status: "pending",
   }));
+  for (const task of tasks) {
+    const [assigneeMember] = await db.select({ id: teamMembersTable.id, role: teamMembersTable.role, active: teamMembersTable.active }).from(teamMembersTable).where(eq(teamMembersTable.name, task.assignee));
+    if (!assigneeMember || !assigneeMember.active || assigneeMember.role !== task.assigneeRole) {
+      res.status(400).json({ error: "Responsável não encontrado." });
+      return;
+    }
+    (task as typeof task & { assigneeMemberId: string }).assigneeMemberId = assigneeMember.id;
+  }
   await db.transaction(async (tx) => {
     await tx.insert(tasksTable).values(tasks);
   });
@@ -459,6 +552,7 @@ router.post("/tasks/bulk", async (req, res) => {
 
 router.post("/tasks/recurring", async (req, res) => {
   await seedPromise;
+  if (!requireAdmin(req, res)) return;
   const parsed = CreateRecurringTasksBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Dados da repetição inválidos." });
@@ -541,6 +635,14 @@ router.post("/tasks/recurring", async (req, res) => {
       status: "pending",
     }));
   });
+  for (const task of tasks) {
+    const [assigneeMember] = await db.select({ id: teamMembersTable.id, role: teamMembersTable.role, active: teamMembersTable.active }).from(teamMembersTable).where(eq(teamMembersTable.name, task.assignee));
+    if (!assigneeMember || !assigneeMember.active || assigneeMember.role !== task.assigneeRole) {
+      res.status(400).json({ error: "Responsável não encontrado." });
+      return;
+    }
+    (task as typeof task & { assigneeMemberId: string }).assigneeMemberId = assigneeMember.id;
+  }
   await db.transaction(async (tx) => {
     await tx.insert(tasksTable).values(tasks);
   });
@@ -559,6 +661,10 @@ router.get("/tasks/:id", async (req, res) => {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
   }
+  if (!(await canAccessTask(req, task))) {
+    res.status(404).json({ error: "Tarefa não encontrada." });
+    return;
+  }
   res.json(task);
 });
 
@@ -570,16 +676,25 @@ router.patch("/tasks/:id", async (req, res) => {
     res.status(400).json({ error: "Atualização inválida." });
     return;
   }
+  const task = await getTaskWithEvidence(params.data.id);
+  if (!task || !(await canAccessTask(req, task))) {
+    res.status(404).json({ error: "Tarefa não encontrada." });
+    return;
+  }
+  if (actor(req).role !== "admin" && (!canExecuteTask(req, task) || Object.keys(body.data).some((key) => key !== "status") || !body.data.status || !["pending", "in_progress"].includes(body.data.status))) {
+    res.status(404).json({ error: "Tarefa não encontrada." });
+    return;
+  }
   await db
     .update(tasksTable)
     .set(body.data)
     .where(eq(tasksTable.id, params.data.id));
-  const task = await getTaskWithEvidence(params.data.id);
-  if (!task) {
+  const updatedTask = await getTaskWithEvidence(params.data.id);
+  if (!updatedTask) {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
   }
-  res.json(task);
+  res.json(updatedTask);
 });
 
 router.post("/tasks/:id/evidence", async (req, res) => {
@@ -595,12 +710,16 @@ router.post("/tasks/:id/evidence", async (req, res) => {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
   }
+  if (!(await canAccessTask(req, task)) || !canExecuteTask(req, task)) {
+    res.status(404).json({ error: "Tarefa não encontrada." });
+    return;
+  }
   const evidence = {
     id: `evidence-${crypto.randomUUID()}`,
     taskId: params.data.id,
     type: body.data.type,
     fileName: body.data.fileName,
-    userName: "João Mendes",
+    userName: actor(req).name,
     location: body.data.location ?? null,
   };
   await db.insert(evidencesTable).values(evidence);
@@ -626,6 +745,10 @@ router.post("/tasks/:id/complete", async (req, res) => {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
   }
+  if (!(await canAccessTask(req, task)) || !canExecuteTask(req, task)) {
+    res.status(404).json({ error: "Tarefa não encontrada." });
+    return;
+  }
   if (task.evidenceRequired && task.evidence.length === 0) {
     res.status(400).json({
       error: "Sem evidência = não concluído. Adicione a comprovação obrigatória.",
@@ -637,23 +760,31 @@ router.post("/tasks/:id/complete", async (req, res) => {
     .set({
       status: "completed",
       completedAt: new Date(),
-      completedBy: "João Mendes",
+       completedBy: actor(req).name,
     })
     .where(eq(tasksTable.id, params.data.id));
   const completed = await getTaskWithEvidence(params.data.id);
   res.json(completed);
 });
 
-router.get("/stores", async (_req, res) => {
+router.get("/stores", async (req, res) => {
   await seedPromise;
-  res.json(await db.select().from(storesTable).orderBy(desc(storesTable.execution)));
+  const ids = await scopedStoreIds(req);
+  res.json(await db.select().from(storesTable).where(ids === null ? undefined : inArray(storesTable.id, ids)).orderBy(desc(storesTable.execution)));
 });
 
 router.post("/stores", async (req, res) => {
   await seedPromise;
+  if (!requireAdmin(req, res)) return;
   const parsed = CreateStoreBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Dados da loja inválidos." });
+    return;
+  }
+  const manager = await resolveActiveMember(parsed.data.manager ?? "", "manager");
+  const supervisor = await resolveActiveMember(parsed.data.supervisor ?? "", "supervisor");
+  if (manager === undefined || supervisor === undefined) {
+    res.status(400).json({ error: "Gerente ou supervisor inválido, inativo ou ambíguo." });
     return;
   }
   const store = {
@@ -662,15 +793,19 @@ router.post("/stores", async (req, res) => {
     city: parsed.data.city,
     region: parsed.data.region,
     manager: parsed.data.manager ?? "",
+    managerMemberId: manager?.id ?? null,
     supervisor: parsed.data.supervisor ?? "",
+    supervisorMemberId: supervisor?.id ?? null,
     execution: 0,
   };
   await db.insert(storesTable).values(store);
+  if (manager) await applyMemberStoreAssignment(manager, store.id);
   res.status(201).json(store);
 });
 
 router.patch("/stores/:id", async (req, res) => {
   await seedPromise;
+  if (!requireAdmin(req, res)) return;
   const params = UpdateStoreParams.safeParse(req.params);
   const body = UpdateStoreBody.safeParse(req.body);
   if (!params.success || !body.success) {
@@ -678,17 +813,29 @@ router.patch("/stores/:id", async (req, res) => {
     return;
   }
   const [existing] = await db
-    .select({ id: storesTable.id })
+    .select()
     .from(storesTable)
     .where(eq(storesTable.id, params.data.id));
   if (!existing) {
     res.status(404).json({ error: "Loja não encontrada." });
     return;
   }
+  const managerName = body.data.manager === undefined ? existing.manager : body.data.manager;
+  const supervisorName = body.data.supervisor === undefined ? existing.supervisor : body.data.supervisor;
+  const manager = await resolveActiveMember(managerName, "manager");
+  const supervisor = await resolveActiveMember(supervisorName, "supervisor");
+  if (manager === undefined || supervisor === undefined) {
+    res.status(400).json({ error: "Gerente ou supervisor inválido, inativo ou ambíguo." });
+    return;
+  }
+  if (existing.managerMemberId && existing.managerMemberId !== manager?.id) {
+    await db.update(teamMembersTable).set({ storeId: null }).where(eq(teamMembersTable.id, existing.managerMemberId));
+  }
   await db
     .update(storesTable)
-    .set(body.data)
+    .set({ ...body.data, manager: managerName, managerMemberId: manager?.id ?? null, supervisor: supervisorName, supervisorMemberId: supervisor?.id ?? null })
     .where(eq(storesTable.id, params.data.id));
+  if (manager) await applyMemberStoreAssignment(manager, params.data.id);
   const [updated] = await db
     .select()
     .from(storesTable)
@@ -698,6 +845,7 @@ router.patch("/stores/:id", async (req, res) => {
 
 router.delete("/stores/:id", async (req, res) => {
   await seedPromise;
+  if (!requireAdmin(req, res)) return;
   const params = DeleteStoreParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "Identificador da loja inválido." });
@@ -726,6 +874,7 @@ router.delete("/stores/:id", async (req, res) => {
 
 router.get("/team-members", async (req, res) => {
   await seedPromise;
+  if (!requireAdmin(req, res)) return;
   const parsed = ListTeamMembersQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: "Filtro de equipe inválido." });
@@ -744,6 +893,7 @@ router.get("/team-members", async (req, res) => {
 
 router.post("/team-members", async (req, res) => {
   await seedPromise;
+  if (!requireAdmin(req, res)) return;
   const parsed = CreateTeamMemberBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Dados do colaborador inválidos." });
@@ -752,25 +902,40 @@ router.post("/team-members", async (req, res) => {
   const [duplicate] = await db
     .select({ id: teamMembersTable.id })
     .from(teamMembersTable)
-    .where(eq(teamMembersTable.email, parsed.data.email));
+    .where(eq(teamMembersTable.email, parsed.data.email.trim().toLowerCase()));
   if (duplicate) {
     res.status(409).json({ error: "Já existe um colaborador com este e-mail." });
+    return;
+  }
+  if (parsed.data.email.trim().toLowerCase() === "david@drogariasminasmais.com.br") {
+    res.status(403).json({ error: "A conta administrativa exclusiva não pode ser criada por esta API." });
     return;
   }
   const member = {
     id: `member-${crypto.randomUUID()}`,
     name: parsed.data.name,
-    email: parsed.data.email,
+    email: parsed.data.email.trim().toLowerCase(),
     phone: parsed.data.phone ?? "",
     role: parsed.data.role,
     storeId: parsed.data.storeId ?? null,
     active: true,
   };
+  if (member.storeId) {
+    const [store] = await db.select().from(storesTable).where(eq(storesTable.id, member.storeId));
+    if (!store) {
+      res.status(400).json({ error: "Loja não encontrada." });
+      return;
+    }
+    if (member.role === "manager" && store.managerMemberId) {
+      res.status(409).json({ error: "A loja já possui um gerente atribuído." });
+      return;
+    }
+  }
   await db.insert(teamMembersTable).values(member);
   if (member.storeId) {
     await db
       .update(storesTable)
-      .set(member.role === "manager" ? { manager: member.name } : { supervisor: member.name })
+      .set(member.role === "manager" ? { manager: member.name, managerMemberId: member.id } : { supervisor: member.name, supervisorMemberId: member.id })
       .where(eq(storesTable.id, member.storeId));
   }
   res.status(201).json({ ...member, createdAt: new Date().toISOString() });
@@ -778,6 +943,7 @@ router.post("/team-members", async (req, res) => {
 
 router.patch("/team-members/:id", async (req, res) => {
   await seedPromise;
+  if (!requireAdmin(req, res)) return;
   const params = UpdateTeamMemberParams.safeParse(req.params);
   const body = UpdateTeamMemberBody.safeParse(req.body);
   if (!params.success || !body.success) {
@@ -792,19 +958,46 @@ router.patch("/team-members/:id", async (req, res) => {
     res.status(404).json({ error: "Colaborador não encontrado." });
     return;
   }
-  if (body.data.email && body.data.email !== existing.email) {
+  if (existing.email.trim().toLowerCase() === "david@drogariasminasmais.com.br" || existing.role === "admin") {
+    res.status(403).json({ error: "A conta administrativa exclusiva não pode ser alterada." });
+    return;
+  }
+  if (body.data.email?.trim().toLowerCase() === "david@drogariasminasmais.com.br") {
+    res.status(403).json({ error: "A conta administrativa exclusiva não pode ser atribuída." });
+    return;
+  }
+  if (body.data.email && body.data.email.trim().toLowerCase() !== existing.email.trim().toLowerCase()) {
     const [duplicate] = await db
       .select({ id: teamMembersTable.id })
       .from(teamMembersTable)
-      .where(eq(teamMembersTable.email, body.data.email));
+    .where(eq(teamMembersTable.email, body.data.email.trim().toLowerCase()));
     if (duplicate) {
       res.status(409).json({ error: "Já existe um colaborador com este e-mail." });
       return;
     }
   }
+  const nextRole = body.data.role ?? existing.role;
+  const nextStoreId = body.data.storeId === undefined ? existing.storeId : body.data.storeId;
+  if (nextStoreId) {
+    const [store] = await db.select().from(storesTable).where(eq(storesTable.id, nextStoreId));
+    if (!store) {
+      res.status(400).json({ error: "Loja não encontrada." });
+      return;
+    }
+    if (nextRole === "manager" && store.managerMemberId && store.managerMemberId !== existing.id) {
+      res.status(409).json({ error: "A loja já possui um gerente atribuído." });
+      return;
+    }
+  }
+  if (existing.role === "manager" && existing.storeId && (nextRole !== "manager" || nextStoreId !== existing.storeId)) {
+    await db.update(storesTable).set({ manager: "", managerMemberId: null }).where(eq(storesTable.managerMemberId, existing.id));
+  }
+  if (existing.role === "supervisor" && (nextRole !== "supervisor" || nextStoreId !== existing.storeId)) {
+    await db.update(storesTable).set({ supervisor: "", supervisorMemberId: null }).where(eq(storesTable.supervisorMemberId, existing.id));
+  }
   await db
     .update(teamMembersTable)
-    .set(body.data)
+    .set({ ...body.data, ...(body.data.email ? { email: body.data.email.trim().toLowerCase() } : {}) })
     .where(eq(teamMembersTable.id, params.data.id));
   const [updated] = await db
     .select()
@@ -813,26 +1006,41 @@ router.patch("/team-members/:id", async (req, res) => {
   if (updated?.storeId) {
     await db
       .update(storesTable)
-      .set(updated.role === "manager" ? { manager: updated.name } : { supervisor: updated.name })
+      .set(updated.role === "manager" ? { manager: updated.name, managerMemberId: updated.id } : { supervisor: updated.name, supervisorMemberId: updated.id })
       .where(eq(storesTable.id, updated.storeId));
+  }
+  if (updated?.role === "supervisor") {
+    await db.update(storesTable)
+      .set({ supervisor: updated.name })
+      .where(eq(storesTable.supervisorMemberId, updated.id));
   }
   res.json(updated ? { ...updated, createdAt: updated.createdAt.toISOString() } : updated);
 });
 
 router.delete("/team-members/:id", async (req, res) => {
   await seedPromise;
+  if (!requireAdmin(req, res)) return;
   const params = DeleteTeamMemberParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "Identificador do colaborador inválido." });
     return;
   }
   const [existing] = await db
-    .select({ id: teamMembersTable.id })
+    .select()
     .from(teamMembersTable)
     .where(eq(teamMembersTable.id, params.data.id));
   if (!existing) {
     res.status(404).json({ error: "Colaborador não encontrado." });
     return;
+  }
+  if (existing.email.trim().toLowerCase() === "david@drogariasminasmais.com.br" || existing.role === "admin") {
+    res.status(403).json({ error: "A conta administrativa exclusiva não pode ser desativada." });
+    return;
+  }
+  if (existing.role === "manager") {
+    await db.update(storesTable).set({ manager: "", managerMemberId: null }).where(eq(storesTable.managerMemberId, existing.id));
+  } else if (existing.role === "supervisor") {
+    await db.update(storesTable).set({ supervisor: "", supervisorMemberId: null }).where(eq(storesTable.supervisorMemberId, existing.id));
   }
   await db
     .update(teamMembersTable)
@@ -841,11 +1049,13 @@ router.delete("/team-members/:id", async (req, res) => {
   res.status(204).send();
 });
 
-router.get("/rankings", async (_req, res) => {
+router.get("/rankings", async (req, res) => {
   await seedPromise;
+  const ids = await scopedStoreIds(req);
   const stores = await db
     .select()
     .from(storesTable)
+    .where(ids === null ? undefined : inArray(storesTable.id, ids))
     .orderBy(desc(storesTable.execution));
   res.json(
     stores.map((store, index) => ({

@@ -9,6 +9,18 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Get the authenticated member and server-authorized scope
+ */
+export const GetMeResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "email": zod.string().email(),
+  "role": zod.enum(['manager', 'supervisor', 'admin']),
+  "storeIds": zod.array(zod.string())
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */
@@ -63,6 +75,7 @@ export const ListTasksResponseItem = zod.object({
   "storeId": zod.string(),
   "storeName": zod.string(),
   "assignee": zod.string(),
+  "assigneeMemberId": zod.string().nullish(),
   "assigneeRole": zod.enum(['manager', 'supervisor']).optional(),
   "batchGroupId": zod.string().nullish(),
   "category": zod.string(),
@@ -117,6 +130,7 @@ export const CreateTaskResponse = zod.object({
   "storeId": zod.string(),
   "storeName": zod.string(),
   "assignee": zod.string(),
+  "assigneeMemberId": zod.string().nullish(),
   "assigneeRole": zod.enum(['manager', 'supervisor']).optional(),
   "batchGroupId": zod.string().nullish(),
   "category": zod.string(),
@@ -155,6 +169,7 @@ export const GetTaskResponse = zod.object({
   "storeId": zod.string(),
   "storeName": zod.string(),
   "assignee": zod.string(),
+  "assigneeMemberId": zod.string().nullish(),
   "assigneeRole": zod.enum(['manager', 'supervisor']).optional(),
   "batchGroupId": zod.string().nullish(),
   "category": zod.string(),
@@ -199,6 +214,7 @@ export const UpdateTaskResponse = zod.object({
   "storeId": zod.string(),
   "storeName": zod.string(),
   "assignee": zod.string(),
+  "assigneeMemberId": zod.string().nullish(),
   "assigneeRole": zod.enum(['manager', 'supervisor']).optional(),
   "batchGroupId": zod.string().nullish(),
   "category": zod.string(),
@@ -264,6 +280,7 @@ export const CompleteTaskResponse = zod.object({
   "storeId": zod.string(),
   "storeName": zod.string(),
   "assignee": zod.string(),
+  "assigneeMemberId": zod.string().nullish(),
   "assigneeRole": zod.enum(['manager', 'supervisor']).optional(),
   "batchGroupId": zod.string().nullish(),
   "category": zod.string(),
@@ -317,6 +334,7 @@ export const CreateBulkTasksResponseItem = zod.object({
   "storeId": zod.string(),
   "storeName": zod.string(),
   "assignee": zod.string(),
+  "assigneeMemberId": zod.string().nullish(),
   "assigneeRole": zod.enum(['manager', 'supervisor']).optional(),
   "batchGroupId": zod.string().nullish(),
   "category": zod.string(),
@@ -380,6 +398,7 @@ export const CreateRecurringTasksResponseItem = zod.object({
   "storeId": zod.string(),
   "storeName": zod.string(),
   "assignee": zod.string(),
+  "assigneeMemberId": zod.string().nullish(),
   "assigneeRole": zod.enum(['manager', 'supervisor']).optional(),
   "batchGroupId": zod.string().nullish(),
   "category": zod.string(),
@@ -515,7 +534,7 @@ export const ListTeamMembersResponseItem = zod.object({
   "name": zod.string(),
   "email": zod.string().email(),
   "phone": zod.string(),
-  "role": zod.enum(['manager', 'supervisor']),
+  "role": zod.enum(['manager', 'supervisor', 'admin']),
   "storeId": zod.string().nullable(),
   "active": zod.boolean(),
   "createdAt": zod.coerce.date()
@@ -542,7 +561,7 @@ export const CreateTeamMemberResponse = zod.object({
   "name": zod.string(),
   "email": zod.string().email(),
   "phone": zod.string(),
-  "role": zod.enum(['manager', 'supervisor']),
+  "role": zod.enum(['manager', 'supervisor', 'admin']),
   "storeId": zod.string().nullable(),
   "active": zod.boolean(),
   "createdAt": zod.coerce.date()
@@ -573,7 +592,7 @@ export const UpdateTeamMemberResponse = zod.object({
   "name": zod.string(),
   "email": zod.string().email(),
   "phone": zod.string(),
-  "role": zod.enum(['manager', 'supervisor']),
+  "role": zod.enum(['manager', 'supervisor', 'admin']),
   "storeId": zod.string().nullable(),
   "active": zod.boolean(),
   "createdAt": zod.coerce.date()

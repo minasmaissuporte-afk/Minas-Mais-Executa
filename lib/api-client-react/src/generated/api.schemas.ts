@@ -51,6 +51,7 @@ export type TeamMemberRole = typeof TeamMemberRole[keyof typeof TeamMemberRole];
 export const TeamMemberRole = {
   manager: 'manager',
   supervisor: 'supervisor',
+  admin: 'admin',
 } as const;
 
 export interface TeamMember {
@@ -63,6 +64,23 @@ export interface TeamMember {
   storeId: string | null;
   active: boolean;
   createdAt: string;
+}
+
+export type CurrentMemberRole = typeof CurrentMemberRole[keyof typeof CurrentMemberRole];
+
+
+export const CurrentMemberRole = {
+  manager: 'manager',
+  supervisor: 'supervisor',
+  admin: 'admin',
+} as const;
+
+export interface CurrentMember {
+  id: string;
+  name: string;
+  email: string;
+  role: CurrentMemberRole;
+  storeIds: string[];
 }
 
 export type TeamMemberInputRole = typeof TeamMemberInputRole[keyof typeof TeamMemberInputRole];
@@ -178,6 +196,8 @@ export interface Task {
   storeId: string;
   storeName: string;
   assignee: string;
+  /** @nullable */
+  assigneeMemberId?: string | null;
   assigneeRole?: TaskAssigneeRole;
   /** @nullable */
   batchGroupId?: string | null;

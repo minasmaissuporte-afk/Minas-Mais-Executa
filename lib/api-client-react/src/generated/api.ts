@@ -22,6 +22,7 @@ import type {
 import type {
   Activity,
   BulkTaskInput,
+  CurrentMember,
   DashboardSummary,
   Evidence,
   EvidenceInput,
@@ -69,6 +70,83 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetMeUrl = () => {
+
+
+
+
+  return `/api/me`
+}
+
+/**
+ * @summary Get the authenticated member and server-authorized scope
+ */
+export const getMe = async ( options?: Parameters<typeof customFetch>[1]): Promise<CurrentMember> => {
+
+  return customFetch<CurrentMember>(getGetMeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMeQueryKey = () => {
+    return [
+    `/api/me`
+    ] as const;
+    }
+
+
+export const getGetMeQueryOptions = <TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMe>>> = ({ signal }) => getMe({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMeQueryResult = NonNullable<Awaited<ReturnType<typeof getMe>>>
+export type GetMeQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the authenticated member and server-authorized scope
+ */
+
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getHealthCheckUrl = () => {
 

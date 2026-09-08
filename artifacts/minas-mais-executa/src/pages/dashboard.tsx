@@ -1,34 +1,23 @@
 import { ArrowUpRight, CheckCircle2, CircleAlert, ListChecks, Target } from 'lucide-react';
 import { useGetActivity, useGetDashboardSummary, useListTasks, getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getListTasksQueryKey } from '@workspace/api-client-react';
-import type { Role } from '@/components/app-shell';
-import { fallbackActivities, fallbackSummary, fallbackTasks, todayInput } from '@/lib/demo-data';
+import type { CurrentMember } from '@workspace/api-client-react';
+import { todayInput } from '@/lib/demo-data';
 import { ActivityItem, EmptyState, ErrorState, LoadingBlocks, MetricCard, TaskRow } from '@/components/ui-kit';
 import { Link } from 'wouter';
-import { useEffect, useState } from 'react';
-import { useUser } from '@clerk/react';
 
-export default function DashboardPage({ role }: { role: Role }) {
-  const { user } = useUser();
-  const [savedName, setSavedName] = useState('');
-  useEffect(() => {
-    if (!user) return;
-    setSavedName(window.localStorage.getItem(`minas-profile-name:${user.id}`) ?? '');
-    const updateName = (event: Event) => setSavedName((event as CustomEvent<string>).detail);
-    window.addEventListener('minas-profile-name-updated', updateName);
-    return () => window.removeEventListener('minas-profile-name-updated', updateName);
-  }, [user]);
-  const firstName = savedName.split(' ')[0] || user?.firstName || user?.fullName?.split(' ')[0] || 'Usuário';
+export default function DashboardPage({ member }: { member: CurrentMember }) {
+  const firstName = member.name.split(' ')[0] || 'Usuário';
   const summaryQuery = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey() } });
   const activityQuery = useGetActivity({ query: { queryKey: getGetActivityQueryKey() } });
   const tasksQuery = useListTasks(undefined, { query: { queryKey: getListTasksQueryKey() } });
-  const summary = summaryQuery.data ?? { ...fallbackSummary, role };
-  const tasks = (tasksQuery.data ?? fallbackTasks).filter((task) => task.dueDate === todayInput).slice(0, 5);
-  const activities = activityQuery.data ?? fallbackActivities;
-  const isNetwork = role !== 'manager';
+  const summary = summaryQuery.data;
+  const tasks = (tasksQuery.data ?? []).filter((task) => task.dueDate === todayInput).slice(0, 5);
+  const activities = activityQuery.data ?? [];
+  const isNetwork = member.role !== 'manager';
   return <div className="content">
-    <div className="page-head"><div><div className="eyebrow">{isNetwork ? 'Pulso da rede' : 'Acompanhamento de hoje'}</div><h1 className="page-title">{isNetwork ? 'A operação, sem ruído.' : `Bom dia, ${firstName}.`}</h1><p className="page-intro">{isNetwork ? <>Acompanhe a execução das <strong>{summary.storesCount} lojas</strong> e encontre o próximo ponto de atenção.</> : <>Sua loja está em ritmo de execução. <strong>{summary.pending} tarefas</strong> pedem atenção antes do fim do dia.</>}</p></div><Link className="button button-primary" href="/tasks" data-testid="link-open-tasks"><ListChecks size={15} /> Abrir tarefas</Link></div>
+    <div className="page-head"><div><div className="eyebrow">{isNetwork ? 'Pulso da rede' : 'Acompanhamento de hoje'}</div><h1 className="page-title">{isNetwork ? 'A operação, sem ruído.' : `Bom dia, ${firstName}.`}</h1><p className="page-intro">{isNetwork ? <>Acompanhe a execução das <strong>{summary?.storesCount ?? 0} lojas</strong> e encontre o próximo ponto de atenção.</> : <>Sua loja está em ritmo de execução. <strong>{summary?.pending ?? 0} tarefas</strong> pedem atenção antes do fim do dia.</>}</p></div><Link className="button button-primary" href="/tasks" data-testid="link-open-tasks"><ListChecks size={15} /> Abrir tarefas</Link></div>
     {summaryQuery.isError && <ErrorState onRetry={() => summaryQuery.refetch()} />}
-    <div className="stats-grid">
+    {summary && <><div className="stats-grid">
       <MetricCard label={isNetwork ? 'Execução da rede' : 'Execução da loja'} value={`${summary.execution.toFixed(1)}%`} meta="+4,2 pts esta semana" tone="stat-accent" />
       <MetricCard label="Tarefas de hoje" value={summary.tasksToday} meta={`${summary.completed} finalizadas`} />
       <MetricCard label="Em aberto" value={summary.pending} meta="Priorize as de alta" tone="stat-warn" />
@@ -41,6 +30,6 @@ export default function DashboardPage({ role }: { role: Role }) {
         <section className="card card-pad"><div className="section-heading"><div className="section-title">Atividade recente</div><span className="stat-meta">últimas 24h</span></div>{activityQuery.isLoading ? <LoadingBlocks rows={1} /> : activities.length ? <div className="activity-list">{activities.slice(0, 4).map((activity) => <ActivityItem activity={activity} key={activity.id} />)}</div> : <EmptyState icon={Target} title="Sem atividade recente" copy="As próximas movimentações aparecerão aqui." />}</section>
       </div>
     </div>
-    <div className="card card-pad" style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 12, background: 'hsl(var(--accent))' }} data-testid="dashboard-operations-note"><CircleAlert size={17} color="hsl(var(--accent-foreground))" /><div><div className="section-title" style={{ color: 'hsl(var(--accent-foreground))' }}>Regra de conclusão ativa</div><div className="stat-meta">Tarefas que pedem evidência só entram no indicador depois da comprovação.</div></div><CheckCircle2 size={18} color="hsl(var(--primary))" style={{ marginLeft: 'auto' }} /></div>
+    <div className="card card-pad" style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 12, background: 'hsl(var(--accent))' }} data-testid="dashboard-operations-note"><CircleAlert size={17} color="hsl(var(--accent-foreground))" /><div><div className="section-title" style={{ color: 'hsl(var(--accent-foreground))' }}>Regra de conclusão ativa</div><div className="stat-meta">Tarefas que pedem evidência só entram no indicador depois da comprovação.</div></div><CheckCircle2 size={18} color="hsl(var(--primary))" style={{ marginLeft: 'auto' }} /></div></>}
   </div>;
 }

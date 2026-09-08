@@ -19,7 +19,7 @@ import { ErrorState, LoadingBlocks, SearchEmpty } from '@/components/ui-kit';
 
 type Tab = 'stores' | 'team';
 type StoreDraft = { name: string; city: string; region: string; manager: string; supervisor: string };
-type MemberDraft = { name: string; email: string; phone: string; role: TeamMemberRole; storeId: string | null };
+type MemberDraft = { name: string; email: string; phone: string; role: Extract<TeamMemberRole, 'manager' | 'supervisor'>; storeId: string | null };
 
 const emptyStore: StoreDraft = { name: '', city: '', region: '', manager: '', supervisor: '' };
 const emptyMember: MemberDraft = { name: '', email: '', phone: '', role: 'manager', storeId: null };
@@ -75,7 +75,7 @@ function MemberForm({ initial, onClose, stores }: { initial?: TeamMember; onClos
   const client = useQueryClient();
   const createMember = useCreateTeamMember();
   const updateMember = useUpdateTeamMember();
-  const [draft, setDraft] = useState<MemberDraft>(initial ? { name: initial.name, email: initial.email, phone: initial.phone, role: initial.role, storeId: initial.storeId } : emptyMember);
+  const [draft, setDraft] = useState<MemberDraft>(initial ? { name: initial.name, email: initial.email, phone: initial.phone, role: initial.role as MemberDraft['role'], storeId: initial.storeId } : emptyMember);
   const [notice, setNotice] = useState('');
   const mutation = initial ? updateMember : createMember;
   const submit = (event: React.FormEvent) => {
@@ -97,7 +97,7 @@ function MemberForm({ initial, onClose, stores }: { initial?: TeamMember; onClos
         <div className="field full"><label htmlFor="member-name">Nome completo</label><input id="member-name" className="input" value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Ex.: Daniela Souza" data-testid="input-member-name" /></div>
         <div className="field"><label htmlFor="member-email">E-mail</label><input id="member-email" type="email" className="input" value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} placeholder="daniela@empresa.com" data-testid="input-member-email" /></div>
         <div className="field"><label htmlFor="member-phone">Telefone</label><input id="member-phone" className="input" value={draft.phone} onChange={(event) => setDraft((current) => ({ ...current, phone: event.target.value }))} placeholder="(31) 99999-0000" data-testid="input-member-phone" /></div>
-        <div className="field"><label htmlFor="member-role">Perfil</label><select id="member-role" className="select" value={draft.role} onChange={(event) => setDraft((current) => ({ ...current, role: event.target.value as TeamMemberRole, storeId: event.target.value === 'supervisor' ? null : current.storeId }))} data-testid="select-member-role"><option value="manager">Gerente de loja</option><option value="supervisor">Supervisor</option></select></div>
+        <div className="field"><label htmlFor="member-role">Perfil</label><select id="member-role" className="select" value={draft.role} onChange={(event) => setDraft((current) => ({ ...current, role: event.target.value as MemberDraft['role'], storeId: event.target.value === 'supervisor' ? null : current.storeId }))} data-testid="select-member-role"><option value="manager">Gerente de loja</option><option value="supervisor">Supervisor</option></select></div>
         <div className="field"><label htmlFor="member-store">Loja principal</label><select id="member-store" className="select" value={draft.storeId ?? ''} onChange={(event) => setDraft((current) => ({ ...current, storeId: event.target.value || null }))} disabled={draft.role === 'supervisor'} data-testid="select-member-store"><option value="">Sem loja definida</option>{stores.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select><span className="field-hint">{draft.role === 'supervisor' ? 'Supervisores podem acompanhar mais de uma loja.' : 'A loja principal do gerente.'}</span></div>
       </div>
       {notice && <div className="form-notice error">{notice}</div>}

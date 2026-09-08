@@ -1,14 +1,13 @@
 import { MapPin, Search, Store as StoreIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { getGetRankingsQueryKey, getListStoresQueryKey, useGetRankings, useListStores } from '@workspace/api-client-react';
-import { fallbackRankings, fallbackStores } from '@/lib/demo-data';
 import { EmptyState, ErrorState, LoadingBlocks, SearchEmpty, TrendIcon } from '@/components/ui-kit';
 
 export default function StoresPage() {
   const [search, setSearch] = useState('');
   const storesQuery = useListStores({ query: { queryKey: getListStoresQueryKey() } });
   const rankingsQuery = useGetRankings({ query: { queryKey: getGetRankingsQueryKey() } });
-  const stores = storesQuery.data ?? fallbackStores; const rankings = rankingsQuery.data ?? fallbackRankings;
+  const stores = storesQuery.data ?? []; const rankings = rankingsQuery.data ?? [];
   const filtered = useMemo(() => stores.filter((store) => `${store.name} ${store.city} ${store.manager}`.toLowerCase().includes(search.toLowerCase())), [stores, search]);
   return <div className="content"><div className="page-head"><div><div className="eyebrow">Visão da rede</div><h1 className="page-title">Lojas</h1><p className="page-intro">Uma leitura rápida de quem está executando bem e onde a operação pede presença.</p></div><div className="card" style={{ padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 9 }} data-testid="stores-count"><StoreIcon size={16} color="hsl(var(--primary))" /><span style={{ fontFamily: 'var(--app-font-mono)', fontSize: 12 }}>{stores.length}</span><span className="stat-meta">unidades visíveis</span></div></div>
     <div className="card filters"><div className="search-wrap"><Search size={15} /><input className="input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por loja, cidade ou gerente" aria-label="Buscar lojas" data-testid="input-search-stores" /></div></div>
