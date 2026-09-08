@@ -1,5 +1,5 @@
 import { BarChart3, Bell, ClipboardCheck, LayoutDashboard, LogOut, Settings2, Store as StoreIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useClerk, useUser } from '@clerk/react';
 import { initials, roleLabel } from '@/components/ui-kit';
@@ -17,8 +17,33 @@ function NavItem({ href, label, icon: Icon, testId }: { href: string; label: str
 export function AppShell({ children, role, onRoleChange }: { children: ReactNode; role: Role; onRoleChange: (role: Role) => void }) {
   const [location] = useLocation();
   const { signOut } = useClerk();
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
+  const [showNameForm, setShowNameForm] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [savingName, setSavingName] = useState(false);
   const userName = user?.fullName || user?.firstName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'Usuário';
+  useEffect(() => {
+    if (isLoaded && user && !user.firstName && !user.fullName) setShowNameForm(true);
+  }, [isLoaded, user]);
+  const saveName = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!firstName.trim()) {
+      setNameError('Informe pelo menos o primeiro nome.');
+      return;
+    }
+    setSavingName(true);
+    setNameError('');
+    try {
+      await user?.update({ firstName: firstName.trim(), lastName: lastName.trim() || undefined });
+      setShowNameForm(false);
+    } catch {
+      setNameError('Não foi possível salvar o nome. Tente novamente.');
+    } finally {
+      setSavingName(false);
+    }
+  };
   const segment = location.split('/')[1];
   const pageName = location === '/' ? 'Visão geral' : segment === 'tasks' ? 'Tarefas' : segment === 'stores' ? 'Lojas' : segment === 'cadastros' ? 'Cadastros' : 'Relatórios';
   return <div className="app-shell">
@@ -33,12 +58,27 @@ export function AppShell({ children, role, onRoleChange }: { children: ReactNode
         <NavItem href="/cadastros" label="Cadastros" icon={Settings2} testId="link-nav-cadastros" />
       </nav>
       <div className="sidebar-spacer" />
-      <div className="sidebar-footer"><div className="user-row"><span className="avatar">{initials(userName)}</span><span><div className="user-name">{userName}</div><div className="user-role">{roleLabel(role)}</div></span></div></div>
+      <div className="sidebar-footer"><button type="button" className="user-row user-profile-button" onClick={() => setShowNameForm(true)} data-testid="button-edit-profile-name"><span className="avatar">{initials(userName)}</span><span><span className="user-name">{userName}</span><span className="user-role">{roleLabel(role)}</span></span></button></div>
     </aside>
     <main className="main-area">
       <header className="topbar"><div className="breadcrumb">Minas Mais <span>/</span> <strong>{pageName}</strong></div><div className="top-actions"><select className="role-switch" value={role} onChange={(event) => onRoleChange(event.target.value as Role)} aria-label="Selecionar papel de demonstração" data-testid="select-role"><option value="manager">Gerente de loja</option><option value="supervisor">Supervisão</option><option value="admin">Administração</option></select><button className="icon-button" aria-label="Notificações" data-testid="button-notifications"><Bell size={16} /></button><button className="icon-button" aria-label="Sair" data-testid="button-logout" onClick={() => signOut({ redirectUrl: basePath || '/' })}><LogOut size={16} /></button></div></header>
       {children}
     </main>
     <nav className="mobile-nav" aria-label="Navegação móvel"><NavItem href="/" label="Início" icon={LayoutDashboard} testId="link-mobile-home" /><NavItem href="/tasks" label="Tarefas" icon={ClipboardCheck} testId="link-mobile-tasks" /><NavItem href="/stores" label="Lojas" icon={StoreIcon} testId="link-mobile-stores" /><NavItem href="/cadastros" label="Cadastros" icon={Settings2} testId="link-mobile-cadastros" /></nav>
+    {showNameForm && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="profile-name-title">
+      <div className="modal profile-modal">
+        <div className="eyebrow">Seu perfil</div>
+        <div className="modal-title" id="profile-name-title">Como devemos chamar você?</div>
+        <p className="page-intro">Esse nome aparecerá no painel e nos registros de execução.</p>
+        <form onSubmit={saveName}>
+          <div className="form-grid profile-form-grid">
+            <div className="field"><label htmlFor="profile-first-name">Primeiro nome</label><input id="profile-first-name" className="input" value={firstName} onChange={(event) => setFirstName(event.target.value)} autoFocus placeholder="David" data-testid="input-profile-first-name" /></div>
+            <div className="field"><label htmlFor="profile-last-name">Sobrenome</label><input id="profile-last-name" className="input" value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Opcional" data-testid="input-profile-last-name" /></div>
+          </div>
+          {nameError && <div className="form-notice error">{nameError}</div>}
+          <div className="form-actions"><button type="submit" className="button button-primary" disabled={savingName} data-testid="button-save-profile-name">{savingName ? 'Salvando...' : 'Salvar meu nome'}</button></div>
+        </form>
+      </div>
+    </div>}
   </div>;
 }
