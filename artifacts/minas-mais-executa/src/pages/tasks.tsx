@@ -4,7 +4,7 @@ import type { FormEvent } from 'react';
 import { getGetDashboardSummaryQueryKey, getListStoresQueryKey, getListTasksQueryKey, getListTeamMembersQueryKey, useCreateBulkTasks, useCreateTask, useListStores, useListTasks, useListTeamMembers } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { fallbackStores, fallbackTasks, todayInput } from '@/lib/demo-data';
-import { ErrorState, LoadingBlocks, SearchEmpty, TaskRow } from '@/components/ui-kit';
+import { ErrorState, LoadingBlocks, SearchEmpty, TaskGroupRow, TaskRow } from '@/components/ui-kit';
 
 function TaskCreateModal({ onClose }: { onClose: () => void }) {
   const client = useQueryClient();
@@ -62,10 +62,28 @@ export default function TasksPage() {
   const query = useListTasks(params, { query: { queryKey: getListTasksQueryKey(params) } });
   const data = query.data ?? fallbackTasks;
   const tasks = useMemo(() => data.filter((task) => `${task.title} ${task.storeName} ${task.assignee}`.toLowerCase().includes(search.toLowerCase())), [data, search]);
+  const taskRows = useMemo(() => {
+    const rows: Array<{ key: string; tasks: typeof tasks }> = [];
+    const bulkRows = new Map<string, typeof tasks>();
+    tasks.forEach((task) => {
+      if (!task.batchGroupId) {
+        rows.push({ key: task.id, tasks: [task] });
+        return;
+      }
+      const existing = bulkRows.get(task.batchGroupId);
+      if (existing) existing.push(task);
+      else {
+        const group = [task];
+        bulkRows.set(task.batchGroupId, group);
+        rows.push({ key: task.batchGroupId, tasks: group });
+      }
+    });
+    return rows;
+  }, [tasks]);
   const categories = [...new Set(data.map((task) => task.category))];
   return <div className="content"><div className="page-head"><div><div className="eyebrow">Ritmo operacional</div><h1 className="page-title">Tarefas</h1><p className="page-intro">Veja, execute e comprove cada combinado da rede.</p></div><button className="button button-primary" onClick={() => setCreating(true)} data-testid="button-new-task"><Plus size={15} /> Nova tarefa</button></div>
     <div className="card filters"><div className="search-wrap"><Search size={15} /><input className="input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por tarefa, loja ou responsável" aria-label="Buscar tarefas" data-testid="input-search-tasks" /></div><select className="select" value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filtrar por status" data-testid="select-filter-status"><option value="all">Todos os status</option><option value="pending">Pendentes</option><option value="in_progress">Em execução</option><option value="completed">Concluídas</option><option value="overdue">Atrasadas</option></select><select className="select" value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Filtrar por categoria" data-testid="select-filter-category"><option value="all">Todas categorias</option>{categories.map((item) => <option value={item} key={item}>{item}</option>)}</select><button className="icon-button" aria-label="Filtros adicionais" data-testid="button-filter"><Filter size={15} /></button></div>
-    {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isLoading ? <LoadingBlocks rows={2} /> : tasks.length ? <div className="task-list">{tasks.map((task) => <TaskRow key={task.id} task={task} />)}</div> : <div className="card"><SearchEmpty /></div>}
+    {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isLoading ? <LoadingBlocks rows={2} /> : taskRows.length ? <div className="task-list">{taskRows.map((row) => row.tasks.length > 1 ? <TaskGroupRow key={row.key} tasks={row.tasks} /> : <TaskRow key={row.key} task={row.tasks[0]} />)}</div> : <div className="card"><SearchEmpty /></div>}
     {creating && <TaskCreateModal onClose={() => setCreating(false)} />}
   </div>;
 }

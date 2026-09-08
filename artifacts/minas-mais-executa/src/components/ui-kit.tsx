@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowUpRight, Camera, CheckCircle2, ChevronRight, CircleAlert, FileVideo, Search } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Camera, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, FileVideo, Search, Store } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
 import type { Activity, Task } from '@workspace/api-client-react';
 import { Link } from 'wouter';
@@ -47,6 +47,23 @@ export function TaskRow({ task }: { task: Task }) {
     </Link>
     <PriorityPill priority={task.priority} /><span className="task-time">{task.dueTime}</span><ChevronRight size={15} color="hsl(var(--muted-foreground))" />
   </div>;
+}
+export function TaskGroupRow({ tasks }: { tasks: Task[] }) {
+  const first = tasks[0];
+  if (!first) return null;
+  const statuses = new Set(tasks.map((task) => task.status));
+  const groupStatus = statuses.size === 1 ? first.status : 'in_progress';
+  return <details className="task-group" data-testid={`group-task-${first.batchGroupId}`}>
+    <summary className="task-row task-group-summary">
+      <span className={`task-status-dot dot-${groupStatus}`} aria-hidden="true" />
+      <span className="task-main">
+        <span className="task-title">{first.title}</span>
+        <span className="task-sub"><Store size={13} /> Todas as lojas · {tasks.length} unidades · Clique para acompanhar</span>
+      </span>
+      <PriorityPill priority={first.priority} /><span className="task-time">{first.dueTime}</span><ChevronDown className="task-group-chevron" size={15} />
+    </summary>
+    <div className="task-group-items">{tasks.map((task) => <TaskRow key={task.id} task={task} />)}</div>
+  </details>;
 }
 export function ActivityItem({ activity }: { activity: Activity }) {
   return <div className="activity-item" data-testid={`activity-${activity.id}`}><span className={`activity-mark mark-${activity.tone}`} /><div><div className="activity-title">{activity.title}</div><div className="activity-detail">{activity.detail}</div><div className="activity-date">{formatDate(activity.createdAt)} · {formatTime(activity.createdAt)}</div></div></div>;

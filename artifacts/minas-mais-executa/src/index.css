@@ -121,3 +121,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .bulk-task-note{margin-top:13px;padding:11px 12px;border-radius:8px;color:hsl(var(--primary));background:hsl(166 35% 92%);font-size:10px;line-height:1.5}
 .user-profile-button{width:100%;padding:0;cursor:pointer;border:0;color:inherit;background:transparent;text-align:left}.user-profile-button:hover .user-name{text-decoration:underline}
 .profile-modal{width:min(510px,100%)}.profile-modal .page-intro{margin:8px 0 20px}.profile-form-grid{margin-top:4px}
+.task-group{overflow:hidden;border-radius:var(--radius)}
+.task-group>summary{cursor:pointer;list-style:none}
+.task-group>summary::-webkit-details-marker{display:none}
+.task-group-summary .task-sub{display:flex;align-items:center;gap:5px}
+.task-group-chevron{color:hsl(var(--muted-foreground));transition:transform 160ms ease}
+.task-group[open] .task-group-chevron{transform:rotate(180deg)}
+.task-group-items{margin-left:22px;padding:4px 0 4px 10px;border-left:2px solid hsl(var(--primary)/.18)}
