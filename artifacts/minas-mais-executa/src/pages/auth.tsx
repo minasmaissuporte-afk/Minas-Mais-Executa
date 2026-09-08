@@ -4,13 +4,13 @@ import type { ReactNode } from 'react';
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 const appearance = {
   variables: {
-    colorPrimary: 'hsl(166 53% 33%)', colorForeground: 'hsl(210 35% 16%)', colorMutedForeground: 'hsl(211 13% 45%)',
-    colorBackground: 'hsl(43 32% 95%)', colorInput: 'hsl(43 38% 99%)', borderRadius: '0.72rem', fontFamily: 'DM Sans, sans-serif',
+    colorPrimary: 'hsl(1 73% 47%)', colorForeground: 'hsl(0 0% 15%)', colorMutedForeground: 'hsl(0 0% 42%)',
+    colorBackground: 'hsl(0 0% 95%)', colorInput: 'hsl(0 0% 100%)', borderRadius: '0.72rem', fontFamily: 'DM Sans, sans-serif',
   },
   elements: {
     rootBox: 'w-full flex justify-center', cardBox: 'bg-transparent w-full max-w-[440px]', card: '!shadow-none !border-0 !bg-transparent',
-    footer: '!shadow-none !border-0 !bg-transparent', formButtonPrimary: 'bg-[hsl(166_53%_33%)] hover:bg-[hsl(166_53%_28%)]',
-    footerActionLink: 'text-[hsl(166_53%_33%)]', formFieldInput: 'border-[hsl(39_23%_84%)]',
+    footer: '!shadow-none !border-0 !bg-transparent', formButtonPrimary: 'bg-[hsl(1_73%_47%)] hover:bg-[hsl(1_73%_40%)]',
+    footerActionLink: 'text-[hsl(1_73%_47%)]', formFieldInput: 'border-[hsl(0_0%_82%)]',
   },
 };
 

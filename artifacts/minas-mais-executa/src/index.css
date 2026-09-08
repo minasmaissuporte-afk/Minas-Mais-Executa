@@ -29,23 +29,23 @@
 }
 
 :root {
-  --background: 42 32% 95%;
-  --foreground: 210 35% 16%;
-  --border: 39 23% 84%;
-  --input: 39 23% 84%;
-  --ring: 167 52% 35%;
-  --card: 43 38% 99%;
-  --card-foreground: 210 35% 16%;
-  --primary: 166 53% 33%;
-  --primary-foreground: 43 38% 98%;
-  --secondary: 31 91% 58%;
-  --secondary-foreground: 210 35% 16%;
-  --muted: 40 22% 89%;
-  --muted-foreground: 211 13% 45%;
-  --accent: 30 82% 90%;
-  --accent-foreground: 20 62% 28%;
-  --destructive: 4 67% 47%;
-  --destructive-foreground: 43 38% 98%;
+  --background: 0 0% 95%;
+  --foreground: 0 0% 15%;
+  --border: 0 0% 82%;
+  --input: 0 0% 82%;
+  --ring: 1 73% 47%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 15%;
+  --primary: 1 73% 47%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 22%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 89%;
+  --muted-foreground: 0 0% 42%;
+  --accent: 0 72% 94%;
+  --accent-foreground: 1 73% 35%;
+  --destructive: 1 73% 47%;
+  --destructive-foreground: 0 0% 100%;
   --app-font-sans: 'DM Sans', sans-serif;
   --app-font-display: 'Bricolage Grotesque', sans-serif;
   --app-font-mono: 'Space Mono', monospace;
@@ -141,3 +141,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .weekday-picker span{display:grid;place-items:center;min-width:40px;height:34px;padding:0 8px;border:1px solid hsl(var(--border));border-radius:8px;color:hsl(var(--muted-foreground));background:hsl(var(--card));font-size:9px;font-weight:700}
 .weekday-picker label.selected span{border-color:hsl(var(--primary));color:hsl(var(--primary-foreground));background:hsl(var(--primary))}
 @media (max-width:700px){.recurrence-fields{grid-template-columns:1fr}}
+.sidebar,.execution-card,.detail-hero,.mobile-nav{background:hsl(0 0% 18%)}
+.brand-mark,.avatar,.nav-item.active{color:hsl(var(--primary-foreground));background:hsl(var(--primary))}
+.topbar{background:hsl(0 0% 98%/.9)}
+.task-row{background:hsl(var(--card))}
+.task-row:hover{border-color:hsl(var(--primary)/.55)}
+.button-primary:hover{background:hsl(1 73% 40%)}
+.login-page{background:hsl(0 0% 18%)}
+.login-brand{background:linear-gradient(145deg,hsl(0 0% 13%),hsl(0 0% 26%))}
