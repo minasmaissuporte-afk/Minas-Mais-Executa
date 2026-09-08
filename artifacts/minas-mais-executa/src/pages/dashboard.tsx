@@ -1,7 +1,7 @@
 import { ArrowUpRight, CheckCircle2, CircleAlert, ListChecks, Target } from 'lucide-react';
 import { useGetActivity, useGetDashboardSummary, useListTasks, getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getListTasksQueryKey } from '@workspace/api-client-react';
 import type { Role } from '@/components/app-shell';
-import { fallbackActivities, fallbackSummary, fallbackTasks } from '@/lib/demo-data';
+import { fallbackActivities, fallbackSummary, fallbackTasks, todayInput } from '@/lib/demo-data';
 import { ActivityItem, EmptyState, ErrorState, LoadingBlocks, MetricCard, TaskRow } from '@/components/ui-kit';
 import { Link } from 'wouter';
 import { useEffect, useState } from 'react';
@@ -20,9 +20,9 @@ export default function DashboardPage({ role }: { role: Role }) {
   const firstName = savedName.split(' ')[0] || user?.firstName || user?.fullName?.split(' ')[0] || 'Usuário';
   const summaryQuery = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey() } });
   const activityQuery = useGetActivity({ query: { queryKey: getGetActivityQueryKey() } });
-  const tasksQuery = useListTasks({ status: 'pending' }, { query: { queryKey: getListTasksQueryKey({ status: 'pending' }) } });
+  const tasksQuery = useListTasks(undefined, { query: { queryKey: getListTasksQueryKey() } });
   const summary = summaryQuery.data ?? { ...fallbackSummary, role };
-  const tasks = (tasksQuery.data ?? fallbackTasks).slice(0, 5);
+  const tasks = (tasksQuery.data ?? fallbackTasks).filter((task) => task.dueDate === todayInput).slice(0, 5);
   const activities = activityQuery.data ?? fallbackActivities;
   const isNetwork = role !== 'manager';
   return <div className="content">
@@ -35,7 +35,7 @@ export default function DashboardPage({ role }: { role: Role }) {
       <MetricCard label="Atrasadas" value={summary.overdue} meta="Requer ação imediata" tone="stat-alert" />
     </div>
     <div className="dashboard-grid">
-      <section className="card card-pad"><div className="section-heading"><div><div className="section-title">Fila de execução</div><div className="stat-meta">O que precisa acontecer agora</div></div><Link href="/tasks" className="section-link" data-testid="link-view-all-tasks">Ver todas <ArrowUpRight size={13} /></Link></div>{tasksQuery.isLoading ? <LoadingBlocks rows={2} /> : tasks.length ? <div className="task-stack">{tasks.map((task) => <TaskRow key={task.id} task={task} />)}</div> : <EmptyState title="Tudo em dia" copy="Nenhuma tarefa pendente neste momento." />}</section>
+      <section className="card card-pad"><div className="section-heading"><div><div className="section-title">Fila de execução</div><div className="stat-meta">Verde: concluída · Vermelho: ainda não concluída</div></div><Link href="/tasks" className="section-link" data-testid="link-view-all-tasks">Ver todas <ArrowUpRight size={13} /></Link></div>{tasksQuery.isLoading ? <LoadingBlocks rows={2} /> : tasks.length ? <div className="task-stack">{tasks.map((task) => <TaskRow key={task.id} task={task} showResult />)}</div> : <EmptyState title="Sem tarefas hoje" copy="As tarefas do dia aparecerão aqui." />}</section>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <section className="card card-pad execution-card"><div className="section-heading"><div className="section-title">Ritmo da operação</div><span className="muted" style={{ fontSize: 9 }}>hoje</span></div><div className="execution-number">{summary.execution.toFixed(1)}<small>%</small></div><div className="muted" style={{ margin: '6px 0 13px', fontSize: 10 }}>Meta diária: 90%</div><div className="progress-track"><div className="progress-fill" style={{ width: `${Math.min(summary.execution, 100)}%` }} /></div></section>
         <section className="card card-pad"><div className="section-heading"><div className="section-title">Atividade recente</div><span className="stat-meta">últimas 24h</span></div>{activityQuery.isLoading ? <LoadingBlocks rows={1} /> : activities.length ? <div className="activity-list">{activities.slice(0, 4).map((activity) => <ActivityItem activity={activity} key={activity.id} />)}</div> : <EmptyState icon={Target} title="Sem atividade recente" copy="As próximas movimentações aparecerão aqui." />}</section>

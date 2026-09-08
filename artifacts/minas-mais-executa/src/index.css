@@ -163,3 +163,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .podium-2{background:hsl(0 0% 96%)}
 .podium-3 .rank,.podium-3 .score{color:hsl(25 58% 40%)}
 .podium-3{background:hsl(25 58% 95%)}
+.task-row-result.result-completed{border-color:hsl(145 42% 72%);background:hsl(145 45% 91%)}
+.task-row-result.result-completed:hover{border-color:hsl(145 58% 42%)}
+.task-row-result.result-open{border-color:hsl(1 62% 78%);background:hsl(1 73% 94%)}
+.task-row-result.result-open:hover{border-color:hsl(1 73% 55%)}
