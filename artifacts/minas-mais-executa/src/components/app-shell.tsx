@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useClerk, useUser } from '@clerk/react';
 import { initials, roleLabel } from '@/components/ui-kit';
+import { PwaInstallPrompt } from '@/components/pwa-install-prompt';
 
 export type Role = 'manager' | 'supervisor' | 'admin';
 
@@ -76,6 +77,7 @@ export function AppShell({ children, role, onRoleChange }: { children: ReactNode
       {children}
     </main>
     <nav className="mobile-nav" aria-label="Navegação móvel"><NavItem href="/" label="Início" icon={LayoutDashboard} testId="link-mobile-home" /><NavItem href="/tasks" label="Tarefas" icon={ClipboardCheck} testId="link-mobile-tasks" /><NavItem href="/stores" label="Lojas" icon={StoreIcon} testId="link-mobile-stores" /><NavItem href="/cadastros" label="Cadastros" icon={Settings2} testId="link-mobile-cadastros" /></nav>
+    <PwaInstallPrompt />
     {showNameForm && <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="profile-name-title">
       <div className="modal profile-modal">
         <div className="eyebrow">Seu perfil</div>
