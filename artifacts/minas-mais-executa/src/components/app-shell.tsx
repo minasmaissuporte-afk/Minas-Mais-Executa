@@ -23,9 +23,14 @@ export function AppShell({ children, role, onRoleChange }: { children: ReactNode
   const [lastName, setLastName] = useState('');
   const [nameError, setNameError] = useState('');
   const [savingName, setSavingName] = useState(false);
-  const userName = user?.fullName || user?.firstName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'Usuário';
+  const [savedName, setSavedName] = useState('');
+  const profileNameKey = user ? `minas-profile-name:${user.id}` : '';
+  const userName = savedName || user?.fullName || user?.firstName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'Usuário';
   useEffect(() => {
-    if (isLoaded && user && !user.firstName && !user.fullName) setShowNameForm(true);
+    if (!isLoaded || !user) return;
+    const localName = window.localStorage.getItem(`minas-profile-name:${user.id}`) ?? '';
+    setSavedName(localName);
+    if (!localName && !user.firstName && !user.fullName) setShowNameForm(true);
   }, [isLoaded, user]);
   const saveName = async (event: FormEvent) => {
     event.preventDefault();
@@ -35,11 +40,17 @@ export function AppShell({ children, role, onRoleChange }: { children: ReactNode
     }
     setSavingName(true);
     setNameError('');
+    const completedName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
     try {
-      await user?.update({ firstName: firstName.trim(), lastName: lastName.trim() || undefined });
+      if (profileNameKey) window.localStorage.setItem(profileNameKey, completedName);
+      setSavedName(completedName);
+      window.dispatchEvent(new CustomEvent('minas-profile-name-updated', { detail: completedName }));
+      try {
+        await user?.update({ firstName: firstName.trim(), lastName: lastName.trim() || undefined });
+      } catch {
+        // O perfil local mantém a identificação quando o tenant não permite editar o nome.
+      }
       setShowNameForm(false);
-    } catch {
-      setNameError('Não foi possível salvar o nome. Tente novamente.');
     } finally {
       setSavingName(false);
     }

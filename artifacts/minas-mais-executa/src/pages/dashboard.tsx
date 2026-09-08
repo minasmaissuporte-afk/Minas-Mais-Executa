@@ -4,11 +4,20 @@ import type { Role } from '@/components/app-shell';
 import { fallbackActivities, fallbackSummary, fallbackTasks } from '@/lib/demo-data';
 import { ActivityItem, EmptyState, ErrorState, LoadingBlocks, MetricCard, TaskRow } from '@/components/ui-kit';
 import { Link } from 'wouter';
+import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/react';
 
 export default function DashboardPage({ role }: { role: Role }) {
   const { user } = useUser();
-  const firstName = user?.firstName || user?.fullName?.split(' ')[0] || 'Usuário';
+  const [savedName, setSavedName] = useState('');
+  useEffect(() => {
+    if (!user) return;
+    setSavedName(window.localStorage.getItem(`minas-profile-name:${user.id}`) ?? '');
+    const updateName = (event: Event) => setSavedName((event as CustomEvent<string>).detail);
+    window.addEventListener('minas-profile-name-updated', updateName);
+    return () => window.removeEventListener('minas-profile-name-updated', updateName);
+  }, [user]);
+  const firstName = savedName.split(' ')[0] || user?.firstName || user?.fullName?.split(' ')[0] || 'Usuário';
   const summaryQuery = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey() } });
   const activityQuery = useGetActivity({ query: { queryKey: getGetActivityQueryKey() } });
   const tasksQuery = useListTasks({ status: 'pending' }, { query: { queryKey: getListTasksQueryKey({ status: 'pending' }) } });
