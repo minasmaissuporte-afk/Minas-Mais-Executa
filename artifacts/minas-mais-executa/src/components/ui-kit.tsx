@@ -39,8 +39,8 @@ export function StatusPill({ status }: { status: string }) {
 export function PriorityPill({ priority }: { priority: string }) {
   return <span className={`priority priority-${priority}`} data-testid={`priority-pill-${priority}`}>{priorityLabel(priority)}</span>;
 }
-export function TaskRow({ task, showResult = false }: { task: Task; showResult?: boolean }) {
-  return <div className={`task-row${showResult ? ` task-row-result result-${task.status === 'completed' ? 'completed' : 'open'}` : ''}`} data-testid={`row-task-${task.id}`}>
+export function TaskRow({ task }: { task: Task }) {
+  return <div className={`task-row task-row-result result-${task.status === 'completed' ? 'completed' : 'open'}`} data-testid={`row-task-${task.id}`}>
     <span className={`task-status-dot dot-${task.status}`} aria-hidden="true" />
     <Link href={`/tasks/${task.id}`} className="task-main" data-testid={`link-task-${task.id}`}>
       <div className="task-title">{task.title}</div><div className="task-sub">{task.category} · {task.storeName} · {task.assigneeRole === 'supervisor' ? 'Supervisor: ' : ''}{task.assignee}</div>
@@ -53,8 +53,9 @@ export function TaskGroupRow({ tasks }: { tasks: Task[] }) {
   if (!first) return null;
   const statuses = new Set(tasks.map((task) => task.status));
   const groupStatus = statuses.size === 1 ? first.status : 'in_progress';
+  const resultStatus = tasks.every((task) => task.status === 'completed') ? 'completed' : 'open';
   return <details className="task-group" data-testid={`group-task-${first.batchGroupId}`}>
-    <summary className="task-row task-group-summary">
+    <summary className={`task-row task-row-result result-${resultStatus} task-group-summary`}>
       <span className={`task-status-dot dot-${groupStatus}`} aria-hidden="true" />
       <span className="task-main">
         <span className="task-title">{first.title}</span>
