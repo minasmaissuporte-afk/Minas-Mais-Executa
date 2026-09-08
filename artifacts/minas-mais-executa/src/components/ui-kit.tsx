@@ -5,7 +5,13 @@ import { Link } from 'wouter';
 
 export function formatDate(date?: string | null) {
   if (!date) return 'Hoje';
-  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(new Date(date));
+  const value = /^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T12:00:00` : date;
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(new Date(value));
+}
+export function formatFullDate(date?: string | null) {
+  if (!date) return '—';
+  const value = /^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T12:00:00` : date;
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value));
 }
 export function formatTime(date?: string | null) {
   if (!date) return '';
@@ -44,6 +50,7 @@ export function TaskRow({ task }: { task: Task }) {
     <span className={`task-status-dot dot-${task.status}`} aria-hidden="true" />
     <Link href={`/tasks/${task.id}`} className="task-main" data-testid={`link-task-${task.id}`}>
       <div className="task-title">{task.title}</div><div className="task-sub">{task.category} · {task.storeName} · {task.assigneeRole === 'supervisor' ? 'Supervisor: ' : ''}{task.assignee}</div>
+      <div className="task-dates">Criada em {formatFullDate(task.createdAt)} · Executar em {formatFullDate(task.dueDate)} às {task.dueTime}</div>
     </Link>
     <PriorityPill priority={task.priority} /><span className="task-time">{task.dueTime}</span><ChevronRight size={15} color="hsl(var(--muted-foreground))" />
   </div>;
@@ -60,6 +67,7 @@ export function TaskGroupRow({ tasks }: { tasks: Task[] }) {
       <span className="task-main">
         <span className="task-title">{first.title}</span>
         <span className="task-sub"><Store size={13} /> Todas as lojas · {tasks.length} unidades · Clique para acompanhar</span>
+        <span className="task-dates">Criada em {formatFullDate(first.createdAt)} · Executar em {formatFullDate(first.dueDate)} às {first.dueTime}</span>
       </span>
       <PriorityPill priority={first.priority} /><span className="task-time">{first.dueTime}</span><ChevronDown className="task-group-chevron" size={15} />
     </summary>

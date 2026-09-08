@@ -65,7 +65,9 @@ export const GetActivityResponse = zod.array(GetActivityResponseItem)
 export const ListTasksQueryParams = zod.object({
   "status": zod.coerce.string().optional(),
   "category": zod.coerce.string().optional(),
-  "storeId": zod.coerce.string().optional()
+  "storeId": zod.coerce.string().optional(),
+  "dateFrom": zod.date().optional().describe('Include tasks scheduled on or after this date'),
+  "dateTo": zod.date().optional().describe('Include tasks scheduled on or before this date')
 })
 
 export const ListTasksResponseItem = zod.object({
@@ -82,6 +84,7 @@ export const ListTasksResponseItem = zod.object({
   "priority": zod.enum(['low', 'medium', 'high']),
   "dueDate": zod.coerce.date(),
   "dueTime": zod.string(),
+  "createdAt": zod.coerce.date(),
   "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
@@ -138,6 +141,7 @@ export const CreateTaskResponse = zod.object({
   "priority": zod.enum(['low', 'medium', 'high']),
   "dueDate": zod.coerce.date(),
   "dueTime": zod.string(),
+  "createdAt": zod.coerce.date(),
   "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
@@ -178,6 +182,7 @@ export const GetTaskResponse = zod.object({
   "priority": zod.enum(['low', 'medium', 'high']),
   "dueDate": zod.coerce.date(),
   "dueTime": zod.string(),
+  "createdAt": zod.coerce.date(),
   "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
@@ -224,6 +229,7 @@ export const UpdateTaskResponse = zod.object({
   "priority": zod.enum(['low', 'medium', 'high']),
   "dueDate": zod.coerce.date(),
   "dueTime": zod.string(),
+  "createdAt": zod.coerce.date(),
   "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
@@ -295,6 +301,7 @@ export const CompleteTaskResponse = zod.object({
   "priority": zod.enum(['low', 'medium', 'high']),
   "dueDate": zod.coerce.date(),
   "dueTime": zod.string(),
+  "createdAt": zod.coerce.date(),
   "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
@@ -350,6 +357,7 @@ export const CreateBulkTasksResponseItem = zod.object({
   "priority": zod.enum(['low', 'medium', 'high']),
   "dueDate": zod.coerce.date(),
   "dueTime": zod.string(),
+  "createdAt": zod.coerce.date(),
   "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
@@ -415,6 +423,7 @@ export const CreateRecurringTasksResponseItem = zod.object({
   "priority": zod.enum(['low', 'medium', 'high']),
   "dueDate": zod.coerce.date(),
   "dueTime": zod.string(),
+  "createdAt": zod.coerce.date(),
   "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
@@ -618,6 +627,16 @@ export const DeleteTeamMemberParams = zod.object({
 })
 
 export const DeleteTeamMemberResponse = zod.void()
+
+
+/**
+ * @summary Permanently delete a manager or supervisor without task history
+ */
+export const PermanentlyDeleteTeamMemberParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const PermanentlyDeleteTeamMemberResponse = zod.void()
 
 
 /**

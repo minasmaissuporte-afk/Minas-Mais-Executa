@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import {
   AddTaskEvidenceBody,
   AddTaskEvidenceParams,
@@ -493,7 +493,11 @@ router.get("/activity", async (req, res) => {
 
 router.get("/tasks", async (req, res) => {
   await seedPromise;
-  const parsed = ListTasksQueryParams.safeParse(req.query);
+  const parsed = ListTasksQueryParams.safeParse({
+    ...req.query,
+    dateFrom: req.query.dateFrom ? new Date(String(req.query.dateFrom)) : undefined,
+    dateTo: req.query.dateTo ? new Date(String(req.query.dateTo)) : undefined,
+  });
   if (!parsed.success) {
     res.status(400).json({ error: "Filtros inválidos." });
     return;
@@ -504,6 +508,12 @@ router.get("/tasks", async (req, res) => {
     filters.push(eq(tasksTable.category, parsed.data.category));
   }
   if (parsed.data.storeId) filters.push(eq(tasksTable.storeId, parsed.data.storeId));
+  if (parsed.data.dateFrom) {
+    filters.push(gte(tasksTable.dueDate, parsed.data.dateFrom.toISOString().slice(0, 10)));
+  }
+  if (parsed.data.dateTo) {
+    filters.push(lte(tasksTable.dueDate, parsed.data.dateTo.toISOString().slice(0, 10)));
+  }
   const storeIds = await scopedStoreIds(req);
   if (storeIds !== null) {
     if (!storeIds.length || (parsed.data.storeId && !storeIds.includes(parsed.data.storeId))) {
@@ -553,7 +563,20 @@ router.post("/tasks", async (req, res) => {
     return;
   }
   (task as typeof task & { assigneeMemberId: string }).assigneeMemberId = assigneeMember.id;
-  await db.insert(tasksTable).values(task);
+  const inserted = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"team-member:" + assigneeMember.id}))`);
+    const [available] = await tx
+      .select({ id: teamMembersTable.id })
+      .from(teamMembersTable)
+      .where(and(eq(teamMembersTable.id, assigneeMember.id), eq(teamMembersTable.active, true)));
+    if (!available) return false;
+    await tx.insert(tasksTable).values(task);
+    return true;
+  });
+  if (!inserted) {
+    res.status(409).json({ error: "O responsável não está mais disponível. Atualize a página e escolha outro." });
+    return;
+  }
   const result = await getTaskWithEvidence(task.id);
   res.status(201).json(result);
 });
@@ -613,9 +636,23 @@ router.post("/tasks/bulk", async (req, res) => {
     }
     (task as typeof task & { assigneeMemberId: string }).assigneeMemberId = assigneeMember.id;
   }
-  await db.transaction(async (tx) => {
+  const inserted = await db.transaction(async (tx) => {
+    const assigneeIds = [...new Set(tasks.map((task) => (task as typeof task & { assigneeMemberId: string }).assigneeMemberId))].sort();
+    for (const assigneeId of assigneeIds) {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"team-member:" + assigneeId}))`);
+    }
+    const available = await tx
+      .select({ id: teamMembersTable.id })
+      .from(teamMembersTable)
+      .where(and(inArray(teamMembersTable.id, assigneeIds), eq(teamMembersTable.active, true)));
+    if (available.length !== assigneeIds.length) return false;
     await tx.insert(tasksTable).values(tasks);
+    return true;
   });
+  if (!inserted) {
+    res.status(409).json({ error: "Um dos responsáveis não está mais disponível. Atualize a página e tente novamente." });
+    return;
+  }
   const created = await Promise.all(tasks.map((task) => getTaskWithEvidence(task.id)));
   res.status(201).json(created.filter(Boolean));
 });
@@ -717,9 +754,23 @@ router.post("/tasks/recurring", async (req, res) => {
     }
     (task as typeof task & { assigneeMemberId: string }).assigneeMemberId = assigneeMember.id;
   }
-  await db.transaction(async (tx) => {
+  const inserted = await db.transaction(async (tx) => {
+    const assigneeIds = [...new Set(tasks.map((task) => (task as typeof task & { assigneeMemberId: string }).assigneeMemberId))].sort();
+    for (const assigneeId of assigneeIds) {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"team-member:" + assigneeId}))`);
+    }
+    const available = await tx
+      .select({ id: teamMembersTable.id })
+      .from(teamMembersTable)
+      .where(and(inArray(teamMembersTable.id, assigneeIds), eq(teamMembersTable.active, true)));
+    if (available.length !== assigneeIds.length) return false;
     await tx.insert(tasksTable).values(tasks);
+    return true;
   });
+  if (!inserted) {
+    res.status(409).json({ error: "Um dos responsáveis não está mais disponível. Atualize a página e tente novamente." });
+    return;
+  }
   const created = await Promise.all(tasks.map((task) => getTaskWithEvidence(task.id)));
   res.status(201).json(created.filter(Boolean));
 });
@@ -1129,6 +1180,62 @@ router.delete("/team-members/:id", async (req, res) => {
     .update(teamMembersTable)
     .set({ active: false, storeId: null })
     .where(eq(teamMembersTable.id, params.data.id));
+  res.status(204).send();
+});
+
+router.delete("/team-members/:id/permanent", async (req, res) => {
+  await seedPromise;
+  if (!requireAdmin(req, res)) return;
+  const params = DeleteTeamMemberParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Identificador do colaborador inválido." });
+    return;
+  }
+  const outcome = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"team-member:" + params.data.id}))`);
+    const [existing] = await tx
+      .select()
+      .from(teamMembersTable)
+      .where(eq(teamMembersTable.id, params.data.id));
+    if (!existing) return "missing" as const;
+    if (existing.email.trim().toLowerCase() === "david@drogariasminasmais.com.br" || existing.role === "admin") {
+      return "protected" as const;
+    }
+    const linkedTasks = await tx
+      .select({ id: tasksTable.id })
+      .from(tasksTable)
+      .where(or(
+        eq(tasksTable.assigneeMemberId, existing.id),
+        and(
+          isNull(tasksTable.assigneeMemberId),
+          sql`lower(trim(${tasksTable.assignee})) = ${existing.name.trim().toLowerCase()}`,
+        ),
+      ))
+      .limit(1);
+    if (linkedTasks.length) return "history" as const;
+    await tx.update(storesTable)
+      .set({ manager: "", managerMemberId: null })
+      .where(eq(storesTable.managerMemberId, existing.id));
+    await tx.update(storesTable)
+      .set({ supervisor: "", supervisorMemberId: null })
+      .where(eq(storesTable.supervisorMemberId, existing.id));
+    await tx.delete(teamMembersTable).where(eq(teamMembersTable.id, existing.id));
+    return "deleted" as const;
+  });
+  if (outcome === "missing") {
+    res.status(404).json({ error: "Colaborador não encontrado." });
+    return;
+  }
+  if (outcome === "protected") {
+    res.status(403).json({ error: "A conta administrativa exclusiva não pode ser excluída." });
+    return;
+  }
+  if (outcome === "history") {
+    res.status(409).json({
+      error: "Este colaborador possui histórico de tarefas. Desative-o para preservar a auditoria.",
+    });
+    return;
+  }
   res.status(204).send();
 });
 

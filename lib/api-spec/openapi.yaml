@@ -92,6 +92,18 @@ paths:
           in: query
           schema:
             type: string
+        - name: dateFrom
+          in: query
+          description: Include tasks scheduled on or after this date
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          description: Include tasks scheduled on or before this date
+          schema:
+            type: string
+            format: date
       responses:
         "200":
           description: Tasks
@@ -355,6 +367,18 @@ paths:
       responses:
         "204":
           description: Team member deactivated
+  /team-members/{id}/permanent:
+    delete:
+      operationId: permanentlyDeleteTeamMember
+      tags: [team]
+      summary: Permanently delete a manager or supervisor without task history
+      parameters:
+        - $ref: "#/components/parameters/TeamMemberId"
+      responses:
+        "204":
+          description: Team member permanently deleted
+        "409":
+          description: Team member has operational history and cannot be deleted
   /rankings:
     get:
       operationId: getRankings
@@ -583,7 +607,7 @@ components:
           type: string
     Task:
       type: object
-      required: [id, title, description, storeId, storeName, assignee, category, priority, dueDate, dueTime, status, evidenceRequired, evidence, instructions]
+      required: [id, title, description, storeId, storeName, assignee, category, priority, dueDate, dueTime, createdAt, status, evidenceRequired, evidence, instructions]
       properties:
         id:
           type: string
@@ -614,6 +638,9 @@ components:
           format: date
         dueTime:
           type: string
+        createdAt:
+          type: string
+          format: date-time
         status:
           type: string
           enum: [pending, in_progress, completed, overdue]

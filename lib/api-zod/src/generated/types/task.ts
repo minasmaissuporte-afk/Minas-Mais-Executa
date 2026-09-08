@@ -27,6 +27,7 @@ export interface Task {
   priority: TaskPriority;
   dueDate: Date;
   dueTime: string;
+  createdAt: Date;
   status: TaskStatus;
   evidenceRequired: boolean;
   evidenceTypes?: TaskEvidenceTypesItem[];

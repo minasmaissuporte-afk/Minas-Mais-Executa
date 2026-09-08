@@ -209,6 +209,7 @@ export interface Task {
   priority: TaskPriority;
   dueDate: string;
   dueTime: string;
+  createdAt: string;
   status: TaskStatus;
   evidenceRequired: boolean;
   evidenceTypes?: TaskEvidenceTypesItem[];
@@ -472,6 +473,14 @@ export type ListTasksParams = {
 status?: string;
 category?: string;
 storeId?: string;
+/**
+ * Include tasks scheduled on or after this date
+ */
+dateFrom?: string;
+/**
+ * Include tasks scheduled on or before this date
+ */
+dateTo?: string;
 };
 
 export type ListTeamMembersParams = {
