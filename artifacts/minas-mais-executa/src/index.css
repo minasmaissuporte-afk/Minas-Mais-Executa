@@ -128,3 +128,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .task-group-chevron{color:hsl(var(--muted-foreground));transition:transform 160ms ease}
 .task-group[open] .task-group-chevron{transform:rotate(180deg)}
 .task-group-items{margin-left:22px;padding:4px 0 4px 10px;border-left:2px solid hsl(var(--primary)/.18)}
+.recurrence-panel{padding:13px;border:1px solid hsl(var(--border));border-radius:10px;background:hsl(var(--muted)/.45)}
+.recurrence-toggle{display:flex;align-items:flex-start;gap:10px;cursor:pointer;text-transform:none!important;letter-spacing:0!important}
+.recurrence-toggle input{margin-top:2px;accent-color:hsl(var(--primary))}
+.recurrence-toggle span{display:flex;flex-direction:column;gap:3px}
+.recurrence-toggle strong{color:hsl(var(--foreground));font-family:var(--app-font);font-size:11px}
+.recurrence-toggle small{color:hsl(var(--muted-foreground));font-family:var(--app-font);font-size:9px;font-weight:400}
+.recurrence-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid hsl(var(--border))}
+.weekday-picker{display:flex;flex-wrap:wrap;gap:6px}
+.weekday-picker label{cursor:pointer}
+.weekday-picker input{position:absolute;opacity:0;pointer-events:none}
+.weekday-picker span{display:grid;place-items:center;min-width:40px;height:34px;padding:0 8px;border:1px solid hsl(var(--border));border-radius:8px;color:hsl(var(--muted-foreground));background:hsl(var(--card));font-size:9px;font-weight:700}
+.weekday-picker label.selected span{border-color:hsl(var(--primary));color:hsl(var(--primary-foreground));background:hsl(var(--primary))}
+@media (max-width:700px){.recurrence-fields{grid-template-columns:1fr}}

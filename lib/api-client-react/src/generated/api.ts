@@ -29,6 +29,7 @@ import type {
   ListTasksParams,
   ListTeamMembersParams,
   RankingEntry,
+  RecurringTaskInput,
   Store,
   StoreInput,
   StoreUpdate,
@@ -817,6 +818,77 @@ export const useCreateBulkTasks = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateBulkTasksMutationOptions(options));
+    }
+
+export const getCreateRecurringTasksUrl = () => {
+
+
+
+
+  return `/api/tasks/recurring`
+}
+
+/**
+ * @summary Schedule independent recurring task occurrences
+ */
+export const createRecurringTasks = async (recurringTaskInput: RecurringTaskInput, options?: Parameters<typeof customFetch>[1]): Promise<Task[]> => {
+
+  return customFetch<Task[]>(getCreateRecurringTasksUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(recurringTaskInput)
+  }
+);}
+
+
+
+
+
+export const getCreateRecurringTasksMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRecurringTasks>>, TError,{data: BodyType<RecurringTaskInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createRecurringTasks>>, TError,{data: BodyType<RecurringTaskInput>}, TContext> => {
+
+const mutationKey = ['createRecurringTasks'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRecurringTasks>>, {data: BodyType<RecurringTaskInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createRecurringTasks(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateRecurringTasksMutationResult = NonNullable<Awaited<ReturnType<typeof createRecurringTasks>>>
+    export type CreateRecurringTasksMutationBody = BodyType<RecurringTaskInput>
+    export type CreateRecurringTasksMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Schedule independent recurring task occurrences
+ */
+export const useCreateRecurringTasks = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRecurringTasks>>, TError,{data: BodyType<RecurringTaskInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createRecurringTasks>>,
+        TError,
+        {data: BodyType<RecurringTaskInput>},
+        TContext
+      > => {
+      return useMutation(getCreateRecurringTasksMutationOptions(options));
     }
 
 export const getListStoresUrl = () => {

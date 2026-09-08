@@ -5,6 +5,7 @@ import {
   AddTaskEvidenceParams,
   CompleteTaskParams,
   CreateBulkTasksBody,
+  CreateRecurringTasksBody,
   CreateTaskBody,
   GetTaskParams,
   CreateStoreBody,
@@ -449,6 +450,97 @@ router.post("/tasks/bulk", async (req, res) => {
     instructions: parsed.data.instructions,
     status: "pending",
   }));
+  await db.transaction(async (tx) => {
+    await tx.insert(tasksTable).values(tasks);
+  });
+  const created = await Promise.all(tasks.map((task) => getTaskWithEvidence(task.id)));
+  res.status(201).json(created.filter(Boolean));
+});
+
+router.post("/tasks/recurring", async (req, res) => {
+  await seedPromise;
+  const parsed = CreateRecurringTasksBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Dados da repetição inválidos." });
+    return;
+  }
+  const input = parsed.data;
+  if (input.assigneeRole === "supervisor" && !input.assignee?.trim()) {
+    res.status(400).json({ error: "Selecione o supervisor responsável." });
+    return;
+  }
+  const requestedStoreIds = [...new Set(input.storeIds)];
+  const stores = await db
+    .select()
+    .from(storesTable)
+    .where(inArray(storesTable.id, requestedStoreIds));
+  if (stores.length !== requestedStoreIds.length) {
+    res.status(400).json({ error: "Uma ou mais lojas não foram encontradas." });
+    return;
+  }
+
+  const startDate = new Date(input.dueDate);
+  const occurrenceDates: Date[] = [];
+  if (input.recurrenceMode === "daily_count") {
+    if (!input.occurrenceCount) {
+      res.status(400).json({ error: "Informe a quantidade de dias." });
+      return;
+    }
+    for (let index = 0; index < input.occurrenceCount; index += 1) {
+      const date = new Date(startDate);
+      date.setUTCDate(startDate.getUTCDate() + index);
+      occurrenceDates.push(date);
+    }
+  } else {
+    if (!input.endDate || !input.weekdays?.length) {
+      res.status(400).json({ error: "Escolha os dias da semana e a data final." });
+      return;
+    }
+    const endDate = new Date(input.endDate);
+    if (endDate < startDate) {
+      res.status(400).json({ error: "A data final deve ser posterior à data inicial." });
+      return;
+    }
+    const weekdays = new Set(input.weekdays);
+    const cursor = new Date(startDate);
+    while (cursor <= endDate && occurrenceDates.length <= 365) {
+      if (weekdays.has(cursor.getUTCDay())) occurrenceDates.push(new Date(cursor));
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    if (!occurrenceDates.length) {
+      res.status(400).json({ error: "Nenhuma ocorrência corresponde aos dias escolhidos." });
+      return;
+    }
+  }
+
+  if (occurrenceDates.length * stores.length > 10000) {
+    res.status(400).json({ error: "A repetição ultrapassa o limite de 10.000 tarefas." });
+    return;
+  }
+  const tasks = occurrenceDates.flatMap((date) => {
+    const batchGroupId = stores.length > 1 ? `batch-${crypto.randomUUID()}` : null;
+    const dueDate = date.toISOString().slice(0, 10);
+    return stores.map((store) => ({
+      id: `task-${crypto.randomUUID()}`,
+      title: input.title,
+      description: input.description,
+      storeId: store.id,
+      storeName: store.name,
+      assignee: input.assigneeRole === "supervisor"
+        ? input.assignee!.trim()
+        : store.manager || "Gerente não definido",
+      assigneeRole: input.assigneeRole,
+      batchGroupId,
+      category: input.category,
+      priority: input.priority,
+      dueDate,
+      dueTime: input.dueTime,
+      evidenceRequired: input.evidenceRequired,
+      evidenceTypes: input.evidenceTypes ?? [],
+      instructions: input.instructions,
+      status: "pending",
+    }));
+  });
   await db.transaction(async (tx) => {
     await tx.insert(tasksTable).values(tasks);
   });

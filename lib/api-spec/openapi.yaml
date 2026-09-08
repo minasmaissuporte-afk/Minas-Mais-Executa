@@ -195,6 +195,26 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Task"
+  /tasks/recurring:
+    post:
+      operationId: createRecurringTasks
+      tags: [tasks]
+      summary: Schedule independent recurring task occurrences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecurringTaskInput"
+      responses:
+        "201":
+          description: Task occurrences created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
   /stores:
     get:
       operationId: listStores
@@ -650,6 +670,61 @@ components:
             enum: [photo, video]
         instructions:
           type: string
+    RecurringTaskInput:
+      type: object
+      required: [title, description, storeIds, assigneeRole, category, priority, dueDate, dueTime, evidenceRequired, instructions, recurrenceMode]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        storeIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        assignee:
+          type: string
+        assigneeRole:
+          type: string
+          enum: [manager, supervisor]
+        category:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high]
+        dueDate:
+          type: string
+          format: date
+        dueTime:
+          type: string
+        evidenceRequired:
+          type: boolean
+        evidenceTypes:
+          type: array
+          items:
+            type: string
+            enum: [photo, video]
+        instructions:
+          type: string
+        recurrenceMode:
+          type: string
+          enum: [daily_count, weekdays_until]
+        occurrenceCount:
+          type: integer
+          minimum: 1
+          maximum: 365
+        weekdays:
+          type: array
+          uniqueItems: true
+          items:
+            type: integer
+            minimum: 0
+            maximum: 6
+        endDate:
+          type: string
+          format: date
     TaskUpdate:
       type: object
       properties:

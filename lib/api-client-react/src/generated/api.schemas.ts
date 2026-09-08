@@ -280,6 +280,68 @@ export interface BulkTaskInput {
   instructions: string;
 }
 
+export type RecurringTaskInputAssigneeRole = typeof RecurringTaskInputAssigneeRole[keyof typeof RecurringTaskInputAssigneeRole];
+
+
+export const RecurringTaskInputAssigneeRole = {
+  manager: 'manager',
+  supervisor: 'supervisor',
+} as const;
+
+export type RecurringTaskInputPriority = typeof RecurringTaskInputPriority[keyof typeof RecurringTaskInputPriority];
+
+
+export const RecurringTaskInputPriority = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+} as const;
+
+export type RecurringTaskInputEvidenceTypesItem = typeof RecurringTaskInputEvidenceTypesItem[keyof typeof RecurringTaskInputEvidenceTypesItem];
+
+
+export const RecurringTaskInputEvidenceTypesItem = {
+  photo: 'photo',
+  video: 'video',
+} as const;
+
+export type RecurringTaskInputRecurrenceMode = typeof RecurringTaskInputRecurrenceMode[keyof typeof RecurringTaskInputRecurrenceMode];
+
+
+export const RecurringTaskInputRecurrenceMode = {
+  daily_count: 'daily_count',
+  weekdays_until: 'weekdays_until',
+} as const;
+
+export interface RecurringTaskInput {
+  /** @minLength 1 */
+  title: string;
+  description: string;
+  /** @minItems 1 */
+  storeIds: string[];
+  assignee?: string;
+  assigneeRole: RecurringTaskInputAssigneeRole;
+  category: string;
+  priority: RecurringTaskInputPriority;
+  dueDate: string;
+  dueTime: string;
+  evidenceRequired: boolean;
+  evidenceTypes?: RecurringTaskInputEvidenceTypesItem[];
+  instructions: string;
+  recurrenceMode: RecurringTaskInputRecurrenceMode;
+  /**
+     * @minimum 1
+     * @maximum 365
+     */
+  occurrenceCount?: number;
+  /**
+     * @items.minimum 0
+     * @items.maximum 6
+     */
+  weekdays?: number[];
+  endDate?: string;
+}
+
 export type TaskUpdateStatus = typeof TaskUpdateStatus[keyof typeof TaskUpdateStatus];
 
 

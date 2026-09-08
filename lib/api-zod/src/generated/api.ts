@@ -343,6 +343,69 @@ export const CreateBulkTasksResponse = zod.array(CreateBulkTasksResponseItem)
 
 
 /**
+ * @summary Schedule independent recurring task occurrences
+ */
+
+
+export const createRecurringTasksBodyOccurrenceCountMax = 365;
+
+export const createRecurringTasksBodyWeekdaysItemMin = 0;
+export const createRecurringTasksBodyWeekdaysItemMax = 6;
+
+
+
+export const CreateRecurringTasksBody = zod.object({
+  "title": zod.string().min(1),
+  "description": zod.string(),
+  "storeIds": zod.array(zod.string()).min(1),
+  "assignee": zod.string().optional(),
+  "assigneeRole": zod.enum(['manager', 'supervisor']),
+  "category": zod.string(),
+  "priority": zod.enum(['low', 'medium', 'high']),
+  "dueDate": zod.coerce.date(),
+  "dueTime": zod.string(),
+  "evidenceRequired": zod.boolean(),
+  "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
+  "instructions": zod.string(),
+  "recurrenceMode": zod.enum(['daily_count', 'weekdays_until']),
+  "occurrenceCount": zod.number().int().min(1).max(createRecurringTasksBodyOccurrenceCountMax).optional(),
+  "weekdays": zod.array(zod.number().int().min(createRecurringTasksBodyWeekdaysItemMin).max(createRecurringTasksBodyWeekdaysItemMax)).optional(),
+  "endDate": zod.coerce.date().optional()
+})
+
+export const CreateRecurringTasksResponseItem = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "storeId": zod.string(),
+  "storeName": zod.string(),
+  "assignee": zod.string(),
+  "assigneeRole": zod.enum(['manager', 'supervisor']).optional(),
+  "batchGroupId": zod.string().nullish(),
+  "category": zod.string(),
+  "priority": zod.enum(['low', 'medium', 'high']),
+  "dueDate": zod.coerce.date(),
+  "dueTime": zod.string(),
+  "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']),
+  "evidenceRequired": zod.boolean(),
+  "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
+  "evidence": zod.array(zod.object({
+  "id": zod.string(),
+  "taskId": zod.string(),
+  "type": zod.enum(['photo', 'video']),
+  "fileName": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "userName": zod.string(),
+  "location": zod.string().nullish()
+})),
+  "instructions": zod.string(),
+  "completedAt": zod.string().nullish(),
+  "completedBy": zod.string().nullish()
+})
+export const CreateRecurringTasksResponse = zod.array(CreateRecurringTasksResponseItem)
+
+
+/**
  * @summary List stores
  */
 export const listStoresResponseExecutionMin = 0;
