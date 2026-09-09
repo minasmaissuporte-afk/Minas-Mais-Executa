@@ -1,8 +1,18 @@
 const CACHE_NAME = 'minas-mais-executa-v1';
-const APP_SHELL = ['/', '/offline.html', '/manifest.webmanifest', '/pwa-icon-192.png', '/pwa-icon-512.png'];
+
+function scopedUrl(path) {
+  return new URL(path, self.registration.scope).href;
+}
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  const appShell = [
+    scopedUrl('./'),
+    scopedUrl('./offline.html'),
+    scopedUrl('./manifest.webmanifest'),
+    scopedUrl('./pwa-icon-192.png'),
+    scopedUrl('./pwa-icon-512.png'),
+  ];
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(appShell)));
   self.skipWaiting();
 });
 
@@ -55,7 +65,7 @@ self.addEventListener('fetch', (event) => {
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(async () => (await caches.match(event.request)) || caches.match('/offline.html')),
+      fetch(event.request).catch(async () => (await caches.match(event.request)) || caches.match(scopedUrl('./offline.html'))),
     );
     return;
   }

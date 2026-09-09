@@ -6,7 +6,7 @@ interface InstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-const DISMISSED_KEY = 'minas-pwa-install-dismissed';
+const DISMISSED_KEY = 'minas-pwa-install-dismissed-v2';
 
 export function PwaInstallPrompt() {
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
