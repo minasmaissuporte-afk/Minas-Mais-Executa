@@ -1,0 +1,1 @@
+- [Push no iOS](ios-pwa-push.md) — PWAs iOS exigem permissão por ação do usuário e contexto HTTPS; restringir push a produção impede testes em previews seguros.
