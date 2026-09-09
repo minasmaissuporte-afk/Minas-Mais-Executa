@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { DashboardSummaryRole } from './dashboardSummaryRole';
+import type { DashboardSummaryStoreFulfillmentItem } from './dashboardSummaryStoreFulfillmentItem';
 
 export interface DashboardSummary {
   role: DashboardSummaryRole;
@@ -18,4 +19,5 @@ export interface DashboardSummary {
   storesCount: number;
   campaignsActive: number;
   actionPlans: number;
+  storeFulfillment: DashboardSummaryStoreFulfillmentItem[];
 }

@@ -4,7 +4,7 @@ export const todayInput = new Date().toISOString().slice(0, 10);
 
 export const fallbackSummary: DashboardSummary = {
   role: 'manager', storeName: 'Savassi 01', tasksToday: 12, completed: 7, pending: 4,
-  overdue: 1, execution: 82.4, storesCount: 38, campaignsActive: 4, actionPlans: 3,
+  overdue: 1, execution: 82.4, storesCount: 38, campaignsActive: 4, actionPlans: 3, storeFulfillment: [],
 };
 
 export const fallbackTasks: Task[] = [

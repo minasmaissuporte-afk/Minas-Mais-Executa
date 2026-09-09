@@ -1,7 +1,7 @@
 import { Filter, Plus, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { getGetDashboardSummaryQueryKey, getListStoresQueryKey, getListTasksQueryKey, getListTeamMembersQueryKey, useCreateBulkTasks, useCreateRecurringTasks, useCreateTask, useGetMe, useListStores, useListTasks, useListTeamMembers } from '@workspace/api-client-react';
+import { getGetDashboardSummaryQueryKey, getListStoresQueryKey, getListTasksQueryKey, getListTeamMembersQueryKey, useCreateBulkTasks, useCreateRecurringTasks, useCreateTask, useDeleteTask, useGetMe, useListStores, useListTasks, useListTeamMembers } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { todayInput } from '@/lib/demo-data';
 import { ErrorState, LoadingBlocks, SearchEmpty, TaskGroupRow, TaskRow } from '@/components/ui-kit';
@@ -107,6 +107,7 @@ export default function TasksPage() {
   const [search, setSearch] = useState(''); const [status, setStatus] = useState('all'); const [category, setCategory] = useState('all'); const [creating, setCreating] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const client = useQueryClient();
   const me = useGetMe();
   const canCreate = me.data?.role === 'admin';
   const params = {
@@ -116,6 +117,7 @@ export default function TasksPage() {
     dateTo: canCreate && dateTo ? dateTo : undefined,
   };
   const query = useListTasks(params, { query: { queryKey: getListTasksQueryKey(params) } });
+  const deleteTask = useDeleteTask();
   const data = (query.data ?? []).filter((task) => (canCreate && (dateFrom || dateTo)) || task.dueDate <= todayInput);
   const tasks = useMemo(() => data.filter((task) => `${task.title} ${task.storeName} ${task.assignee}`.toLowerCase().includes(search.toLowerCase())), [data, search]);
   const taskRows = useMemo(() => {
@@ -137,9 +139,18 @@ export default function TasksPage() {
     return rows;
   }, [tasks]);
   const categories = [...new Set(data.map((task) => task.category))];
+  const removeTask = (task: { id: string; title: string }) => {
+    if (!window.confirm(`Excluir definitivamente "${task.title}"? Esta ação apagará a tarefa e suas evidências.`)) return;
+    deleteTask.mutate({ id: task.id }, {
+      onSuccess: () => {
+        client.invalidateQueries({ queryKey: getListTasksQueryKey() });
+        client.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
+      },
+    });
+  };
   return <div className="content"><div className="page-head"><div><div className="eyebrow">Ritmo operacional</div><h1 className="page-title">Tarefas</h1><p className="page-intro">Veja, execute e comprove cada combinado da rede.</p></div>{canCreate && <button className="button button-primary" onClick={() => setCreating(true)} data-testid="button-new-task"><Plus size={15} /> Nova tarefa</button>}</div>
     <div className="card filters"><div className="search-wrap"><Search size={15} /><input className="input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por tarefa, loja ou responsável" aria-label="Buscar tarefas" data-testid="input-search-tasks" /></div><select className="select" value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filtrar por status" data-testid="select-filter-status"><option value="all">Todos os status</option><option value="pending">Pendentes</option><option value="in_progress">Em execução</option><option value="completed">Concluídas</option><option value="overdue">Atrasadas</option></select><select className="select" value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Filtrar por categoria" data-testid="select-filter-category"><option value="all">Todas categorias</option>{categories.map((item) => <option value={item} key={item}>{item}</option>)}</select>{canCreate && <><label className="date-filter"><span>De</span><input type="date" className="input" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} aria-label="Data inicial" data-testid="input-filter-date-from" /></label><label className="date-filter"><span>Até</span><input type="date" className="input" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} aria-label="Data final" data-testid="input-filter-date-to" /></label>{(dateFrom || dateTo) && <button className="button button-ghost" type="button" onClick={() => { setDateFrom(''); setDateTo(''); }} data-testid="button-clear-date-filter">Limpar datas</button>}</>}<button className="icon-button" aria-label="Filtros adicionais" data-testid="button-filter"><Filter size={15} /></button></div>
-    {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isLoading ? <LoadingBlocks rows={2} /> : taskRows.length ? <div className="task-list">{taskRows.map((row) => row.tasks.length > 1 ? <TaskGroupRow key={row.key} tasks={row.tasks} /> : <TaskRow key={row.key} task={row.tasks[0]} />)}</div> : <div className="card"><SearchEmpty /></div>}
+     {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isLoading ? <LoadingBlocks rows={2} /> : taskRows.length ? <div className="task-list">{taskRows.map((row) => row.tasks.length > 1 ? <TaskGroupRow key={row.key} tasks={row.tasks} onDelete={canCreate ? removeTask : undefined} /> : <TaskRow key={row.key} task={row.tasks[0]} onDelete={canCreate ? removeTask : undefined} />)}</div> : <div className="card"><SearchEmpty /></div>}
     {creating && canCreate && <TaskCreateModal onClose={() => setCreating(false)} />}
   </div>;
 }

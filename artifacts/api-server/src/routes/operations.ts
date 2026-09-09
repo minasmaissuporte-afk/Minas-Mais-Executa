@@ -39,6 +39,13 @@ const now = new Date();
 const today = now.toISOString().slice(0, 10);
 const objectStorageService = new ObjectStorageService();
 
+function currentRankingCycle() {
+  const endDate = new Date();
+  const start = new Date(endDate);
+  start.setUTCDate(start.getUTCDate() - 29);
+  return { start: start.toISOString().slice(0, 10), end: endDate.toISOString().slice(0, 10) };
+}
+
 function isNormalizedPrivateObjectPath(path: string): boolean {
   return path.startsWith("/objects/")
     && path.length > "/objects/".length
@@ -453,6 +460,8 @@ router.get("/dashboard/summary", async (req, res) => {
   const visibleTasks = visibleStoreIds === null ? tasks : tasks.filter((task) => visibleStoreIds.includes(task.storeId));
   const visibleStores = visibleStoreIds === null ? stores : stores.filter((store) => visibleStoreIds.includes(store.id));
   const todaysTasks = visibleTasks.filter((task) => task.dueDate === today);
+  const cycle = currentRankingCycle();
+  const cycleTasks = visibleTasks.filter((task) => task.dueDate >= cycle.start && task.dueDate <= cycle.end);
   const completed = todaysTasks.filter((task) => task.status === "completed").length;
   const overdue = visibleTasks.filter((task) => task.status === "overdue").length;
   const execution = todaysTasks.length
@@ -469,6 +478,14 @@ router.get("/dashboard/summary", async (req, res) => {
     storesCount: visibleStores.length,
     campaignsActive: 2,
     actionPlans: 3,
+    storeFulfillment: visibleStores.map((store) => {
+      const storeTasks = cycleTasks.filter((task) => task.storeId === store.id);
+      return {
+        storeName: store.name,
+        completed: storeTasks.filter((task) => task.status === "completed").length,
+        pending: storeTasks.filter((task) => task.status !== "completed").length,
+      };
+    }),
   });
 });
 
@@ -822,6 +839,31 @@ router.patch("/tasks/:id", async (req, res) => {
   res.json(updatedTask);
 });
 
+router.delete("/tasks/:id", async (req, res) => {
+  await seedPromise;
+  if (!requireAdmin(req, res)) return;
+  const params = GetTaskParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Identificador inválido." });
+    return;
+  }
+  const [task] = await db.select({ id: tasksTable.id }).from(tasksTable).where(eq(tasksTable.id, params.data.id));
+  if (!task) {
+    res.status(404).json({ error: "Tarefa não encontrada." });
+    return;
+  }
+  const evidence = await db
+    .select({ objectPath: evidencesTable.objectPath })
+    .from(evidencesTable)
+    .where(eq(evidencesTable.taskId, params.data.id));
+  await db.transaction(async (tx) => {
+    await tx.delete(evidencesTable).where(eq(evidencesTable.taskId, params.data.id));
+    await tx.delete(tasksTable).where(eq(tasksTable.id, params.data.id));
+  });
+  await Promise.all(evidence.filter((item) => item.objectPath).map((item) => objectStorageService.deleteObjectEntity(item.objectPath!)));
+  res.status(204).send();
+});
+
 router.post("/tasks/:id/evidence", async (req, res) => {
   await seedPromise;
   const params = AddTaskEvidenceParams.safeParse(req.params);
@@ -992,13 +1034,20 @@ router.delete("/stores/:id", async (req, res) => {
   const linkedTasks = await db
     .select({ id: tasksTable.id })
     .from(tasksTable)
-    .where(eq(tasksTable.storeId, params.data.id))
-    .limit(1);
-  if (linkedTasks.length > 0) {
-    res.status(409).json({ error: "A loja possui tarefas vinculadas e não pode ser excluída." });
-    return;
-  }
-  await db.delete(storesTable).where(eq(storesTable.id, params.data.id));
+    .where(eq(tasksTable.storeId, params.data.id));
+  const taskIds = linkedTasks.map((task) => task.id);
+  const evidence = taskIds.length
+    ? await db.select({ objectPath: evidencesTable.objectPath }).from(evidencesTable).where(inArray(evidencesTable.taskId, taskIds))
+    : [];
+  await db.transaction(async (tx) => {
+    if (taskIds.length) {
+      await tx.delete(evidencesTable).where(inArray(evidencesTable.taskId, taskIds));
+      await tx.delete(tasksTable).where(eq(tasksTable.storeId, params.data.id));
+    }
+    await tx.update(teamMembersTable).set({ storeId: null }).where(eq(teamMembersTable.storeId, params.data.id));
+    await tx.delete(storesTable).where(eq(storesTable.id, params.data.id));
+  });
+  await Promise.all(evidence.filter((item) => item.objectPath).map((item) => objectStorageService.deleteObjectEntity(item.objectPath!)));
   res.status(204).send();
 });
 
@@ -1242,6 +1291,11 @@ router.delete("/team-members/:id/permanent", async (req, res) => {
 router.get("/rankings", async (req, res) => {
   await seedPromise;
   const ids = await scopedStoreIds(req);
+  const cycle = currentRankingCycle();
+  const tasks = await db
+    .select()
+    .from(tasksTable)
+    .where(and(gte(tasksTable.dueDate, cycle.start), lte(tasksTable.dueDate, cycle.end)));
   const stores = await db
     .select()
     .from(storesTable)
@@ -1252,7 +1306,9 @@ router.get("/rankings", async (req, res) => {
       position: index + 1,
       storeName: store.name,
       manager: store.manager,
-      execution: store.execution,
+      execution: tasks.filter((task) => task.storeId === store.id).length
+        ? Math.round((tasks.filter((task) => task.storeId === store.id && task.status === "completed").length / tasks.filter((task) => task.storeId === store.id).length) * 100)
+        : 0,
       trend: index === 0 ? "up" : index === 3 ? "down" : "stable",
     })),
   );

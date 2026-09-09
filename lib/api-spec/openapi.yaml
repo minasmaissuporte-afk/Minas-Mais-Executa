@@ -165,6 +165,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Task"
+    delete:
+      operationId: deleteTask
+      tags: [tasks]
+      summary: Permanently delete an operational task
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "204":
+          description: Task and its evidence permanently deleted
+        "403":
+          description: Only the general administrator can delete tasks
   /tasks/{id}/evidence:
     post:
       operationId: addTaskEvidence
@@ -820,7 +831,7 @@ components:
           enum: [success, warning, info]
     DashboardSummary:
       type: object
-      required: [role, storeName, tasksToday, completed, pending, overdue, execution, storesCount, campaignsActive, actionPlans]
+      required: [role, storeName, tasksToday, completed, pending, overdue, execution, storesCount, campaignsActive, actionPlans, storeFulfillment]
       properties:
         role:
           type: string
@@ -843,6 +854,18 @@ components:
           type: integer
         actionPlans:
           type: integer
+        storeFulfillment:
+          type: array
+          items:
+            type: object
+            required: [storeName, completed, pending]
+            properties:
+              storeName:
+                type: string
+              completed:
+                type: integer
+              pending:
+                type: integer
     RankingEntry:
       type: object
       required: [position, storeName, manager, execution, trend]

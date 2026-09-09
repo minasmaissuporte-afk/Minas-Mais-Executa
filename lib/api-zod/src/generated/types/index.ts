@@ -16,6 +16,7 @@ export * from './currentMember';
 export * from './currentMemberRole';
 export * from './dashboardSummary';
 export * from './dashboardSummaryRole';
+export * from './dashboardSummaryStoreFulfillmentItem';
 export * from './evidence';
 export * from './evidenceInput';
 export * from './evidenceInputType';

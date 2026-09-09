@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowUpRight, Camera, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, FileVideo, Search, Store } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Camera, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, FileVideo, Search, Store, Trash2 } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
 import type { Activity, Task } from '@workspace/api-client-react';
 import { Link } from 'wouter';
@@ -45,17 +45,17 @@ export function StatusPill({ status }: { status: string }) {
 export function PriorityPill({ priority }: { priority: string }) {
   return <span className={`priority priority-${priority}`} data-testid={`priority-pill-${priority}`}>{priorityLabel(priority)}</span>;
 }
-export function TaskRow({ task }: { task: Task }) {
+export function TaskRow({ task, onDelete }: { task: Task; onDelete?: (task: Task) => void }) {
   return <div className={`task-row task-row-result result-${task.status === 'completed' ? 'completed' : 'open'}`} data-testid={`row-task-${task.id}`}>
     <span className={`task-status-dot dot-${task.status}`} aria-hidden="true" />
     <Link href={`/tasks/${task.id}`} className="task-main" data-testid={`link-task-${task.id}`}>
       <div className="task-title">{task.title}</div><div className="task-sub">{task.category} · {task.storeName} · {task.assigneeRole === 'supervisor' ? 'Supervisor: ' : ''}{task.assignee}</div>
       <div className="task-dates">Criada em {formatFullDate(task.createdAt)} · Executar em {formatFullDate(task.dueDate)} às {task.dueTime}</div>
     </Link>
-    <PriorityPill priority={task.priority} /><span className="task-time">{task.dueTime}</span><ChevronRight size={15} color="hsl(var(--muted-foreground))" />
+    <PriorityPill priority={task.priority} /><span className="task-time">{task.dueTime}</span>{onDelete && <button className="icon-button task-delete-button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onDelete(task); }} aria-label={`Excluir ${task.title}`} data-testid={`button-delete-task-${task.id}`}><Trash2 size={14} /></button>}<ChevronRight size={15} color="hsl(var(--muted-foreground))" />
   </div>;
 }
-export function TaskGroupRow({ tasks }: { tasks: Task[] }) {
+export function TaskGroupRow({ tasks, onDelete }: { tasks: Task[]; onDelete?: (task: Task) => void }) {
   const first = tasks[0];
   if (!first) return null;
   const statuses = new Set(tasks.map((task) => task.status));
@@ -71,7 +71,7 @@ export function TaskGroupRow({ tasks }: { tasks: Task[] }) {
       </span>
       <PriorityPill priority={first.priority} /><span className="task-time">{first.dueTime}</span><ChevronDown className="task-group-chevron" size={15} />
     </summary>
-    <div className="task-group-items">{tasks.map((task) => <TaskRow key={task.id} task={task} />)}</div>
+    <div className="task-group-items">{tasks.map((task) => <TaskRow key={task.id} task={task} onDelete={onDelete} />)}</div>
   </details>;
 }
 export function ActivityItem({ activity }: { activity: Activity }) {

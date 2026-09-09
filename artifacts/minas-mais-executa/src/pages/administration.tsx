@@ -126,7 +126,7 @@ export default function AdministrationPage() {
   const storeName = (storeId: string | null) => stores.find((store) => store.id === storeId)?.name ?? 'Sem loja definida';
   const removeStore = (store: Store) => {
     if (!window.confirm(`Excluir ${store.name}?`)) return;
-    deleteStore.mutate({ id: store.id }, { onSuccess: () => { client.invalidateQueries({ queryKey: getListStoresQueryKey() }); setNotice('Loja excluída.'); }, onError: () => setNotice('Esta loja não pode ser excluída porque possui tarefas vinculadas.') });
+    deleteStore.mutate({ id: store.id }, { onSuccess: () => { client.invalidateQueries({ queryKey: getListStoresQueryKey() }); client.invalidateQueries({ queryKey: getListTeamMembersQueryKey() }); setNotice('Loja, tarefas e evidências excluídas definitivamente.'); }, onError: () => setNotice('Não foi possível excluir a loja e seu histórico.') });
   };
   const removeMember = (member: TeamMember) => {
     if (!window.confirm(`Desativar ${member.name}?`)) return;

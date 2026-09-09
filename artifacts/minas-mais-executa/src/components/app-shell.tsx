@@ -1,10 +1,12 @@
 import { BarChart3, Bell, ClipboardCheck, LayoutDashboard, LogOut, Settings2, Store as StoreIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
+import { useCallback, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useClerk } from '@clerk/react';
 import type { CurrentMember } from '@workspace/api-client-react';
 import { initials, roleLabel } from '@/components/ui-kit';
 import { PwaInstallPrompt } from '@/components/pwa-install-prompt';
+import { TaskAlert } from '@/components/task-alert';
 
 export type Role = 'manager' | 'supervisor' | 'admin';
 
@@ -19,6 +21,8 @@ function NavItem({ href, label, icon: Icon, testId }: { href: string; label: str
 export function AppShell({ children, member }: { children: ReactNode; member: CurrentMember }) {
   const [location] = useLocation();
   const { signOut } = useClerk();
+  const [unreadTasks, setUnreadTasks] = useState(0);
+  const onUnreadChange = useCallback((count: number) => setUnreadTasks((current) => current + count), []);
   const userName = member.name;
   const segment = location.split('/')[1];
   const pageName = location === '/' ? 'Visão geral' : segment === 'tasks' ? 'Tarefas' : segment === 'stores' ? 'Lojas' : segment === 'cadastros' ? 'Cadastros' : 'Relatórios';
@@ -37,9 +41,10 @@ export function AppShell({ children, member }: { children: ReactNode; member: Cu
       <div className="sidebar-footer"><div className="user-row"><span className="avatar">{initials(userName)}</span><span><span className="user-name">{userName}</span><span className="user-role">{roleLabel(member.role)}</span></span></div></div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><div className="breadcrumb">Minas Mais <span>/</span> <strong>{pageName}</strong></div><div className="top-actions"><button className="icon-button" aria-label="Notificações" data-testid="button-notifications"><Bell size={16} /></button><button className="icon-button" aria-label="Sair" data-testid="button-logout" onClick={() => signOut({ redirectUrl: basePath || '/' })}><LogOut size={16} /></button></div></header>
+      <header className="topbar"><div className="breadcrumb">Minas Mais <span>/</span> <strong>{pageName}</strong></div><div className="top-actions"><button className="icon-button notification-button" aria-label="Notificações" title={unreadTasks ? `${unreadTasks} nova(s) tarefa(s)` : 'Notificações'} onClick={() => setUnreadTasks(0)} data-testid="button-notifications"><Bell size={16} />{unreadTasks > 0 && <span className="notification-badge">{unreadTasks > 9 ? '9+' : unreadTasks}</span>}</button><button className="icon-button" aria-label="Sair" data-testid="button-logout" onClick={() => signOut({ redirectUrl: basePath || '/' })}><LogOut size={16} /></button></div></header>
       {children}
     </main>
+    {member.role !== 'admin' && <TaskAlert member={member} onUnreadChange={onUnreadChange} />}
     <nav className="mobile-nav" aria-label="Navegação móvel"><NavItem href="/" label="Início" icon={LayoutDashboard} testId="link-mobile-home" /><NavItem href="/tasks" label="Tarefas" icon={ClipboardCheck} testId="link-mobile-tasks" /><NavItem href="/stores" label="Lojas" icon={StoreIcon} testId="link-mobile-stores" />{member.role === 'admin' && <NavItem href="/cadastros" label="Cadastros" icon={Settings2} testId="link-mobile-cadastros" />}</nav>
     <PwaInstallPrompt />
   </div>;

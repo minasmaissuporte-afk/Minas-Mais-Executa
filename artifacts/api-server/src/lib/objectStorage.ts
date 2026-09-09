@@ -91,24 +91,43 @@ export class ObjectStorageService {
   async downloadObject(
     file: File,
     cacheTtlSec: number = 3600,
+    rangeHeader?: string,
   ): Promise<Response> {
     const [metadata] = await file.getMetadata();
     const aclPolicy = await getObjectAclPolicy(file);
     const isPublic = aclPolicy?.visibility === 'public';
-
-    const nodeStream = file.createReadStream();
+    const size = Number(metadata.size || 0);
+    let start: number | undefined;
+    let end: number | undefined;
+    const range = rangeHeader?.match(/^bytes=(\d*)-(\d*)$/);
+    if (range && size > 0) {
+      start = range[1] ? Number(range[1]) : Math.max(0, size - Number(range[2] || 0));
+      end = range[2] ? Number(range[2]) : size - 1;
+      if (start > end || start >= size) {
+        return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}` } });
+      }
+      end = Math.min(end, size - 1);
+    }
+    const nodeStream = start !== undefined && end !== undefined
+      ? file.createReadStream({ start, end })
+      : file.createReadStream();
     const webStream = Readable.toWeb(nodeStream) as ReadableStream;
 
     const headers: Record<string, string> = {
       'Content-Type':
         (metadata.contentType as string) || 'application/octet-stream',
       'Cache-Control': `${isPublic ? 'public' : 'private'}, max-age=${cacheTtlSec}`,
+      'Content-Disposition': 'inline',
+      'Accept-Ranges': 'bytes',
     };
-    if (metadata.size) {
+    if (start !== undefined && end !== undefined) {
+      headers['Content-Length'] = String(end - start + 1);
+      headers['Content-Range'] = `bytes ${start}-${end}/${size}`;
+    } else if (metadata.size) {
       headers['Content-Length'] = String(metadata.size);
     }
 
-    return new Response(webStream, { headers });
+    return new Response(webStream, { status: start !== undefined ? 206 : 200, headers });
   }
 
   async getObjectEntityUploadURL(): Promise<string> {
@@ -157,6 +176,11 @@ export class ObjectStorageService {
       throw new ObjectNotFoundError();
     }
     return objectFile;
+  }
+
+  async deleteObjectEntity(objectPath: string): Promise<void> {
+    const objectFile = await this.getObjectEntityFile(objectPath);
+    await objectFile.delete({ ignoreNotFound: true });
   }
 
   normalizeObjectEntityPath(rawPath: string): string {

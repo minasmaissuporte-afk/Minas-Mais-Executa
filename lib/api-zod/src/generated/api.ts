@@ -42,7 +42,12 @@ export const GetDashboardSummaryResponse = zod.object({
   "execution": zod.number().int(),
   "storesCount": zod.number().int(),
   "campaignsActive": zod.number().int(),
-  "actionPlans": zod.number().int()
+  "actionPlans": zod.number().int(),
+  "storeFulfillment": zod.array(zod.object({
+  "storeName": zod.string(),
+  "completed": zod.number().int(),
+  "pending": zod.number().int()
+}))
 })
 
 
@@ -247,6 +252,16 @@ export const UpdateTaskResponse = zod.object({
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
 })
+
+
+/**
+ * @summary Permanently delete an operational task
+ */
+export const DeleteTaskParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteTaskResponse = zod.void()
 
 
 /**

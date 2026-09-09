@@ -418,6 +418,12 @@ export const DashboardSummaryRole = {
   admin: 'admin',
 } as const;
 
+export type DashboardSummaryStoreFulfillmentItem = {
+  storeName: string;
+  completed: number;
+  pending: number;
+};
+
 export interface DashboardSummary {
   role: DashboardSummaryRole;
   storeName: string;
@@ -429,6 +435,7 @@ export interface DashboardSummary {
   storesCount: number;
   campaignsActive: number;
   actionPlans: number;
+  storeFulfillment: DashboardSummaryStoreFulfillmentItem[];
 }
 
 export type RankingEntryTrend = typeof RankingEntryTrend[keyof typeof RankingEntryTrend];
