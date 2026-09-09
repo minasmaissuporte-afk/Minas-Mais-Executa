@@ -74,6 +74,36 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Activity"
+  /notifications/public-key:
+    get:
+      operationId: getPushPublicKey
+      tags: [notifications]
+      summary: Get the public key used to subscribe to Web Push
+      responses:
+        "200":
+          description: Web Push public key
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [publicKey]
+                properties:
+                  publicKey:
+                    type: string
+  /notifications/subscription:
+    post:
+      operationId: savePushSubscription
+      tags: [notifications]
+      summary: Save the authenticated user's Web Push subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushSubscriptionInput"
+      responses:
+        "204":
+          description: Subscription saved
   /tasks:
     get:
       operationId: listTasks
@@ -829,6 +859,21 @@ components:
         tone:
           type: string
           enum: [success, warning, info]
+    PushSubscriptionInput:
+      type: object
+      required: [endpoint, keys]
+      properties:
+        endpoint:
+          type: string
+          format: uri
+        keys:
+          type: object
+          required: [p256dh, auth]
+          properties:
+            p256dh:
+              type: string
+            auth:
+              type: string
     DashboardSummary:
       type: object
       required: [role, storeName, tasksToday, completed, pending, overdue, execution, storesCount, campaignsActive, actionPlans, storeFulfillment]

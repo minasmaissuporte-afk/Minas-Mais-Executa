@@ -26,9 +26,11 @@ import type {
   DashboardSummary,
   Evidence,
   EvidenceInput,
+  GetPushPublicKey200,
   HealthStatus,
   ListTasksParams,
   ListTeamMembersParams,
+  PushSubscriptionInput,
   RankingEntry,
   RecurringTaskInput,
   Store,
@@ -379,6 +381,154 @@ export function useGetActivity<TData = Awaited<ReturnType<typeof getActivity>>, 
 
 
 
+
+export const getGetPushPublicKeyUrl = () => {
+
+
+
+
+  return `/api/notifications/public-key`
+}
+
+/**
+ * @summary Get the public key used to subscribe to Web Push
+ */
+export const getPushPublicKey = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetPushPublicKey200> => {
+
+  return customFetch<GetPushPublicKey200>(getGetPushPublicKeyUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPushPublicKeyQueryKey = () => {
+    return [
+    `/api/notifications/public-key`
+    ] as const;
+    }
+
+
+export const getGetPushPublicKeyQueryOptions = <TData = Awaited<ReturnType<typeof getPushPublicKey>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPushPublicKey>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPushPublicKeyQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPushPublicKey>>> = ({ signal }) => getPushPublicKey({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPushPublicKey>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPushPublicKeyQueryResult = NonNullable<Awaited<ReturnType<typeof getPushPublicKey>>>
+export type GetPushPublicKeyQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the public key used to subscribe to Web Push
+ */
+
+export function useGetPushPublicKey<TData = Awaited<ReturnType<typeof getPushPublicKey>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPushPublicKey>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPushPublicKeyQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSavePushSubscriptionUrl = () => {
+
+
+
+
+  return `/api/notifications/subscription`
+}
+
+/**
+ * @summary Save the authenticated user's Web Push subscription
+ */
+export const savePushSubscription = async (pushSubscriptionInput: PushSubscriptionInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getSavePushSubscriptionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pushSubscriptionInput)
+  }
+);}
+
+
+
+
+
+export const getSavePushSubscriptionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof savePushSubscription>>, TError,{data: BodyType<PushSubscriptionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof savePushSubscription>>, TError,{data: BodyType<PushSubscriptionInput>}, TContext> => {
+
+const mutationKey = ['savePushSubscription'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof savePushSubscription>>, {data: BodyType<PushSubscriptionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  savePushSubscription(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SavePushSubscriptionMutationResult = NonNullable<Awaited<ReturnType<typeof savePushSubscription>>>
+    export type SavePushSubscriptionMutationBody = BodyType<PushSubscriptionInput>
+    export type SavePushSubscriptionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Save the authenticated user's Web Push subscription
+ */
+export const useSavePushSubscription = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof savePushSubscription>>, TError,{data: BodyType<PushSubscriptionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof savePushSubscription>>,
+        TError,
+        {data: BodyType<PushSubscriptionInput>},
+        TContext
+      > => {
+      return useMutation(getSavePushSubscriptionMutationOptions(options));
+    }
 
 export const getListTasksUrl = (params?: ListTasksParams,) => {
   const normalizedParams = new URLSearchParams();

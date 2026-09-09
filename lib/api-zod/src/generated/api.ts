@@ -65,6 +65,28 @@ export const GetActivityResponse = zod.array(GetActivityResponseItem)
 
 
 /**
+ * @summary Get the public key used to subscribe to Web Push
+ */
+export const GetPushPublicKeyResponse = zod.object({
+  "publicKey": zod.string()
+})
+
+
+/**
+ * @summary Save the authenticated user's Web Push subscription
+ */
+export const SavePushSubscriptionBody = zod.object({
+  "endpoint": zod.string().url(),
+  "keys": zod.object({
+  "p256dh": zod.string(),
+  "auth": zod.string()
+})
+})
+
+export const SavePushSubscriptionResponse = zod.void()
+
+
+/**
  * @summary List operational tasks
  */
 export const ListTasksQueryParams = zod.object({

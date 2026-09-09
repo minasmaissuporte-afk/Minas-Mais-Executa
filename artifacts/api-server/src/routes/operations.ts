@@ -25,6 +25,7 @@ import {
   activityTable,
   db,
   evidencesTable,
+  pushSubscriptionsTable,
   teamMembersTable,
   storesTable,
   tasksTable,
@@ -32,6 +33,7 @@ import {
 import { actor, requireAdmin } from "../middlewares/authorization";
 import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
+import { getPushPublicKey, notifyTaskAssignees } from "../lib/push";
 
 const router: IRouter = Router();
 
@@ -411,6 +413,52 @@ const seedPromise = ensureSeedData().catch((error) => {
   logger.error({ err: error }, "Failed to seed operational data");
 });
 
+router.get("/notifications/public-key", async (_req, res) => {
+  res.json({ publicKey: getPushPublicKey() });
+});
+
+router.post("/notifications/subscription", async (req, res) => {
+  const member = actor(req);
+  if (member.role !== "manager" && member.role !== "supervisor") {
+    res.status(403).json({ error: "Somente gerentes e supervisores podem registrar notificações." });
+    return;
+  }
+  const body = req.body as {
+    endpoint?: unknown;
+    keys?: { p256dh?: unknown; auth?: unknown };
+  };
+  if (
+    typeof body.endpoint !== "string"
+    || !body.endpoint
+    || typeof body.keys?.p256dh !== "string"
+    || typeof body.keys?.auth !== "string"
+  ) {
+    res.status(400).json({ error: "Subscription de push inválida." });
+    return;
+  }
+  const updatedAt = new Date();
+  await db
+    .insert(pushSubscriptionsTable)
+    .values({
+      id: `push-${crypto.randomUUID()}`,
+      memberId: member.id,
+      endpoint: body.endpoint,
+      p256dh: body.keys.p256dh,
+      auth: body.keys.auth,
+      updatedAt,
+    })
+    .onConflictDoUpdate({
+      target: pushSubscriptionsTable.endpoint,
+      set: {
+        memberId: member.id,
+        p256dh: body.keys.p256dh,
+        auth: body.keys.auth,
+        updatedAt,
+      },
+    });
+  res.status(204).send();
+});
+
 router.get("/me", async (req, res) => {
   await seedPromise;
   const member = actor(req);
@@ -595,6 +643,7 @@ router.post("/tasks", async (req, res) => {
     return;
   }
   const result = await getTaskWithEvidence(task.id);
+  await notifyTaskAssignees([{ id: task.id, title: task.title, assigneeMemberId: assigneeMember.id }]);
   res.status(201).json(result);
 });
 
@@ -671,6 +720,11 @@ router.post("/tasks/bulk", async (req, res) => {
     return;
   }
   const created = await Promise.all(tasks.map((task) => getTaskWithEvidence(task.id)));
+  await notifyTaskAssignees(tasks.map((task) => ({
+    id: task.id,
+    title: task.title,
+    assigneeMemberId: (task as typeof task & { assigneeMemberId: string }).assigneeMemberId,
+  })));
   res.status(201).json(created.filter(Boolean));
 });
 
@@ -789,6 +843,11 @@ router.post("/tasks/recurring", async (req, res) => {
     return;
   }
   const created = await Promise.all(tasks.map((task) => getTaskWithEvidence(task.id)));
+  await notifyTaskAssignees(tasks.map((task) => ({
+    id: task.id,
+    title: task.title,
+    assigneeMemberId: (task as typeof task & { assigneeMemberId: string }).assigneeMemberId,
+  })));
   res.status(201).json(created.filter(Boolean));
 });
 

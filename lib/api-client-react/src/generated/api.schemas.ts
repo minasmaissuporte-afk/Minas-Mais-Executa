@@ -409,6 +409,16 @@ export interface Activity {
   tone: ActivityTone;
 }
 
+export type PushSubscriptionInputKeys = {
+  p256dh: string;
+  auth: string;
+};
+
+export interface PushSubscriptionInput {
+  endpoint: string;
+  keys: PushSubscriptionInputKeys;
+}
+
 export type DashboardSummaryRole = typeof DashboardSummaryRole[keyof typeof DashboardSummaryRole];
 
 
@@ -475,6 +485,10 @@ export interface UploadUrlResponse {
   objectPath: string;
   metadata: UploadUrlResponseMetadata;
 }
+
+export type GetPushPublicKey200 = {
+  publicKey: string;
+};
 
 export type ListTasksParams = {
 status?: string;

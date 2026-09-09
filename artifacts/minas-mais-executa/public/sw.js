@@ -14,6 +14,40 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+self.addEventListener('push', (event) => {
+  const payload = event.data ? event.data.json() : {};
+  const notification = {
+    body: payload.body || 'Você recebeu uma nova tarefa.',
+    icon: new URL('pwa-icon-192.png', self.registration.scope).href,
+    badge: new URL('pwa-icon-192.png', self.registration.scope).href,
+    tag: payload.tag || 'minas-mais-tarefa',
+    renotify: true,
+    requireInteraction: payload.requireInteraction !== false,
+    silent: false,
+    vibrate: payload.vibrate || [300, 100, 300, 100, 500],
+    data: payload.data || {},
+  };
+  event.waitUntil(
+    self.registration.showNotification(payload.title || 'Nova tarefa prioritária', notification),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = event.notification.data?.url || '/tasks';
+  const targetUrl = new URL(target, self.registration.scope).href;
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      const existing = windows.find((client) => 'focus' in client);
+      if (existing) {
+        existing.navigate(targetUrl);
+        return existing.focus();
+      }
+      return clients.openWindow(targetUrl);
+    }),
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);

@@ -81,8 +81,23 @@ export const activityTable = pgTable("activity", {
   tone: text("tone").notNull(),
 });
 
+export const pushSubscriptionsTable = pgTable("push_subscriptions", {
+  id: text("id").primaryKey(),
+  memberId: text("member_id").notNull(),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export type Store = typeof storesTable.$inferSelect;
 export type TeamMember = typeof teamMembersTable.$inferSelect;
 export type Task = typeof tasksTable.$inferSelect;
 export type Evidence = typeof evidencesTable.$inferSelect;
 export type Activity = typeof activityTable.$inferSelect;
+export type PushSubscription = typeof pushSubscriptionsTable.$inferSelect;
