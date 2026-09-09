@@ -1,0 +1,59 @@
+Preciso de ajustes PONTUAIS no meu app já finalizado. NÃO reescreva 
+funcionalidades existentes, NÃO refatore código que já funciona, NÃO 
+altere estrutura de arquivos, banco de dados ou nomes de variáveis que 
+não sejam estritamente necessários para os itens abaixo. Faça apenas 
+edições cirúrgicas nos trechos relevantes.
+
+Antes de codar, me responda listando: quais arquivos/funções serão 
+alterados em cada item e uma frase de como vai resolver. Só depois 
+disso, com minha confirmação, comece a implementar — um item por vez, 
+na ordem abaixo.
+
+ITENS A CORRIGIR:
+
+1. PERMISSÃO DE EXCLUSÃO DE TAREFA
+   - Apenas o usuário com papel "admin geral" pode excluir tarefas.
+   - Outros perfis (gerente, supervisor, etc.) não devem ver/usar o 
+     botão de excluir nem conseguir chamar a rota/endpoint de exclusão 
+     (validar tanto no front quanto no back-end).
+
+2. VÍDEO NA SEÇÃO DE EVIDÊNCIAS
+   - O upload do vídeo já funciona, mas ele não reproduz (sem áudio/
+     sem player funcional).
+   - Verificar: formato do arquivo salvo, tag de player usada, se o 
+     áudio está sendo incluído no upload, e se o player está 
+     apontando pro caminho/URL correto do arquivo.
+   - Corrigir para que o vídeo toque normalmente, com áudio.
+
+3. ALERTA DE NOVA TAREFA
+   - Quando uma tarefa nova for atribuída a um GERENTE ou SUPERVISOR, 
+     disparar um alerta/notificação para esse usuário (definir o tipo 
+     que já exista na estrutura do app: notificação in-app, push, 
+     som, badge — use o que já estiver implementado ou o mais simples 
+     de integrar sem mexer em infraestrutura).
+
+4. GRÁFICO NO PAINEL DO ADMIN GERAL
+   - No painel de visualização do admin geral, adicionar um gráfico 
+     mostrando quais lojas cumpriram e quais não cumpriram as tarefas 
+     (ex: gráfico de barras ou pizza, lojas feitas x não feitas).
+
+5. EXPLICAÇÃO DO RANKING
+   - Me explique (em texto, sem alterar código) como o ranking de 
+     execução de tarefas funciona atualmente no sistema.
+
+6. RANKING A CADA 30 DIAS
+   - Alterar a lógica do ranking para reiniciar/recalcular a cada 
+     ciclo de 30 dias.
+
+7. TRAVA AO EXCLUIR LOJA
+   - Atualmente não é possível excluir uma loja porque existe uma 
+     restrição (chave estrangeira/vínculo) com tarefas vinculadas a 
+     ela.
+   - Ajustar para permitir a exclusão da loja mesmo havendo tarefas 
+     vinculadas (defina a melhor estratégia: excluir em cascata, 
+     desvincular tarefas, ou arquivar — pode sugerir qual é mais 
+     seguro para o meu caso antes de aplicar).
+
+IMPORTANTE: Não gere código extra, não crie funcionalidades não 
+pedidas, não altere estilos/layout fora do necessário. Seja direto e 
+eficiente no uso de tokens.
