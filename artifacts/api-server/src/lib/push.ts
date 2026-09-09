@@ -26,7 +26,7 @@ function getVapidKeys() {
     publicKey: ecdh.getPublicKey().toString("base64url"),
   };
   webpush.setVapidDetails(
-    "mailto:admin@minasmaisexecuta.local",
+    "mailto:admin@minasmaisexecuta.com",
     cachedVapidKeys.publicKey,
     cachedVapidKeys.privateKey,
   );

@@ -7,4 +7,4 @@ Em iOS/iPadOS, a permissão de notificações Web Push deve ser solicitada duran
 
 **Why:** Solicitar a permissão automaticamente durante o carregamento pode não abrir o diálogo do Safari. Além disso, um app instalado a partir do preview fica sem push se o frontend só executar o registro quando `import.meta.env.PROD` for verdadeiro.
 
-**How to apply:** Manter um botão visível para ativar notificações, tratar estados `default`, `granted` e `denied`, registrar o Service Worker em origens seguras de preview e produção e confirmar no backend que `POST /api/notifications/subscription` foi recebido antes de testar a entrega de uma nova tarefa.
+**How to apply:** Manter um botão visível para ativar notificações, tratar estados `default`, `granted` e `denied`, registrar o Service Worker em origens seguras de preview e produção e confirmar no backend que `POST /api/notifications/subscription` foi recebido antes de testar a entrega de uma nova tarefa. Para APNs, o `subject` do VAPID deve ser uma URL ou um `mailto:` com domínio válido; domínios locais como `.local` podem retornar `403 BadJwtToken`.

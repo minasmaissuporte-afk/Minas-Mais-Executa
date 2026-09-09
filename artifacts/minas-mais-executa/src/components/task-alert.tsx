@@ -145,11 +145,16 @@ export function TaskAlert({ member, onUnreadChange }: { member: CurrentMember; o
 
 async function registerPushSubscription(publicKey: string) {
   const registration = await navigator.serviceWorker.ready;
+  const applicationServerKey = urlBase64ToUint8Array(publicKey);
   let subscription = await registration.pushManager.getSubscription();
+  if (subscription && !hasMatchingApplicationServerKey(subscription, applicationServerKey)) {
+    await subscription.unsubscribe();
+    subscription = null;
+  }
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
+      applicationServerKey,
     });
   }
   const json = subscription.toJSON();
@@ -160,6 +165,13 @@ async function registerPushSubscription(publicKey: string) {
     endpoint: json.endpoint,
     keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
   });
+}
+
+function hasMatchingApplicationServerKey(subscription: PushSubscription, expectedKey: Uint8Array) {
+  const configuredKey = subscription.options.applicationServerKey;
+  if (!configuredKey) return true;
+  const actualKey = new Uint8Array(configuredKey);
+  return actualKey.length === expectedKey.length && actualKey.every((value, index) => value === expectedKey[index]);
 }
 
 function urlBase64ToUint8Array(value: string) {
