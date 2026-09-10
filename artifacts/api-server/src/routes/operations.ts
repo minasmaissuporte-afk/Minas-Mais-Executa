@@ -54,6 +54,41 @@ function currentRankingCycle() {
   return { start: start.toISOString().slice(0, 10), end: endDate.toISOString().slice(0, 10) };
 }
 
+function previousRankingCycle(currentCycle: { start: string; end: string }) {
+  const endDate = new Date(`${currentCycle.start}T00:00:00.000Z`);
+  endDate.setUTCDate(endDate.getUTCDate() - 1);
+  const startDate = new Date(endDate);
+  startDate.setUTCDate(startDate.getUTCDate() - 29);
+  return { start: startDate.toISOString().slice(0, 10), end: endDate.toISOString().slice(0, 10) };
+}
+
+function rankingPointsForElapsedMs(elapsedMs: number) {
+  const elapsedHours = elapsedMs / (60 * 60 * 1000);
+  if (elapsedHours <= 1) return 100;
+  if (elapsedHours <= 6) return 80;
+  if (elapsedHours <= 24) return 60;
+  if (elapsedHours <= 72) return 40;
+  return 20;
+}
+
+function rankingMetrics(tasks: typeof tasksTable.$inferSelect[]) {
+  const completedTasks = tasks.filter((task) => task.status === "completed" && task.completedAt);
+  const elapsedTimes = completedTasks
+    .map((task) => task.completedAt!.getTime() - task.createdAt.getTime())
+    .filter((elapsedMs) => Number.isFinite(elapsedMs) && elapsedMs >= 0);
+  const points = elapsedTimes.reduce((total, elapsedMs) => total + rankingPointsForElapsedMs(elapsedMs), 0);
+
+  return {
+    points,
+    averageExecutionMinutes: elapsedTimes.length
+      ? Math.round(elapsedTimes.reduce((total, elapsedMs) => total + elapsedMs, 0) / elapsedTimes.length / (60 * 1000))
+      : 0,
+    execution: tasks.length
+      ? Math.round((tasks.filter((task) => task.status === "completed").length / tasks.length) * 100)
+      : 0,
+  };
+}
+
 function isNormalizedPrivateObjectPath(path: string): boolean {
   return path.startsWith("/objects/")
     && path.length > "/objects/".length
@@ -1047,7 +1082,7 @@ router.post("/tasks/:id/review", async (req, res) => {
   await db
     .update(tasksTable)
     .set(body.data.decision === "approve"
-      ? { status: "completed" }
+      ? { status: "completed", completedAt: new Date() }
       : { status: "rejected", completedAt: null, completedBy: null })
     .where(eq(tasksTable.id, task.id));
   const reviewed = await getTaskWithEvidence(task.id);
@@ -1492,35 +1527,55 @@ router.delete("/team-members/:id/permanent", async (req, res) => {
 router.get("/rankings", async (req, res) => {
   await seedPromise;
   const ids = await scopedStoreIds(req);
-  const cycle = currentRankingCycle();
+  const currentCycle = currentRankingCycle();
+  const previousCycle = previousRankingCycle(currentCycle);
   const tasks = await db
     .select()
     .from(tasksTable)
-    .where(and(gte(tasksTable.dueDate, cycle.start), lte(tasksTable.dueDate, cycle.end)));
-  const visibleTasks = tasks;
+    .where(and(gte(tasksTable.dueDate, previousCycle.start), lte(tasksTable.dueDate, currentCycle.end)));
   const stores = await db
     .select()
     .from(storesTable)
-    .where(ids === null ? undefined : inArray(storesTable.id, ids))
-    .orderBy(desc(storesTable.execution));
+    .where(ids === null ? undefined : inArray(storesTable.id, ids));
+
+  const rankedStores = stores
+    .map((store) => {
+      const currentTasks = tasks.filter(
+        (task) => task.storeId === store.id && task.dueDate >= currentCycle.start && task.dueDate <= currentCycle.end,
+      );
+      const previousTasks = tasks.filter(
+        (task) => task.storeId === store.id && task.dueDate >= previousCycle.start && task.dueDate <= previousCycle.end,
+      );
+      const currentMetrics = rankingMetrics(currentTasks);
+      const previousMetrics = rankingMetrics(previousTasks);
+      const trend = currentMetrics.points > previousMetrics.points
+        ? "up"
+        : currentMetrics.points < previousMetrics.points
+          ? "down"
+          : "stable";
+
+      return {
+        storeName: store.name,
+        manager: store.manager,
+        execution: currentMetrics.execution,
+        points: currentMetrics.points,
+        averageExecutionMinutes: currentMetrics.averageExecutionMinutes,
+        trend,
+        supervisorName: store.supervisor || "Sem supervisor",
+      };
+    })
+    .sort((left, right) => right.points - left.points || left.storeName.localeCompare(right.storeName));
+
   const supervisorPositions = new Map<string, number>();
   res.json(
-    stores.map((store, index) => {
-      const supervisorName = store.supervisor || "Sem supervisor";
+    rankedStores.map((entry, index) => {
       const position = actor(req).role === "admin"
-        ? (supervisorPositions.set(supervisorName, (supervisorPositions.get(supervisorName) ?? 0) + 1), supervisorPositions.get(supervisorName)!)
+        ? (supervisorPositions.set(entry.supervisorName, (supervisorPositions.get(entry.supervisorName) ?? 0) + 1), supervisorPositions.get(entry.supervisorName)!)
         : index + 1;
-      const storeTasks = visibleTasks.filter((task) => task.storeId === store.id);
       return {
-      position,
-      storeName: store.name,
-      manager: store.manager,
-      execution: storeTasks.length
-        ? Math.round((storeTasks.filter((task) => task.status === "completed").length / storeTasks.length) * 100)
-        : 0,
-      trend: index === 0 ? "up" : index === 3 ? "down" : "stable",
-      supervisorName,
-    };
+        position,
+        ...entry,
+      };
     }),
   );
 });

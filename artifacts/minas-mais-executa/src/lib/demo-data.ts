@@ -29,5 +29,6 @@ export const fallbackStores: Store[] = [
 
 export const fallbackRankings: RankingEntry[] = fallbackStores.map((store, index) => ({
   position: index + 1, storeName: store.name, manager: store.manager, execution: store.execution,
+  points: [850, 720, 560, 420][index] ?? 0, averageExecutionMinutes: [272, 390, 615, 980][index] ?? 0,
   trend: index === 0 ? 'up' : index === 1 ? 'stable' : 'down', supervisorName: store.supervisor,
 }));

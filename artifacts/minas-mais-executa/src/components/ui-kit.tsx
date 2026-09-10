@@ -17,6 +17,15 @@ export function formatTime(date?: string | null) {
   if (!date) return '';
   return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(date));
 }
+export function formatDurationMinutes(minutes: number) {
+  if (!minutes) return '—';
+  const days = Math.floor(minutes / (24 * 60));
+  const hours = Math.floor((minutes % (24 * 60)) / 60);
+  const remainingMinutes = minutes % 60;
+  if (days) return `${days}d${hours ? ` ${hours}h` : ''}`;
+  if (hours) return `${hours}h${remainingMinutes ? `${remainingMinutes}min` : ''}`;
+  return `${remainingMinutes}min`;
+}
 export function initials(name: string) {
   return name.split(' ').slice(0, 2).map((part) => part[0]).join('').toUpperCase();
 }

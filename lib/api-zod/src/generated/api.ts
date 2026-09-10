@@ -853,7 +853,9 @@ export const GetRankingsResponseItem = zod.object({
   "position": zod.number().int(),
   "storeName": zod.string(),
   "manager": zod.string(),
-  "execution": zod.number().int(),
+  "execution": zod.number().int().describe('Legacy execution percentage retained for compatibility; not used to rank stores.'),
+  "points": zod.number().int().describe('Total speed points from completed tasks in the current 30-day cycle.'),
+  "averageExecutionMinutes": zod.number().int().describe('Average elapsed time from task creation to completion, in minutes.'),
   "trend": zod.enum(['up', 'down', 'stable']),
   "supervisorName": zod.string()
 })

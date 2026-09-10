@@ -1006,7 +1006,7 @@ components:
                 type: integer
     RankingEntry:
       type: object
-      required: [position, storeName, manager, execution, trend, supervisorName]
+      required: [position, storeName, manager, execution, points, averageExecutionMinutes, trend, supervisorName]
       properties:
         position:
           type: integer
@@ -1016,6 +1016,13 @@ components:
           type: string
         execution:
           type: integer
+          description: Legacy execution percentage retained for compatibility; not used to rank stores.
+        points:
+          type: integer
+          description: Total speed points from completed tasks in the current 30-day cycle.
+        averageExecutionMinutes:
+          type: integer
+          description: Average elapsed time from task creation to completion, in minutes.
         trend:
           type: string
           enum: [up, down, stable]

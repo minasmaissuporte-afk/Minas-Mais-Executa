@@ -525,7 +525,12 @@ export interface RankingEntry {
   position: number;
   storeName: string;
   manager: string;
+  /** Legacy execution percentage retained for compatibility; not used to rank stores. */
   execution: number;
+  /** Total speed points from completed tasks in the current 30-day cycle. */
+  points: number;
+  /** Average elapsed time from task creation to completion, in minutes. */
+  averageExecutionMinutes: number;
   trend: RankingEntryTrend;
   supervisorName: string;
 }
