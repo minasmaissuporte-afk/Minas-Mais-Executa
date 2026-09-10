@@ -1,0 +1,47 @@
+Adicione as funcionalidades abaixo ao projeto existente, SEM alterar, refatorar, redesenhar ou "melhorar" nenhuma parte do app que não seja diretamente necessária para elas. Não altere dados já existentes no banco, não mude nenhuma tela/fluxo fora do escopo descrito, e não toque no frontend fora dos pontos citados.
+
+Contexto atual do código (para não perder tempo/créditos redescobrindo):
+- authorization.ts trava o admin a um único e-mail fixo (ADMIN_EMAIL) e bloqueia criar/editar qualquer membro com role "admin".
+- tasksTable.status hoje só tem: pending / in_progress / completed / overdue. Existe um campo "notes" (texto único) na tabela.
+- scopedStoreIds já filtra dados do supervisor pelas lojas vinculadas a ele (usado em tarefas e ranking). Admin sempre vê tudo (retorna null).
+- Tarefas de supervisor já só podem ser criadas para as lojas vinculadas a ele; tarefas de admin já podem ir para qualquer loja/gerente/supervisor.
+- Já existe sistema de upload de evidências (object storage) — reaproveite.
+
+Implemente NESTA ORDEM, pois há dependência entre os itens 3 e 4:
+
+1) MODELO/EXEMPLO VISUAL DA TAREFA
+- Ao criar uma tarefa, permitir anexar opcionalmente uma imagem de modelo/exemplo a ser seguido pelo gerente (ex: supervisor cria "organizar prateleira" e anexa foto de como deve ficar).
+- Reutilize o sistema de upload já existente (mesmo fluxo usado para evidências).
+- O modelo/exemplo deve aparecer na tela da tarefa separado das evidências enviadas pelo gerente (seções distintas, sem misturar).
+- Deve funcionar em tarefa individual, em massa e recorrente, quando aplicável.
+- Altere tasksTable apenas se for necessário para armazenar a referência do arquivo (ex: um campo novo para o path do modelo). Não altere mais nada na tabela.
+
+2) ADMIN GERAL (promoção de colaborador a admin)
+- Permitir que o admin promova um colaborador já cadastrado e ativo para role "admin" pela tela de gestão de equipe já existente.
+- requireAdmin deve autorizar qualquer membro ativo com role = "admin" no banco, e não uma lista fixa de e-mails. Não criar uma nova lista fixa de e-mails — o objetivo é multi-admin de verdade, baseado no campo role já existente.
+- O admin original identificado por david@drogariasminasmais.com.br deve continuar protegido contra remoção/rebaixamento, preservando isso da forma mais simples dentro da arquitetura atual.
+- Um admin promovido tem exatamente as mesmas permissões do admin original. Não altere permissões de manager/supervisor.
+
+3) FLUXO DE CONFERÊNCIA DO SUPERVISOR (amarelo → verde, comentários, reprovação)
+- Quando o gerente conclui uma tarefa CRIADA POR SUPERVISOR, ela não deve virar "completed" direto: deve entrar em um novo status de "aguardando conferência" (ex: pending_review), exibido em amarelo no front.
+- Adicione rota para o supervisor aprovar (vira "completed"/verde) ou reprovar a tarefa, com comentário de correção obrigatório na reprovação.
+- Somente o supervisor vinculado à loja da tarefa pode aprovar/reprovar essa tarefa — valide isso no backend, não apenas esconder o botão no front.
+- Ao reprovar, a tarefa volta ao gerente com status "reprovado" (ex: rejected) e os comentários visíveis; o gerente pode executá-la novamente normalmente, podendo repetir esse ciclo mais de uma vez.
+- Comentários: NÃO sobrescrever comentários anteriores em um campo único. Se "notes" não suportar histórico, crie uma estrutura mínima de comentários vinculados à tarefa (ex: task_comments) contendo taskId, userId, message, createdAt e tipo/origem do comentário (ex: "manager_note" ou "supervisor_rejection"). Isso deve preservar o histórico completo de idas e vindas de cada tarefa.
+- Tarefas criadas pelo ADMIN continuam concluindo direto como hoje (sem passar por conferência).
+- Atualize só os componentes que já exibem status/cores de tarefa para refletir os novos estados, e exiba o histórico de comentários na tela da tarefa — sem redesenhar telas.
+
+4) VISIBILIDADE PARA O ADMIN GERAL
+- Tarefas criadas por supervisor só aparecem nas listagens/dashboard do admin geral quando status = "completed" (executada E aprovada pelo supervisor, do item 3).
+- Tarefas criadas pelo admin continuam visíveis em qualquer status, como hoje.
+- Supervisor e gerente continuam vendo tudo normalmente, sem mudança.
+
+5) RANKING DIVIDIDO POR SUPERVISOR
+- Para o admin geral, dividir o ranking em grupos por supervisor (um ranking por supervisor, com as lojas vinculadas a cada um).
+- Para o supervisor, manter o comportamento atual (só as lojas dele).
+- Ajustar apenas a rota /rankings e o componente que a renderiza para o admin. Não alterar o cálculo de execução (%) já existente, só o agrupamento/exibição.
+- Se o cálculo atual considerar tarefas executadas antes da aprovação do supervisor como concluídas, ajuste apenas esse critério para considerar concluída somente status = completed, sem mudar a fórmula percentual.
+
+IMPORTANTE:
+- Ao concluir, rode apenas os testes/typecheck necessários às alterações feitas.
+- Não faça nenhuma alteração fora do que está descrito acima.
