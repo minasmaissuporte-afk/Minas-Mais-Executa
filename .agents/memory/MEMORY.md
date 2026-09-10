@@ -1,2 +1,3 @@
 - [Push no iOS](ios-pwa-push.md) — PWAs iOS exigem permissão por ação do usuário e contexto HTTPS; restringir push a produção impede testes em previews seguros.
 - [Migrações aditivas no desenvolvimento](development-schema-migrations.md) — o drizzle push pode pedir truncamento por constraints antigas; prefira DDL aditivo quando preservar dados for requisito.
+- [Status de tarefas agrupadas](task-status-aggregation.md) — o resumo de tarefas em massa precisa priorizar reprovação e conferência antes de estados genéricos.

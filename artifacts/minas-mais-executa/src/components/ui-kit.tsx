@@ -61,7 +61,17 @@ export function TaskGroupRow({ tasks, onDelete }: { tasks: Task[]; onDelete?: (t
   const first = tasks[0];
   if (!first) return null;
   const statuses = new Set(tasks.map((task) => task.status));
-  const groupStatus = statuses.size === 1 ? first.status : 'in_progress';
+  const groupStatus = statuses.has('rejected')
+    ? 'rejected'
+    : statuses.has('pending_review')
+      ? 'pending_review'
+      : statuses.has('overdue')
+        ? 'overdue'
+        : statuses.has('in_progress')
+          ? 'in_progress'
+          : statuses.has('pending')
+            ? 'pending'
+            : 'completed';
   const resultStatus = tasks.every((task) => task.status === 'completed') ? 'completed' : 'open';
   return <details className="task-group" data-testid={`group-task-${first.batchGroupId}`}>
      <summary className={`task-row task-row-result result-${resultStatus} task-group-summary task-status-${groupStatus}`}>
@@ -71,7 +81,7 @@ export function TaskGroupRow({ tasks, onDelete }: { tasks: Task[]; onDelete?: (t
         <span className="task-sub"><Store size={13} /> Todas as lojas · {tasks.length} unidades · Clique para acompanhar</span>
         <span className="task-dates">Criada em {formatFullDate(first.createdAt)} · Executar em {formatFullDate(first.dueDate)} às {first.dueTime}</span>
       </span>
-      <PriorityPill priority={first.priority} /><span className="task-time">{first.dueTime}</span><ChevronDown className="task-group-chevron" size={15} />
+       {groupStatus === 'pending_review' && <span className="status-chip status-pending_review task-row-status-chip">Conferência</span>}{groupStatus === 'rejected' && <span className="status-chip status-rejected task-row-status-chip">Reprovada</span>}<PriorityPill priority={first.priority} /><span className="task-time">{first.dueTime}</span><ChevronDown className="task-group-chevron" size={15} />
     </summary>
     <div className="task-group-items">{tasks.map((task) => <TaskRow key={task.id} task={task} onDelete={onDelete} />)}</div>
   </details>;
