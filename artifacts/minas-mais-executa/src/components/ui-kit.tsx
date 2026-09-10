@@ -46,7 +46,7 @@ export function PriorityPill({ priority }: { priority: string }) {
   return <span className={`priority priority-${priority}`} data-testid={`priority-pill-${priority}`}>{priorityLabel(priority)}</span>;
 }
 export function TaskRow({ task, onDelete }: { task: Task; onDelete?: (task: Task) => void }) {
-  return <div className={`task-row task-row-result result-${task.status === 'completed' ? 'completed' : 'open'}`} data-testid={`row-task-${task.id}`}>
+  return <div className={`task-row task-row-result result-${task.status === 'completed' ? 'completed' : 'open'} task-status-${task.status}`} data-testid={`row-task-${task.id}`}>
     <span className={`task-status-dot dot-${task.status}`} aria-hidden="true" />
     <Link href={`/tasks/${task.id}`} className="task-main" data-testid={`link-task-${task.id}`}>
       <div className="task-title">{task.title}</div><div className="task-sub">{task.category} · {task.storeName} · {task.assigneeRole === 'supervisor' ? 'Supervisor: ' : ''}{task.assignee}</div>
@@ -62,7 +62,7 @@ export function TaskGroupRow({ tasks, onDelete }: { tasks: Task[]; onDelete?: (t
   const groupStatus = statuses.size === 1 ? first.status : 'in_progress';
   const resultStatus = tasks.every((task) => task.status === 'completed') ? 'completed' : 'open';
   return <details className="task-group" data-testid={`group-task-${first.batchGroupId}`}>
-    <summary className={`task-row task-row-result result-${resultStatus} task-group-summary`}>
+     <summary className={`task-row task-row-result result-${resultStatus} task-group-summary task-status-${groupStatus}`}>
       <span className={`task-status-dot dot-${groupStatus}`} aria-hidden="true" />
       <span className="task-main">
         <span className="task-title">{first.title}</span>

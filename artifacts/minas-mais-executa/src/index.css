@@ -178,6 +178,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .task-row-result.result-completed:hover{border-color:hsl(145 58% 42%)}
 .task-row-result.result-open{border-color:hsl(1 62% 78%);background:hsl(1 73% 94%)}
 .task-row-result.result-open:hover{border-color:hsl(1 73% 55%)}
+.task-row.task-status-pending_review{border-color:hsl(43 78% 65%);background:hsl(43 92% 88%)}
+.task-row.task-status-pending_review:hover{border-color:hsl(43 78% 47%)}
+.task-row.task-status-rejected{border-color:hsl(1 62% 70%);background:hsl(1 73% 91%)}
+.task-row.task-status-rejected:hover{border-color:hsl(1 73% 48%)}
+.dot-pending_review{background:hsl(43 78% 47%)}
+.dot-rejected{background:hsl(1 73% 48%)}
+.task-status-banner{display:flex;flex-direction:column;gap:4px;margin-top:18px;padding:12px 14px;border:1px solid;border-radius:9px;font-size:10px;line-height:1.45}
+.task-status-banner strong{font-size:11px}
+.task-status-banner-pending_review{border-color:hsl(43 78% 65%);color:hsl(31 69% 27%);background:hsl(43 92% 88%)}
+.task-status-banner-rejected{border-color:hsl(1 62% 70%);color:hsl(1 62% 35%);background:hsl(1 73% 91%)}
+.rejection-feedback{border-color:hsl(1 62% 70%);background:hsl(1 73% 98%)}
 .pwa-install{position:fixed;right:18px;bottom:18px;z-index:80;width:min(440px,calc(100vw - 32px));display:flex;align-items:center;gap:12px;padding:13px 44px 13px 13px;border:1px solid hsl(var(--border));border-radius:14px;background:hsl(var(--card));box-shadow:0 16px 45px hsl(0 0% 0%/.16)}
 .pwa-install-mark{width:42px;height:42px;display:grid;place-items:center;flex:0 0 auto;border-radius:11px;background:hsl(var(--primary));color:white;font-weight:800}
 .pwa-install-copy{min-width:0;flex:1}.pwa-install-copy strong,.pwa-install-copy span{display:block}.pwa-install-copy strong{font-size:11px}.pwa-install-copy span{margin-top:3px;color:hsl(var(--muted-foreground));font-size:9px;line-height:1.4}
