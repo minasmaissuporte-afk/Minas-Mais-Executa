@@ -418,12 +418,10 @@ async function getTaskWithEvidence(id: string) {
 
 router.get("/dashboard/summary", async (req, res) => {
   await seedPromise;
-  const [tasks, stores, origins] = await Promise.all([
+  const [tasks, stores] = await Promise.all([
     db.select().from(tasksTable),
     db.select().from(storesTable),
-    db.select().from(taskOriginsTable),
   ]);
-  const originByTaskId = new Map(origins.map((origin) => [origin.taskId, origin]));
   const visibleStoreIds = await scopedStoreIds(req);
   const visibleTasks = visibleStoreIds === null ? tasks : tasks.filter((task) => visibleStoreIds.includes(task.storeId));
   const visibleStores = visibleStoreIds === null ? stores : stores.filter((store) => visibleStoreIds.includes(store.id));
@@ -1427,8 +1425,6 @@ router.get("/rankings", async (req, res) => {
     .select()
     .from(tasksTable)
     .where(and(gte(tasksTable.dueDate, cycle.start), lte(tasksTable.dueDate, cycle.end)));
-  const origins = await db.select().from(taskOriginsTable);
-  const originByTaskId = new Map(origins.map((origin) => [origin.taskId, origin]));
   const visibleTasks = tasks;
   const stores = await db
     .select()
