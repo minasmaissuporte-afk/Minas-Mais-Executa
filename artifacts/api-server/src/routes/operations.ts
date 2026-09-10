@@ -976,9 +976,7 @@ router.post("/tasks/:id/complete", async (req, res) => {
     });
     return;
   }
-  const requiresSupervisorReview = task.createdByRole === "supervisor"
-    && actor(req).role === "manager"
-    && task.assigneeRole === "manager";
+  const requiresSupervisorReview = task.assigneeRole === "manager";
   await db
     .update(tasksTable)
     .set({
@@ -1004,15 +1002,11 @@ router.post("/tasks/:id/review", async (req, res) => {
     res.status(403).json({ error: "Somente o supervisor vinculado à loja pode conferir esta tarefa." });
     return;
   }
-  if (task.createdByRole !== "supervisor" || task.status !== "pending_review") {
+  if (task.status !== "pending_review") {
     res.status(400).json({ error: "Esta tarefa não está aguardando conferência." });
     return;
   }
   const comment = body.data.comment?.trim() ?? "";
-  if (body.data.decision === "reject" && !comment) {
-    res.status(400).json({ error: "Informe o comentário de correção para reprovar a tarefa." });
-    return;
-  }
   if (comment) {
     await db.insert(taskCommentsTable).values({
       id: `comment-${crypto.randomUUID()}`,
