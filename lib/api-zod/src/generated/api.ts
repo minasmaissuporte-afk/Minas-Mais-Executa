@@ -136,6 +136,7 @@ export const ListTasksResponseItem = zod.object({
   "userName": zod.string()
 })),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
+  "createdByName": zod.string().optional(),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -205,6 +206,7 @@ export const CreateTaskResponse = zod.object({
   "userName": zod.string()
 })),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
+  "createdByName": zod.string().optional(),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -257,6 +259,7 @@ export const GetTaskResponse = zod.object({
   "userName": zod.string()
 })),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
+  "createdByName": zod.string().optional(),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -315,6 +318,7 @@ export const UpdateTaskResponse = zod.object({
   "userName": zod.string()
 })),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
+  "createdByName": zod.string().optional(),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -408,6 +412,7 @@ export const CompleteTaskResponse = zod.object({
   "userName": zod.string()
 })),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
+  "createdByName": zod.string().optional(),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -465,6 +470,7 @@ export const ReviewTaskResponse = zod.object({
   "userName": zod.string()
 })),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
+  "createdByName": zod.string().optional(),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -558,6 +564,7 @@ export const CreateBulkTasksResponseItem = zod.object({
   "userName": zod.string()
 })),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
+  "createdByName": zod.string().optional(),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -636,6 +643,7 @@ export const CreateRecurringTasksResponseItem = zod.object({
   "userName": zod.string()
 })),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
+  "createdByName": zod.string().optional(),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()

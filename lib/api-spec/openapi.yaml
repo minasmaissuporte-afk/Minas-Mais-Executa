@@ -781,6 +781,8 @@ components:
         createdByRole:
           type: string
           enum: [manager, supervisor, admin]
+        createdByName:
+          type: string
         instructions:
           type: string
         completedAt:

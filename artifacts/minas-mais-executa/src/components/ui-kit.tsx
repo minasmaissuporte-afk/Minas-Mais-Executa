@@ -50,7 +50,7 @@ export function TaskRow({ task, onDelete }: { task: Task; onDelete?: (task: Task
     <span className={`task-status-dot dot-${task.status}`} aria-hidden="true" />
     <Link href={`/tasks/${task.id}`} className="task-main" data-testid={`link-task-${task.id}`}>
       <div className="task-title">{task.title}</div><div className="task-sub">{task.category} · {task.storeName} · {task.assigneeRole === 'supervisor' ? 'Supervisor: ' : ''}{task.assignee}</div>
-      <div className="task-dates">Criada em {formatFullDate(task.createdAt)} · Executar em {formatFullDate(task.dueDate)} às {task.dueTime}</div>
+      <div className="task-dates">Criada em {formatFullDate(task.createdAt)} por {task.createdByName} · Executar em {formatFullDate(task.dueDate)} às {task.dueTime}</div>
       {task.status === 'pending_review' && <div className="task-row-status-note task-row-status-note-review">Aguardando conferência do supervisor</div>}
       {task.status === 'rejected' && <div className="task-row-status-note task-row-status-note-rejected">Reprovada pelo supervisor · veja a orientação</div>}
     </Link>

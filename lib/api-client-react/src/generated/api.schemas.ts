@@ -269,6 +269,7 @@ export interface Task {
   modelObjectPath?: string | null;
   comments: TaskComment[];
   createdByRole: TaskCreatedByRole;
+  createdByName?: string;
   instructions: string;
   /** @nullable */
   completedAt?: string | null;

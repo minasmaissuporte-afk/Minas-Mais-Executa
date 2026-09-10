@@ -399,6 +399,12 @@ async function getTaskWithEvidence(id: string) {
     .select()
     .from(taskOriginsTable)
     .where(eq(taskOriginsTable.taskId, id));
+  const [creator] = origin
+    ? await db
+      .select({ name: teamMembersTable.name })
+      .from(teamMembersTable)
+      .where(eq(teamMembersTable.id, origin.createdByMemberId))
+    : [];
   const comments = await db
     .select()
     .from(taskCommentsTable)
@@ -432,6 +438,7 @@ async function getTaskWithEvidence(id: string) {
       userName: commentUserNames.get(comment.userId) ?? comment.userId,
     })),
     createdByRole: origin?.createdByRole ?? "admin",
+    createdByName: creator?.name ?? "Administração",
     completedAt: task.completedAt?.toISOString() ?? null,
     completedBy: task.completedBy ?? null,
   };
