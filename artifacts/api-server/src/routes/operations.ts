@@ -117,6 +117,27 @@ async function resolveActiveMember(name: string, role: "manager" | "supervisor")
   return matches.length === 1 ? matches[0] : undefined;
 }
 
+async function resolveManagerForStore(store: {
+  id: string;
+  manager: string;
+  managerMemberId: string | null;
+}) {
+  const [linkedManager] = store.managerMemberId
+    ? await db
+      .select()
+      .from(teamMembersTable)
+      .where(and(
+        eq(teamMembersTable.id, store.managerMemberId),
+        eq(teamMembersTable.role, "manager"),
+        eq(teamMembersTable.active, true),
+      ))
+    : [];
+  const manager = linkedManager ?? await resolveActiveMember(store.manager, "manager");
+  if (!manager || !manager.active || manager.role !== "manager") return null;
+  if (manager.storeId && manager.storeId !== store.id) return null;
+  return manager;
+}
+
 async function applyMemberStoreAssignment(
   member: { id: string; name: string; role: string },
   storeId: string | null,
@@ -548,12 +569,14 @@ router.post("/tasks", async (req, res) => {
     modelObjectPath: parsed.data.modelObjectPath ?? null,
     status: "pending",
   };
-  const assigneeMember = await resolveActiveMember(task.assignee, task.assigneeRole);
+  const assigneeMember = task.assigneeRole === "manager"
+    ? await resolveManagerForStore(selectedStore)
+    : await resolveActiveMember(task.assignee, task.assigneeRole);
   if (!assigneeMember || !assigneeMember.active || assigneeMember.role !== task.assigneeRole) {
     res.status(400).json({ error: "Responsável não encontrado." });
     return;
   }
-  if (task.assigneeRole === "manager" && assigneeMember.storeId !== selectedStore.id) {
+  if (task.assigneeRole === "manager" && assigneeMember.storeId && assigneeMember.storeId !== selectedStore.id) {
     res.status(400).json({ error: "O gerente responsável não está vinculado à loja selecionada." });
     return;
   }
@@ -638,12 +661,15 @@ router.post("/tasks/bulk", async (req, res) => {
     status: "pending",
   }));
   for (const task of tasks) {
-    const assigneeMember = await resolveActiveMember(task.assignee, task.assigneeRole);
+    const store = stores.find((item) => item.id === task.storeId);
+    const assigneeMember = task.assigneeRole === "manager" && store
+      ? await resolveManagerForStore(store)
+      : await resolveActiveMember(task.assignee, task.assigneeRole);
     if (!assigneeMember || !assigneeMember.active || assigneeMember.role !== task.assigneeRole) {
       res.status(400).json({ error: "Responsável não encontrado." });
       return;
     }
-    if (task.assigneeRole === "manager" && assigneeMember.storeId !== task.storeId) {
+    if (task.assigneeRole === "manager" && assigneeMember.storeId && assigneeMember.storeId !== task.storeId) {
       res.status(400).json({ error: `A loja ${task.storeName} não possui um gerente ativo vinculado.` });
       return;
     }
@@ -1171,16 +1197,55 @@ router.delete("/stores/:id", async (req, res) => {
 
 router.get("/team-members", async (req, res) => {
   await seedPromise;
-  if (!requireAdmin(req, res)) return;
   const parsed = ListTeamMembersQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: "Filtro de equipe inválido." });
     return;
   }
+  const currentMember = actor(req);
+  if (currentMember.role !== "admin" && currentMember.role !== "supervisor") {
+    res.status(403).json({ error: "Você não pode consultar a equipe." });
+    return;
+  }
+  const filters = [];
+  if (currentMember.role === "admin" && parsed.data.role) {
+    filters.push(eq(teamMembersTable.role, parsed.data.role));
+  } else if (currentMember.role === "supervisor") {
+    const visibleStoreIds = await scopedStoreIds(req);
+    if (!visibleStoreIds || !visibleStoreIds.length) {
+      res.json([]);
+      return;
+    }
+    const visibleStores = await db
+      .select({
+        manager: storesTable.manager,
+        managerMemberId: storesTable.managerMemberId,
+      })
+      .from(storesTable)
+      .where(inArray(storesTable.id, visibleStoreIds));
+    const managerIds = visibleStores
+      .map((store) => store.managerMemberId)
+      .filter((id): id is string => Boolean(id));
+    const managerNames = visibleStores
+      .map((store) => store.manager.trim().toLowerCase())
+      .filter(Boolean);
+    const managerScope = [
+      inArray(teamMembersTable.storeId, visibleStoreIds),
+      ...(managerIds.length ? [inArray(teamMembersTable.id, managerIds)] : []),
+      ...managerNames.map((name) => sql`lower(trim(${teamMembersTable.name})) = ${name}`),
+    ];
+    filters.push(
+      and(
+        eq(teamMembersTable.role, "manager"),
+        eq(teamMembersTable.active, true),
+        or(...managerScope),
+      ),
+    );
+  }
   const members = await db
     .select()
     .from(teamMembersTable)
-    .where(parsed.data.role ? eq(teamMembersTable.role, parsed.data.role) : undefined)
+    .where(filters.length ? and(...filters) : undefined)
     .orderBy(teamMembersTable.name);
   res.json(members.map((member) => ({
     ...member,

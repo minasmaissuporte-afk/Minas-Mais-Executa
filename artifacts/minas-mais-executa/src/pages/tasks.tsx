@@ -19,7 +19,17 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
   const members = membersQuery.data ?? [];
   const isSupervisor = me.data?.role === 'supervisor';
   const supervisors = members.filter((member) => member.role === 'supervisor' && member.active);
-  const activeManagerForStore = (storeId: string) => members.find((member) => member.role === 'manager' && member.active && member.storeId === storeId);
+  const activeManagerForStore = (storeId: string) => {
+    const store = stores.find((item) => item.id === storeId);
+    return members.find((member) => (
+      member.role === 'manager'
+      && member.active
+      && (
+        member.storeId === storeId
+        || (store?.manager && member.name.trim().toLowerCase() === store.manager.trim().toLowerCase())
+      )
+    ));
+  };
   const [notice, setNotice] = useState('');
   const [uploadingModel, setUploadingModel] = useState(false);
   const [repeat, setRepeat] = useState(false);
@@ -138,7 +148,7 @@ export default function TasksPage() {
   };
   const query = useListTasks(params, { query: { queryKey: getListTasksQueryKey(params) } });
   const deleteTask = useDeleteTask();
-   const data = (query.data ?? []).filter((task) => (isAdmin && (dateFrom || dateTo)) || task.dueDate <= todayInput);
+   const data = (query.data ?? []).filter((task) => isAdmin || task.dueDate <= todayInput);
   const tasks = useMemo(() => data.filter((task) => `${task.title} ${task.storeName} ${task.assignee}`.toLowerCase().includes(search.toLowerCase())), [data, search]);
   const taskRows = useMemo(() => {
     const rows: Array<{ key: string; tasks: typeof tasks }> = [];
