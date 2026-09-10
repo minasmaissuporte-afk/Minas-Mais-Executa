@@ -849,6 +849,14 @@ export const PermanentlyDeleteTeamMemberResponse = zod.void()
 /**
  * @summary Get store performance rankings
  */
+export const getRankingsQueryDaysDefault = 30;
+
+
+export const GetRankingsQueryParams = zod.object({
+  "days": zod.union([zod.literal(7),zod.literal(30),zod.literal(90)]).default(getRankingsQueryDaysDefault),
+  "region": zod.coerce.string().min(1).optional()
+})
+
 export const GetRankingsResponseItem = zod.object({
   "position": zod.number().int(),
   "storeName": zod.string(),

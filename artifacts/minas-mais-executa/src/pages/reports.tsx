@@ -6,7 +6,7 @@ import { EmptyState, ErrorState, LoadingBlocks } from '@/components/ui-kit';
 export default function ReportsPage() {
   const summaryQuery = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey() } });
   const tasksQuery = useListTasks(undefined, { query: { queryKey: getListTasksQueryKey() } });
-  const rankingsQuery = useGetRankings({ query: { queryKey: getGetRankingsQueryKey() } });
+  const rankingsQuery = useGetRankings(undefined, { query: { queryKey: getGetRankingsQueryKey() } });
   const summary = summaryQuery.data; const tasks = tasksQuery.data ?? []; const rankings = rankingsQuery.data ?? [];
   const categories = useMemo(() => {
     const values = new Map<string, { total: number; done: number }>();

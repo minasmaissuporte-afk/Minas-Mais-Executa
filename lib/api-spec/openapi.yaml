@@ -465,6 +465,20 @@ paths:
       operationId: getRankings
       tags: [rankings]
       summary: Get store performance rankings
+      parameters:
+        - in: query
+          name: days
+          required: false
+          schema:
+            type: integer
+            enum: [7, 30, 90]
+            default: 30
+        - in: query
+          name: region
+          required: false
+          schema:
+            type: string
+            minLength: 1
       responses:
         "200":
           description: Rankings

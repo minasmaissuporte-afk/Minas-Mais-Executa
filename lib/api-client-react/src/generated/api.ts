@@ -27,6 +27,7 @@ import type {
   Evidence,
   EvidenceInput,
   GetPushPublicKey200,
+  GetRankingsParams,
   HealthStatus,
   ListTasksParams,
   ListTeamMembersParams,
@@ -1997,20 +1998,27 @@ export const usePermanentlyDeleteTeamMember = <TError = ErrorType<void>,
       return useMutation(getPermanentlyDeleteTeamMemberMutationOptions(options));
     }
 
-export const getGetRankingsUrl = () => {
+export const getGetRankingsUrl = (params?: GetRankingsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/rankings`
+  return stringifiedParams.length > 0 ? `/api/rankings?${stringifiedParams}` : `/api/rankings`
 }
 
 /**
  * @summary Get store performance rankings
  */
-export const getRankings = async ( options?: Parameters<typeof customFetch>[1]): Promise<RankingEntry[]> => {
+export const getRankings = async (params?: GetRankingsParams, options?: Parameters<typeof customFetch>[1]): Promise<RankingEntry[]> => {
 
-  return customFetch<RankingEntry[]>(getGetRankingsUrl(),
+  return customFetch<RankingEntry[]>(getGetRankingsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -2023,23 +2031,23 @@ export const getRankings = async ( options?: Parameters<typeof customFetch>[1]):
 
 
 
-export const getGetRankingsQueryKey = () => {
+export const getGetRankingsQueryKey = (params?: GetRankingsParams,) => {
     return [
-    `/api/rankings`
+    `/api/rankings`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetRankingsQueryOptions = <TData = Awaited<ReturnType<typeof getRankings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRankings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetRankingsQueryOptions = <TData = Awaited<ReturnType<typeof getRankings>>, TError = ErrorType<unknown>>(params?: GetRankingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRankings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetRankingsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetRankingsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRankings>>> = ({ signal }) => getRankings({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRankings>>> = ({ signal }) => getRankings(params, { signal, ...requestOptions });
 
 
 
@@ -2057,11 +2065,11 @@ export type GetRankingsQueryError = ErrorType<unknown>
  */
 
 export function useGetRankings<TData = Awaited<ReturnType<typeof getRankings>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRankings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: GetRankingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRankings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetRankingsQueryOptions(options)
+  const queryOptions = getGetRankingsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -47,19 +47,20 @@ const now = new Date();
 const today = now.toISOString().slice(0, 10);
 const objectStorageService = new ObjectStorageService();
 
-function currentRankingCycle() {
-  const endDate = new Date();
+function rankingCycleEndingOn(endDate: Date, days: number) {
   const start = new Date(endDate);
-  start.setUTCDate(start.getUTCDate() - 29);
+  start.setUTCDate(start.getUTCDate() - (days - 1));
   return { start: start.toISOString().slice(0, 10), end: endDate.toISOString().slice(0, 10) };
 }
 
-function previousRankingCycle(currentCycle: { start: string; end: string }) {
+function currentRankingCycle(days = 30) {
+  return rankingCycleEndingOn(new Date(), days);
+}
+
+function previousRankingCycle(currentCycle: { start: string; end: string }, days: number) {
   const endDate = new Date(`${currentCycle.start}T00:00:00.000Z`);
   endDate.setUTCDate(endDate.getUTCDate() - 1);
-  const startDate = new Date(endDate);
-  startDate.setUTCDate(startDate.getUTCDate() - 29);
-  return { start: startDate.toISOString().slice(0, 10), end: endDate.toISOString().slice(0, 10) };
+  return rankingCycleEndingOn(endDate, days);
 }
 
 function rankingPointsForElapsedMs(elapsedMs: number) {
@@ -1527,16 +1528,23 @@ router.delete("/team-members/:id/permanent", async (req, res) => {
 router.get("/rankings", async (req, res) => {
   await seedPromise;
   const ids = await scopedStoreIds(req);
-  const currentCycle = currentRankingCycle();
-  const previousCycle = previousRankingCycle(currentCycle);
+  const requestedDays = Number(req.query.days);
+  const days = requestedDays === 7 || requestedDays === 90 ? requestedDays : 30;
+  const region = typeof req.query.region === "string" ? req.query.region.trim() : "";
+  const currentCycle = currentRankingCycle(days);
+  const previousCycle = previousRankingCycle(currentCycle, days);
   const tasks = await db
     .select()
     .from(tasksTable)
     .where(and(gte(tasksTable.dueDate, previousCycle.start), lte(tasksTable.dueDate, currentCycle.end)));
+  const storeFilters = [
+    ids === null ? undefined : inArray(storesTable.id, ids),
+    region ? eq(storesTable.region, region) : undefined,
+  ].filter((filter): filter is NonNullable<typeof filter> => filter !== undefined);
   const stores = await db
     .select()
     .from(storesTable)
-    .where(ids === null ? undefined : inArray(storesTable.id, ids));
+    .where(storeFilters.length ? and(...storeFilters) : undefined);
 
   const rankedStores = stores
     .map((store) => {

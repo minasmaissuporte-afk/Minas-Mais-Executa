@@ -586,3 +586,20 @@ export const ListTeamMembersRole = {
   supervisor: 'supervisor',
 } as const;
 
+export type GetRankingsParams = {
+days?: GetRankingsDays;
+/**
+ * @minLength 1
+ */
+region?: string;
+};
+
+export type GetRankingsDays = typeof GetRankingsDays[keyof typeof GetRankingsDays];
+
+
+export const GetRankingsDays = {
+  NUMBER_7: 7,
+  NUMBER_30: 30,
+  NUMBER_90: 90,
+} as const;
+
