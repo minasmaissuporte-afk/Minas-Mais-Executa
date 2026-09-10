@@ -23,5 +23,7 @@ export interface BulkTaskInput {
   dueTime: string;
   evidenceRequired: boolean;
   evidenceTypes?: BulkTaskInputEvidenceTypesItem[];
+  /** @nullable */
+  modelObjectPath?: string | null;
   instructions: string;
 }

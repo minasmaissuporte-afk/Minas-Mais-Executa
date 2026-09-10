@@ -68,10 +68,6 @@ export async function requireActiveMember(
     res.status(403).json({ error: "A conta administrativa está configurada incorretamente.", code: "ACCESS_PENDING" });
     return;
   }
-  if (member.role === "admin" && email !== ADMIN_EMAIL) {
-    res.status(403).json({ error: "Acesso administrativo não autorizado.", code: "ACCESS_PENDING" });
-    return;
-  }
   if (!member.clerkUserId) {
     await db.update(teamMembersTable)
       .set({ clerkUserId: userId })

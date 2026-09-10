@@ -37,7 +37,10 @@ import type {
   StoreInput,
   StoreUpdate,
   Task,
+  TaskComment,
+  TaskCommentInput,
   TaskInput,
+  TaskReviewInput,
   TaskUpdate,
   TeamMember,
   TeamMemberInput,
@@ -1046,6 +1049,150 @@ export const useCompleteTask = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCompleteTaskMutationOptions(options));
+    }
+
+export const getReviewTaskUrl = (id: string,) => {
+
+
+
+
+  return `/api/tasks/${id}/review`
+}
+
+/**
+ * @summary Approve or reject a supervisor-created task
+ */
+export const reviewTask = async (id: string,
+    taskReviewInput: TaskReviewInput, options?: Parameters<typeof customFetch>[1]): Promise<Task> => {
+
+  return customFetch<Task>(getReviewTaskUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(taskReviewInput)
+  }
+);}
+
+
+
+
+
+export const getReviewTaskMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewTask>>, TError,{id: string;data: BodyType<TaskReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewTask>>, TError,{id: string;data: BodyType<TaskReviewInput>}, TContext> => {
+
+const mutationKey = ['reviewTask'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewTask>>, {id: string;data: BodyType<TaskReviewInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reviewTask(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewTaskMutationResult = NonNullable<Awaited<ReturnType<typeof reviewTask>>>
+    export type ReviewTaskMutationBody = BodyType<TaskReviewInput>
+    export type ReviewTaskMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Approve or reject a supervisor-created task
+ */
+export const useReviewTask = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewTask>>, TError,{id: string;data: BodyType<TaskReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reviewTask>>,
+        TError,
+        {id: string;data: BodyType<TaskReviewInput>},
+        TContext
+      > => {
+      return useMutation(getReviewTaskMutationOptions(options));
+    }
+
+export const getAddTaskCommentUrl = (id: string,) => {
+
+
+
+
+  return `/api/tasks/${id}/comments`
+}
+
+/**
+ * @summary Add a comment to a task
+ */
+export const addTaskComment = async (id: string,
+    taskCommentInput: TaskCommentInput, options?: Parameters<typeof customFetch>[1]): Promise<TaskComment> => {
+
+  return customFetch<TaskComment>(getAddTaskCommentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(taskCommentInput)
+  }
+);}
+
+
+
+
+
+export const getAddTaskCommentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addTaskComment>>, TError,{id: string;data: BodyType<TaskCommentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addTaskComment>>, TError,{id: string;data: BodyType<TaskCommentInput>}, TContext> => {
+
+const mutationKey = ['addTaskComment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addTaskComment>>, {id: string;data: BodyType<TaskCommentInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  addTaskComment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddTaskCommentMutationResult = NonNullable<Awaited<ReturnType<typeof addTaskComment>>>
+    export type AddTaskCommentMutationBody = BodyType<TaskCommentInput>
+    export type AddTaskCommentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add a comment to a task
+ */
+export const useAddTaskComment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addTaskComment>>, TError,{id: string;data: BodyType<TaskCommentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addTaskComment>>,
+        TError,
+        {id: string;data: BodyType<TaskCommentInput>},
+        TContext
+      > => {
+      return useMutation(getAddTaskCommentMutationOptions(options));
     }
 
 export const getCreateBulkTasksUrl = () => {

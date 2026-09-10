@@ -23,5 +23,7 @@ export interface TaskInput {
   dueTime: string;
   evidenceRequired: boolean;
   evidenceTypes?: TaskInputEvidenceTypesItem[];
+  /** @nullable */
+  modelObjectPath?: string | null;
   instructions: string;
 }

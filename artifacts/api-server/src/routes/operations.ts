@@ -3,6 +3,8 @@ import { and, desc, eq, gte, inArray, isNull, lte, ne, or, sql } from "drizzle-o
 import {
   AddTaskEvidenceBody,
   AddTaskEvidenceParams,
+  AddTaskCommentBody,
+  AddTaskCommentParams,
   CompleteTaskParams,
   CreateBulkTasksBody,
   CreateRecurringTasksBody,
@@ -20,12 +22,16 @@ import {
   ListTasksQueryParams,
   UpdateTaskBody,
   UpdateTaskParams,
+  ReviewTaskBody,
+  ReviewTaskParams,
 } from "@workspace/api-zod";
 import {
   activityTable,
   db,
   evidencesTable,
   pushSubscriptionsTable,
+  taskCommentsTable,
+  taskOriginsTable,
   teamMembersTable,
   storesTable,
   tasksTable,
@@ -67,6 +73,37 @@ async function scopedStoreIds(req: import("express").Request): Promise<string[] 
 async function canAccessTask(req: import("express").Request, task: { storeId: string }): Promise<boolean> {
   const storeIds = await scopedStoreIds(req);
   return storeIds === null || storeIds.includes(task.storeId);
+}
+
+async function canCreateTask(req: import("express").Request, storeIds: string[]): Promise<boolean> {
+  const member = actor(req);
+  if (member.role === "admin") return true;
+  if (member.role !== "supervisor") return false;
+  const allowedStoreIds = await scopedStoreIds(req);
+  return allowedStoreIds !== null && storeIds.every((storeId) => allowedStoreIds.includes(storeId));
+}
+
+async function getTaskOrigin(taskId: string) {
+  const [origin] = await db
+    .select()
+    .from(taskOriginsTable)
+    .where(eq(taskOriginsTable.taskId, taskId));
+  return origin ?? null;
+}
+
+async function isVisibleToAdmin(req: import("express").Request, task: { id: string; status: string }): Promise<boolean> {
+  if (actor(req).role !== "admin") return true;
+  const origin = await getTaskOrigin(task.id);
+  return origin?.createdByRole !== "supervisor" || task.status === "completed";
+}
+
+async function canReviewTask(req: import("express").Request, task: { storeId: string }): Promise<boolean> {
+  if (actor(req).role !== "supervisor") return false;
+  const [store] = await db
+    .select({ supervisorMemberId: storesTable.supervisorMemberId })
+    .from(storesTable)
+    .where(eq(storesTable.id, task.storeId));
+  return store?.supervisorMemberId === actor(req).id;
 }
 
 async function resolveActiveMember(name: string, role: "manager" | "supervisor") {
@@ -339,6 +376,23 @@ async function getTaskWithEvidence(id: string) {
     .from(evidencesTable)
     .where(eq(evidencesTable.taskId, id))
     .orderBy(desc(evidencesTable.createdAt));
+  const [origin] = await db
+    .select()
+    .from(taskOriginsTable)
+    .where(eq(taskOriginsTable.taskId, id));
+  const comments = await db
+    .select()
+    .from(taskCommentsTable)
+    .where(eq(taskCommentsTable.taskId, id))
+    .orderBy(taskCommentsTable.createdAt);
+  const commentUserIds = [...new Set(comments.map((comment) => comment.userId))];
+  const commentUsers = commentUserIds.length
+    ? await db
+      .select({ id: teamMembersTable.id, name: teamMembersTable.name })
+      .from(teamMembersTable)
+      .where(inArray(teamMembersTable.id, commentUserIds))
+    : [];
+  const commentUserNames = new Map(commentUsers.map((user) => [user.id, user.name]));
   return {
     ...task,
     evidenceTypes: task.evidenceTypes ?? [],
@@ -352,6 +406,13 @@ async function getTaskWithEvidence(id: string) {
       userName: item.userName,
       location: item.location,
     })),
+    modelObjectPath: task.modelObjectPath ?? null,
+    comments: comments.map((comment) => ({
+      ...comment,
+      createdAt: comment.createdAt.toISOString(),
+      userName: commentUserNames.get(comment.userId) ?? comment.userId,
+    })),
+    createdByRole: origin?.createdByRole ?? "admin",
     completedAt: task.completedAt?.toISOString() ?? null,
     completedBy: task.completedBy ?? null,
   };
@@ -359,12 +420,15 @@ async function getTaskWithEvidence(id: string) {
 
 router.get("/dashboard/summary", async (req, res) => {
   await seedPromise;
-  const [tasks, stores] = await Promise.all([
+  const [tasks, stores, origins] = await Promise.all([
     db.select().from(tasksTable),
     db.select().from(storesTable),
+    db.select().from(taskOriginsTable),
   ]);
+  const originByTaskId = new Map(origins.map((origin) => [origin.taskId, origin]));
   const visibleStoreIds = await scopedStoreIds(req);
-  const visibleTasks = visibleStoreIds === null ? tasks : tasks.filter((task) => visibleStoreIds.includes(task.storeId));
+  const visibleTasks = (visibleStoreIds === null ? tasks : tasks.filter((task) => visibleStoreIds.includes(task.storeId)))
+    .filter((task) => actor(req).role !== "admin" || originByTaskId.get(task.id)?.createdByRole !== "supervisor" || task.status === "completed");
   const visibleStores = visibleStoreIds === null ? stores : stores.filter((store) => visibleStoreIds.includes(store.id));
   const todaysTasks = visibleTasks.filter((task) => task.dueDate === today);
   const cycle = currentRankingCycle();
@@ -452,15 +516,26 @@ router.get("/tasks", async (req, res) => {
     .where(filters.length ? and(...filters) : undefined)
     .orderBy(tasksTable.dueTime);
   const payload = await Promise.all(tasks.map((task) => getTaskWithEvidence(task.id)));
-  res.json(payload.filter(Boolean));
+  res.json(payload.filter((task) => task && (actor(req).role !== "admin" || task.createdByRole !== "supervisor" || task.status === "completed")));
 });
 
 router.post("/tasks", async (req, res) => {
   await seedPromise;
-  if (!requireAdmin(req, res)) return;
   const parsed = CreateTaskBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Dados da tarefa inválidos." });
+    return;
+  }
+  if (!(await canCreateTask(req, [parsed.data.storeId]))) {
+    res.status(403).json({ error: "Você só pode criar tarefas para as lojas vinculadas ao seu perfil." });
+    return;
+  }
+  if (actor(req).role === "supervisor" && parsed.data.assigneeRole !== "manager") {
+    res.status(400).json({ error: "Tarefas criadas pela supervisão devem ser atribuídas a um gerente." });
+    return;
+  }
+  if (parsed.data.modelObjectPath && !isNormalizedPrivateObjectPath(parsed.data.modelObjectPath)) {
+    res.status(400).json({ error: "Caminho do modelo visual inválido." });
     return;
   }
   const [selectedStore] = await db.select().from(storesTable).where(eq(storesTable.id, parsed.data.storeId));
@@ -475,6 +550,7 @@ router.post("/tasks", async (req, res) => {
     assigneeRole: parsed.data.assigneeRole ?? "manager",
     dueDate: parsed.data.dueDate.toISOString().slice(0, 10),
     evidenceTypes: parsed.data.evidenceTypes ?? [],
+    modelObjectPath: parsed.data.modelObjectPath ?? null,
     status: "pending",
   };
   const assigneeMember = await resolveActiveMember(task.assignee, task.assigneeRole);
@@ -495,6 +571,11 @@ router.post("/tasks", async (req, res) => {
       .where(and(eq(teamMembersTable.id, assigneeMember.id), eq(teamMembersTable.active, true)));
     if (!available) return false;
     await tx.insert(tasksTable).values(task);
+    await tx.insert(taskOriginsTable).values({
+      taskId: task.id,
+      createdByMemberId: actor(req).id,
+      createdByRole: actor(req).role,
+    });
     return true;
   });
   if (!inserted) {
@@ -508,17 +589,28 @@ router.post("/tasks", async (req, res) => {
 
 router.post("/tasks/bulk", async (req, res) => {
   await seedPromise;
-  if (!requireAdmin(req, res)) return;
   const parsed = CreateBulkTasksBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Dados da tarefa em massa inválidos." });
+    return;
+  }
+  const requestedStoreIds = [...new Set(parsed.data.storeIds)];
+  if (!(await canCreateTask(req, requestedStoreIds))) {
+    res.status(403).json({ error: "Você só pode criar tarefas para as lojas vinculadas ao seu perfil." });
+    return;
+  }
+  if (actor(req).role === "supervisor" && parsed.data.assigneeRole !== "manager") {
+    res.status(400).json({ error: "Tarefas criadas pela supervisão devem ser atribuídas a um gerente." });
+    return;
+  }
+  if (parsed.data.modelObjectPath && !isNormalizedPrivateObjectPath(parsed.data.modelObjectPath)) {
+    res.status(400).json({ error: "Caminho do modelo visual inválido." });
     return;
   }
   if (parsed.data.assigneeRole === "supervisor" && !parsed.data.assignee?.trim()) {
     res.status(400).json({ error: "Selecione o supervisor responsável." });
     return;
   }
-  const requestedStoreIds = [...new Set(parsed.data.storeIds)];
   const stores = await db
     .select()
     .from(storesTable)
@@ -546,6 +638,7 @@ router.post("/tasks/bulk", async (req, res) => {
     dueTime: parsed.data.dueTime,
     evidenceRequired: parsed.data.evidenceRequired,
     evidenceTypes: parsed.data.evidenceTypes ?? [],
+    modelObjectPath: parsed.data.modelObjectPath ?? null,
     instructions: parsed.data.instructions,
     status: "pending",
   }));
@@ -572,6 +665,11 @@ router.post("/tasks/bulk", async (req, res) => {
       .where(and(inArray(teamMembersTable.id, assigneeIds), eq(teamMembersTable.active, true)));
     if (available.length !== assigneeIds.length) return false;
     await tx.insert(tasksTable).values(tasks);
+    await tx.insert(taskOriginsTable).values(tasks.map((task) => ({
+      taskId: task.id,
+      createdByMemberId: actor(req).id,
+      createdByRole: actor(req).role,
+    })));
     return true;
   });
   if (!inserted) {
@@ -589,18 +687,29 @@ router.post("/tasks/bulk", async (req, res) => {
 
 router.post("/tasks/recurring", async (req, res) => {
   await seedPromise;
-  if (!requireAdmin(req, res)) return;
   const parsed = CreateRecurringTasksBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Dados da repetição inválidos." });
     return;
   }
   const input = parsed.data;
+  const requestedStoreIds = [...new Set(input.storeIds)];
+  if (!(await canCreateTask(req, requestedStoreIds))) {
+    res.status(403).json({ error: "Você só pode criar tarefas para as lojas vinculadas ao seu perfil." });
+    return;
+  }
+  if (actor(req).role === "supervisor" && input.assigneeRole !== "manager") {
+    res.status(400).json({ error: "Tarefas criadas pela supervisão devem ser atribuídas a um gerente." });
+    return;
+  }
+  if (input.modelObjectPath && !isNormalizedPrivateObjectPath(input.modelObjectPath)) {
+    res.status(400).json({ error: "Caminho do modelo visual inválido." });
+    return;
+  }
   if (input.assigneeRole === "supervisor" && !input.assignee?.trim()) {
     res.status(400).json({ error: "Selecione o supervisor responsável." });
     return;
   }
-  const requestedStoreIds = [...new Set(input.storeIds)];
   const stores = await db
     .select()
     .from(storesTable)
@@ -668,6 +777,7 @@ router.post("/tasks/recurring", async (req, res) => {
       dueTime: input.dueTime,
       evidenceRequired: input.evidenceRequired,
       evidenceTypes: input.evidenceTypes ?? [],
+      modelObjectPath: input.modelObjectPath ?? null,
       instructions: input.instructions,
       status: "pending",
     }));
@@ -695,6 +805,11 @@ router.post("/tasks/recurring", async (req, res) => {
       .where(and(inArray(teamMembersTable.id, assigneeIds), eq(teamMembersTable.active, true)));
     if (available.length !== assigneeIds.length) return false;
     await tx.insert(tasksTable).values(tasks);
+    await tx.insert(taskOriginsTable).values(tasks.map((task) => ({
+      taskId: task.id,
+      createdByMemberId: actor(req).id,
+      createdByRole: actor(req).role,
+    })));
     return true;
   });
   if (!inserted) {
@@ -721,7 +836,7 @@ router.get("/tasks/:id", async (req, res) => {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
   }
-  if (!(await canAccessTask(req, task))) {
+  if (!(await canAccessTask(req, task)) || !(await isVisibleToAdmin(req, task))) {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
   }
@@ -737,11 +852,11 @@ router.patch("/tasks/:id", async (req, res) => {
     return;
   }
   const task = await getTaskWithEvidence(params.data.id);
-  if (!task || !(await canAccessTask(req, task))) {
+  if (!task || !(await canAccessTask(req, task)) || !(await isVisibleToAdmin(req, task))) {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
   }
-  if (actor(req).role !== "admin" && (!canExecuteTask(req, task) || Object.keys(body.data).some((key) => key !== "status") || !body.data.status || !["pending", "in_progress"].includes(body.data.status))) {
+  if (actor(req).role !== "admin" && (!canExecuteTask(req, task) || Object.keys(body.data).some((key) => key !== "status") || !body.data.status || !["pending", "in_progress", "rejected"].includes(body.data.status))) {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
   }
@@ -765,7 +880,10 @@ router.delete("/tasks/:id", async (req, res) => {
     res.status(400).json({ error: "Identificador inválido." });
     return;
   }
-  const [task] = await db.select({ id: tasksTable.id }).from(tasksTable).where(eq(tasksTable.id, params.data.id));
+  const [task] = await db
+    .select({ id: tasksTable.id, modelObjectPath: tasksTable.modelObjectPath })
+    .from(tasksTable)
+    .where(eq(tasksTable.id, params.data.id));
   if (!task) {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
@@ -776,9 +894,14 @@ router.delete("/tasks/:id", async (req, res) => {
     .where(eq(evidencesTable.taskId, params.data.id));
   await db.transaction(async (tx) => {
     await tx.delete(evidencesTable).where(eq(evidencesTable.taskId, params.data.id));
+    await tx.delete(taskCommentsTable).where(eq(taskCommentsTable.taskId, params.data.id));
+    await tx.delete(taskOriginsTable).where(eq(taskOriginsTable.taskId, params.data.id));
     await tx.delete(tasksTable).where(eq(tasksTable.id, params.data.id));
   });
-  await Promise.all(evidence.filter((item) => item.objectPath).map((item) => objectStorageService.deleteObjectEntity(item.objectPath!)));
+  await Promise.all([
+    ...evidence.filter((item) => item.objectPath).map((item) => objectStorageService.deleteObjectEntity(item.objectPath!)),
+    ...(task.modelObjectPath ? [objectStorageService.deleteObjectEntity(task.modelObjectPath)] : []),
+  ]);
   res.status(204).send();
 });
 
@@ -801,6 +924,10 @@ router.post("/tasks/:id/evidence", async (req, res) => {
   }
   if (!(await canAccessTask(req, task)) || !canExecuteTask(req, task)) {
     res.status(404).json({ error: "Tarefa não encontrada." });
+    return;
+  }
+  if (task.status === "pending_review") {
+    res.status(409).json({ error: "Esta tarefa aguarda a conferência do supervisor." });
     return;
   }
   const evidence = {
@@ -839,22 +966,98 @@ router.post("/tasks/:id/complete", async (req, res) => {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
   }
+  if (task.status === "pending_review") {
+    res.status(409).json({ error: "Esta tarefa aguarda a conferência do supervisor." });
+    return;
+  }
   if (task.evidenceRequired && task.evidence.length === 0) {
     res.status(400).json({
       error: "Sem evidência = não concluído. Adicione a comprovação obrigatória.",
     });
     return;
   }
+  const requiresSupervisorReview = task.createdByRole === "supervisor"
+    && actor(req).role === "manager"
+    && task.assigneeRole === "manager";
   await db
     .update(tasksTable)
     .set({
-      status: "completed",
+      status: requiresSupervisorReview ? "pending_review" : "completed",
       completedAt: new Date(),
-       completedBy: actor(req).name,
+      completedBy: actor(req).name,
     })
     .where(eq(tasksTable.id, params.data.id));
   const completed = await getTaskWithEvidence(params.data.id);
   res.json(completed);
+});
+
+router.post("/tasks/:id/review", async (req, res) => {
+  await seedPromise;
+  const params = ReviewTaskParams.safeParse(req.params);
+  const body = ReviewTaskBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: "Conferência inválida." });
+    return;
+  }
+  const task = await getTaskWithEvidence(params.data.id);
+  if (!task || !(await canAccessTask(req, task)) || !(await canReviewTask(req, task))) {
+    res.status(403).json({ error: "Somente o supervisor vinculado à loja pode conferir esta tarefa." });
+    return;
+  }
+  if (task.createdByRole !== "supervisor" || task.status !== "pending_review") {
+    res.status(400).json({ error: "Esta tarefa não está aguardando conferência." });
+    return;
+  }
+  const comment = body.data.comment?.trim() ?? "";
+  if (body.data.decision === "reject" && !comment) {
+    res.status(400).json({ error: "Informe o comentário de correção para reprovar a tarefa." });
+    return;
+  }
+  if (comment) {
+    await db.insert(taskCommentsTable).values({
+      id: `comment-${crypto.randomUUID()}`,
+      taskId: task.id,
+      userId: actor(req).id,
+      message: comment,
+      type: body.data.decision === "reject" ? "supervisor_rejection" : "supervisor_note",
+    });
+  }
+  await db
+    .update(tasksTable)
+    .set(body.data.decision === "approve"
+      ? { status: "completed" }
+      : { status: "rejected", completedAt: null, completedBy: null })
+    .where(eq(tasksTable.id, task.id));
+  const reviewed = await getTaskWithEvidence(task.id);
+  res.json(reviewed);
+});
+
+router.post("/tasks/:id/comments", async (req, res) => {
+  await seedPromise;
+  const params = AddTaskCommentParams.safeParse(req.params);
+  const body = AddTaskCommentBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: "Comentário inválido." });
+    return;
+  }
+  const task = await getTaskWithEvidence(params.data.id);
+  if (!task || !(await canAccessTask(req, task)) || !(await isVisibleToAdmin(req, task))) {
+    res.status(404).json({ error: "Tarefa não encontrada." });
+    return;
+  }
+  const comment = {
+    id: `comment-${crypto.randomUUID()}`,
+    taskId: task.id,
+    userId: actor(req).id,
+    message: body.data.message.trim(),
+    type: actor(req).role === "manager" ? "manager_note" : actor(req).role === "supervisor" ? "supervisor_note" : "admin_note",
+  };
+  await db.insert(taskCommentsTable).values(comment);
+  res.status(201).json({
+    ...comment,
+    createdAt: new Date().toISOString(),
+    userName: actor(req).name,
+  });
 });
 
 router.get("/stores", async (req, res) => {
@@ -954,18 +1157,26 @@ router.delete("/stores/:id", async (req, res) => {
     .from(tasksTable)
     .where(eq(tasksTable.storeId, params.data.id));
   const taskIds = linkedTasks.map((task) => task.id);
+  const taskModels = taskIds.length
+    ? await db.select({ modelObjectPath: tasksTable.modelObjectPath }).from(tasksTable).where(inArray(tasksTable.id, taskIds))
+    : [];
   const evidence = taskIds.length
     ? await db.select({ objectPath: evidencesTable.objectPath }).from(evidencesTable).where(inArray(evidencesTable.taskId, taskIds))
     : [];
   await db.transaction(async (tx) => {
     if (taskIds.length) {
       await tx.delete(evidencesTable).where(inArray(evidencesTable.taskId, taskIds));
+      await tx.delete(taskCommentsTable).where(inArray(taskCommentsTable.taskId, taskIds));
+      await tx.delete(taskOriginsTable).where(inArray(taskOriginsTable.taskId, taskIds));
       await tx.delete(tasksTable).where(eq(tasksTable.storeId, params.data.id));
     }
     await tx.update(teamMembersTable).set({ storeId: null }).where(eq(teamMembersTable.storeId, params.data.id));
     await tx.delete(storesTable).where(eq(storesTable.id, params.data.id));
   });
-  await Promise.all(evidence.filter((item) => item.objectPath).map((item) => objectStorageService.deleteObjectEntity(item.objectPath!)));
+  await Promise.all([
+    ...evidence.filter((item) => item.objectPath).map((item) => objectStorageService.deleteObjectEntity(item.objectPath!)),
+    ...taskModels.filter((item) => item.modelObjectPath).map((item) => objectStorageService.deleteObjectEntity(item.modelObjectPath!)),
+  ]);
   res.status(204).send();
 });
 
@@ -1014,7 +1225,7 @@ router.post("/team-members", async (req, res) => {
     email: parsed.data.email.trim().toLowerCase(),
     phone: parsed.data.phone ?? "",
     role: parsed.data.role,
-    storeId: parsed.data.storeId ?? null,
+    storeId: parsed.data.role === "manager" ? parsed.data.storeId ?? null : null,
     active: true,
   };
   if (member.storeId) {
@@ -1055,8 +1266,15 @@ router.patch("/team-members/:id", async (req, res) => {
     res.status(404).json({ error: "Colaborador não encontrado." });
     return;
   }
-  if (existing.email.trim().toLowerCase() === "david@drogariasminasmais.com.br" || existing.role === "admin") {
-    res.status(403).json({ error: "A conta administrativa exclusiva não pode ser alterada." });
+  const isOriginalAdmin = existing.email.trim().toLowerCase() === "david@drogariasminasmais.com.br";
+  const changingOriginalEmail = body.data.email !== undefined
+    && body.data.email.trim().toLowerCase() !== existing.email.trim().toLowerCase();
+  if (isOriginalAdmin && (
+    (body.data.role !== undefined && body.data.role !== "admin")
+    || body.data.active === false
+    || changingOriginalEmail
+  )) {
+    res.status(403).json({ error: "A conta administrativa original não pode ser rebaixada, desativada ou removida." });
     return;
   }
   if (body.data.email?.trim().toLowerCase() === "david@drogariasminasmais.com.br") {
@@ -1074,7 +1292,9 @@ router.patch("/team-members/:id", async (req, res) => {
     }
   }
   const nextRole = body.data.role ?? existing.role;
-  const nextStoreId = body.data.storeId === undefined ? existing.storeId : body.data.storeId;
+  const nextStoreId = nextRole === "manager"
+    ? body.data.storeId === undefined ? existing.storeId : body.data.storeId
+    : null;
   if (nextStoreId) {
     const [store] = await db.select().from(storesTable).where(eq(storesTable.id, nextStoreId));
     if (!store) {
@@ -1096,6 +1316,8 @@ router.patch("/team-members/:id", async (req, res) => {
     .update(teamMembersTable)
     .set({
       ...body.data,
+      role: nextRole,
+      storeId: nextStoreId,
       ...(body.data.name ? { name: body.data.name.trim() } : {}),
       ...(body.data.email ? { email: body.data.email.trim().toLowerCase() } : {}),
     })
@@ -1134,8 +1356,8 @@ router.delete("/team-members/:id", async (req, res) => {
     res.status(404).json({ error: "Colaborador não encontrado." });
     return;
   }
-  if (existing.email.trim().toLowerCase() === "david@drogariasminasmais.com.br" || existing.role === "admin") {
-    res.status(403).json({ error: "A conta administrativa exclusiva não pode ser desativada." });
+  if (existing.email.trim().toLowerCase() === "david@drogariasminasmais.com.br") {
+    res.status(403).json({ error: "A conta administrativa original não pode ser desativada." });
     return;
   }
   if (existing.role === "manager") {
@@ -1165,7 +1387,7 @@ router.delete("/team-members/:id/permanent", async (req, res) => {
       .from(teamMembersTable)
       .where(eq(teamMembersTable.id, params.data.id));
     if (!existing) return "missing" as const;
-    if (existing.email.trim().toLowerCase() === "david@drogariasminasmais.com.br" || existing.role === "admin") {
+    if (existing.email.trim().toLowerCase() === "david@drogariasminasmais.com.br") {
       return "protected" as const;
     }
     const linkedTasks = await tx
@@ -1194,7 +1416,7 @@ router.delete("/team-members/:id/permanent", async (req, res) => {
     return;
   }
   if (outcome === "protected") {
-    res.status(403).json({ error: "A conta administrativa exclusiva não pode ser excluída." });
+    res.status(403).json({ error: "A conta administrativa original não pode ser excluída." });
     return;
   }
   if (outcome === "history") {
@@ -1214,21 +1436,37 @@ router.get("/rankings", async (req, res) => {
     .select()
     .from(tasksTable)
     .where(and(gte(tasksTable.dueDate, cycle.start), lte(tasksTable.dueDate, cycle.end)));
+  const origins = await db.select().from(taskOriginsTable);
+  const originByTaskId = new Map(origins.map((origin) => [origin.taskId, origin]));
+  const visibleTasks = tasks.filter((task) =>
+    actor(req).role !== "admin"
+    || originByTaskId.get(task.id)?.createdByRole !== "supervisor"
+    || task.status === "completed"
+  );
   const stores = await db
     .select()
     .from(storesTable)
     .where(ids === null ? undefined : inArray(storesTable.id, ids))
     .orderBy(desc(storesTable.execution));
+  const supervisorPositions = new Map<string, number>();
   res.json(
-    stores.map((store, index) => ({
-      position: index + 1,
+    stores.map((store, index) => {
+      const supervisorName = store.supervisor || "Sem supervisor";
+      const position = actor(req).role === "admin"
+        ? (supervisorPositions.set(supervisorName, (supervisorPositions.get(supervisorName) ?? 0) + 1), supervisorPositions.get(supervisorName)!)
+        : index + 1;
+      const storeTasks = visibleTasks.filter((task) => task.storeId === store.id);
+      return {
+      position,
       storeName: store.name,
       manager: store.manager,
-      execution: tasks.filter((task) => task.storeId === store.id).length
-        ? Math.round((tasks.filter((task) => task.storeId === store.id && task.status === "completed").length / tasks.filter((task) => task.storeId === store.id).length) * 100)
+      execution: storeTasks.length
+        ? Math.round((storeTasks.filter((task) => task.status === "completed").length / storeTasks.length) * 100)
         : 0,
       trend: index === 0 ? "up" : index === 3 ? "down" : "stable",
-    })),
+      supervisorName,
+    };
+    }),
   );
 });
 

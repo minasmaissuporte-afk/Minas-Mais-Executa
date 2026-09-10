@@ -24,6 +24,8 @@ export interface RecurringTaskInput {
   dueTime: string;
   evidenceRequired: boolean;
   evidenceTypes?: RecurringTaskInputEvidenceTypesItem[];
+  /** @nullable */
+  modelObjectPath?: string | null;
   instructions: string;
   recurrenceMode: RecurringTaskInputRecurrenceMode;
   /**

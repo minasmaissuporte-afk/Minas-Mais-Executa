@@ -50,6 +50,7 @@ export const tasksTable = pgTable("tasks", {
   evidenceRequired: boolean("evidence_required").notNull().default(false),
   evidenceTypes: text("evidence_types").array().notNull().default([]),
   instructions: text("instructions").notNull().default(""),
+  modelObjectPath: text("model_object_path"),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   completedBy: text("completed_by"),
   notes: text("notes"),
@@ -69,6 +70,23 @@ export const evidencesTable = pgTable("evidences", {
     .defaultNow(),
   userName: text("user_name").notNull(),
   location: text("location"),
+});
+
+export const taskOriginsTable = pgTable("task_origins", {
+  taskId: text("task_id").primaryKey(),
+  createdByMemberId: text("created_by_member_id").notNull(),
+  createdByRole: text("created_by_role").notNull(),
+});
+
+export const taskCommentsTable = pgTable("task_comments", {
+  id: text("id").primaryKey(),
+  taskId: text("task_id").notNull(),
+  userId: text("user_id").notNull(),
+  message: text("message").notNull(),
+  type: text("type").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const activityTable = pgTable("activity", {
@@ -99,5 +117,7 @@ export type Store = typeof storesTable.$inferSelect;
 export type TeamMember = typeof teamMembersTable.$inferSelect;
 export type Task = typeof tasksTable.$inferSelect;
 export type Evidence = typeof evidencesTable.$inferSelect;
+export type TaskOrigin = typeof taskOriginsTable.$inferSelect;
+export type TaskComment = typeof taskCommentsTable.$inferSelect;
 export type Activity = typeof activityTable.$inferSelect;
 export type PushSubscription = typeof pushSubscriptionsTable.$inferSelect;

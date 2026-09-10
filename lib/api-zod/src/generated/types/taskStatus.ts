@@ -12,6 +12,8 @@ export type TaskStatus = typeof TaskStatus[keyof typeof TaskStatus];
 export const TaskStatus = {
   pending: 'pending',
   in_progress: 'in_progress',
+  pending_review: 'pending_review',
+  rejected: 'rejected',
   completed: 'completed',
   overdue: 'overdue',
 } as const;

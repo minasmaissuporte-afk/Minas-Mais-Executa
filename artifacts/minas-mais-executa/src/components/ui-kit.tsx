@@ -24,7 +24,7 @@ export function roleLabel(role: string) {
   return ({ manager: 'Gerente de loja', supervisor: 'Supervisão', admin: 'Administração' } as Record<string, string>)[role] || role;
 }
 export function statusLabel(status: string) {
-  return ({ pending: 'Pendente', in_progress: 'Em execução', completed: 'Concluída', overdue: 'Atrasada' } as Record<string, string>)[status] || status;
+  return ({ pending: 'Pendente', in_progress: 'Em execução', pending_review: 'Aguardando conferência', rejected: 'Reprovada', completed: 'Concluída', overdue: 'Atrasada' } as Record<string, string>)[status] || status;
 }
 export function priorityLabel(priority: string) {
   return ({ high: 'Alta', medium: 'Média', low: 'Baixa' } as Record<string, string>)[priority] || priority;

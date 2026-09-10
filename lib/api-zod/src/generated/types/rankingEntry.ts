@@ -13,4 +13,5 @@ export interface RankingEntry {
   manager: string;
   execution: number;
   trend: RankingEntryTrend;
+  supervisorName: string;
 }

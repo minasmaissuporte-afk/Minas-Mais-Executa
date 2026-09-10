@@ -7,6 +7,8 @@
  */
 import type { Evidence } from './evidence';
 import type { TaskAssigneeRole } from './taskAssigneeRole';
+import type { TaskComment } from './taskComment';
+import type { TaskCreatedByRole } from './taskCreatedByRole';
 import type { TaskEvidenceTypesItem } from './taskEvidenceTypesItem';
 import type { TaskPriority } from './taskPriority';
 import type { TaskStatus } from './taskStatus';
@@ -32,6 +34,10 @@ export interface Task {
   evidenceRequired: boolean;
   evidenceTypes?: TaskEvidenceTypesItem[];
   evidence: Evidence[];
+  /** @nullable */
+  modelObjectPath?: string | null;
+  comments: TaskComment[];
+  createdByRole: TaskCreatedByRole;
   instructions: string;
   /** @nullable */
   completedAt?: string | null;

@@ -89,6 +89,7 @@ export type TeamMemberInputRole = typeof TeamMemberInputRole[keyof typeof TeamMe
 export const TeamMemberInputRole = {
   manager: 'manager',
   supervisor: 'supervisor',
+  admin: 'admin',
 } as const;
 
 export interface TeamMemberInput {
@@ -107,6 +108,7 @@ export type TeamMemberUpdateRole = typeof TeamMemberUpdateRole[keyof typeof Team
 export const TeamMemberUpdateRole = {
   manager: 'manager',
   supervisor: 'supervisor',
+  admin: 'admin',
 } as const;
 
 export interface TeamMemberUpdate {
@@ -158,6 +160,44 @@ export interface EvidenceInput {
   location?: string;
 }
 
+export type TaskCommentType = typeof TaskCommentType[keyof typeof TaskCommentType];
+
+
+export const TaskCommentType = {
+  manager_note: 'manager_note',
+  supervisor_note: 'supervisor_note',
+  supervisor_rejection: 'supervisor_rejection',
+  admin_note: 'admin_note',
+} as const;
+
+export interface TaskComment {
+  id: string;
+  taskId: string;
+  userId: string;
+  message: string;
+  type: TaskCommentType;
+  createdAt: string;
+  userName: string;
+}
+
+export interface TaskCommentInput {
+  /** @minLength 1 */
+  message: string;
+}
+
+export type TaskReviewInputDecision = typeof TaskReviewInputDecision[keyof typeof TaskReviewInputDecision];
+
+
+export const TaskReviewInputDecision = {
+  approve: 'approve',
+  reject: 'reject',
+} as const;
+
+export interface TaskReviewInput {
+  decision: TaskReviewInputDecision;
+  comment?: string;
+}
+
 export type TaskAssigneeRole = typeof TaskAssigneeRole[keyof typeof TaskAssigneeRole];
 
 
@@ -181,6 +221,8 @@ export type TaskStatus = typeof TaskStatus[keyof typeof TaskStatus];
 export const TaskStatus = {
   pending: 'pending',
   in_progress: 'in_progress',
+  pending_review: 'pending_review',
+  rejected: 'rejected',
   completed: 'completed',
   overdue: 'overdue',
 } as const;
@@ -191,6 +233,15 @@ export type TaskEvidenceTypesItem = typeof TaskEvidenceTypesItem[keyof typeof Ta
 export const TaskEvidenceTypesItem = {
   photo: 'photo',
   video: 'video',
+} as const;
+
+export type TaskCreatedByRole = typeof TaskCreatedByRole[keyof typeof TaskCreatedByRole];
+
+
+export const TaskCreatedByRole = {
+  manager: 'manager',
+  supervisor: 'supervisor',
+  admin: 'admin',
 } as const;
 
 export interface Task {
@@ -214,6 +265,10 @@ export interface Task {
   evidenceRequired: boolean;
   evidenceTypes?: TaskEvidenceTypesItem[];
   evidence: Evidence[];
+  /** @nullable */
+  modelObjectPath?: string | null;
+  comments: TaskComment[];
+  createdByRole: TaskCreatedByRole;
   instructions: string;
   /** @nullable */
   completedAt?: string | null;
@@ -260,6 +315,8 @@ export interface TaskInput {
   dueTime: string;
   evidenceRequired: boolean;
   evidenceTypes?: TaskInputEvidenceTypesItem[];
+  /** @nullable */
+  modelObjectPath?: string | null;
   instructions: string;
 }
 
@@ -302,6 +359,8 @@ export interface BulkTaskInput {
   dueTime: string;
   evidenceRequired: boolean;
   evidenceTypes?: BulkTaskInputEvidenceTypesItem[];
+  /** @nullable */
+  modelObjectPath?: string | null;
   instructions: string;
 }
 
@@ -352,6 +411,8 @@ export interface RecurringTaskInput {
   dueTime: string;
   evidenceRequired: boolean;
   evidenceTypes?: RecurringTaskInputEvidenceTypesItem[];
+  /** @nullable */
+  modelObjectPath?: string | null;
   instructions: string;
   recurrenceMode: RecurringTaskInputRecurrenceMode;
   /**
@@ -373,6 +434,8 @@ export type TaskUpdateStatus = typeof TaskUpdateStatus[keyof typeof TaskUpdateSt
 export const TaskUpdateStatus = {
   pending: 'pending',
   in_progress: 'in_progress',
+  pending_review: 'pending_review',
+  rejected: 'rejected',
   completed: 'completed',
   overdue: 'overdue',
 } as const;
@@ -463,6 +526,7 @@ export interface RankingEntry {
   manager: string;
   execution: number;
   trend: RankingEntryTrend;
+  supervisorName: string;
 }
 
 export interface UploadUrlInput {

@@ -112,7 +112,7 @@ export const ListTasksResponseItem = zod.object({
   "dueDate": zod.coerce.date(),
   "dueTime": zod.string(),
   "createdAt": zod.coerce.date(),
-  "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']),
+  "status": zod.enum(['pending', 'in_progress', 'pending_review', 'rejected', 'completed', 'overdue']),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
   "evidence": zod.array(zod.object({
@@ -125,6 +125,17 @@ export const ListTasksResponseItem = zod.object({
   "userName": zod.string(),
   "location": zod.string().nullish()
 })),
+  "modelObjectPath": zod.string().nullish(),
+  "comments": zod.array(zod.object({
+  "id": zod.string(),
+  "taskId": zod.string(),
+  "userId": zod.string(),
+  "message": zod.string(),
+  "type": zod.enum(['manager_note', 'supervisor_note', 'supervisor_rejection', 'admin_note']),
+  "createdAt": zod.coerce.date(),
+  "userName": zod.string()
+})),
+  "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -151,6 +162,7 @@ export const CreateTaskBody = zod.object({
   "dueTime": zod.string(),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
+  "modelObjectPath": zod.string().nullish(),
   "instructions": zod.string()
 })
 
@@ -169,7 +181,7 @@ export const CreateTaskResponse = zod.object({
   "dueDate": zod.coerce.date(),
   "dueTime": zod.string(),
   "createdAt": zod.coerce.date(),
-  "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']),
+  "status": zod.enum(['pending', 'in_progress', 'pending_review', 'rejected', 'completed', 'overdue']),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
   "evidence": zod.array(zod.object({
@@ -182,6 +194,17 @@ export const CreateTaskResponse = zod.object({
   "userName": zod.string(),
   "location": zod.string().nullish()
 })),
+  "modelObjectPath": zod.string().nullish(),
+  "comments": zod.array(zod.object({
+  "id": zod.string(),
+  "taskId": zod.string(),
+  "userId": zod.string(),
+  "message": zod.string(),
+  "type": zod.enum(['manager_note', 'supervisor_note', 'supervisor_rejection', 'admin_note']),
+  "createdAt": zod.coerce.date(),
+  "userName": zod.string()
+})),
+  "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -210,7 +233,7 @@ export const GetTaskResponse = zod.object({
   "dueDate": zod.coerce.date(),
   "dueTime": zod.string(),
   "createdAt": zod.coerce.date(),
-  "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']),
+  "status": zod.enum(['pending', 'in_progress', 'pending_review', 'rejected', 'completed', 'overdue']),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
   "evidence": zod.array(zod.object({
@@ -223,6 +246,17 @@ export const GetTaskResponse = zod.object({
   "userName": zod.string(),
   "location": zod.string().nullish()
 })),
+  "modelObjectPath": zod.string().nullish(),
+  "comments": zod.array(zod.object({
+  "id": zod.string(),
+  "taskId": zod.string(),
+  "userId": zod.string(),
+  "message": zod.string(),
+  "type": zod.enum(['manager_note', 'supervisor_note', 'supervisor_rejection', 'admin_note']),
+  "createdAt": zod.coerce.date(),
+  "userName": zod.string()
+})),
+  "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -237,7 +271,7 @@ export const UpdateTaskParams = zod.object({
 })
 
 export const UpdateTaskBody = zod.object({
-  "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']).optional(),
+  "status": zod.enum(['pending', 'in_progress', 'pending_review', 'rejected', 'completed', 'overdue']).optional(),
   "priority": zod.enum(['low', 'medium', 'high']).optional(),
   "notes": zod.string().optional()
 })
@@ -257,7 +291,7 @@ export const UpdateTaskResponse = zod.object({
   "dueDate": zod.coerce.date(),
   "dueTime": zod.string(),
   "createdAt": zod.coerce.date(),
-  "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']),
+  "status": zod.enum(['pending', 'in_progress', 'pending_review', 'rejected', 'completed', 'overdue']),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
   "evidence": zod.array(zod.object({
@@ -270,6 +304,17 @@ export const UpdateTaskResponse = zod.object({
   "userName": zod.string(),
   "location": zod.string().nullish()
 })),
+  "modelObjectPath": zod.string().nullish(),
+  "comments": zod.array(zod.object({
+  "id": zod.string(),
+  "taskId": zod.string(),
+  "userId": zod.string(),
+  "message": zod.string(),
+  "type": zod.enum(['manager_note', 'supervisor_note', 'supervisor_rejection', 'admin_note']),
+  "createdAt": zod.coerce.date(),
+  "userName": zod.string()
+})),
+  "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -339,7 +384,7 @@ export const CompleteTaskResponse = zod.object({
   "dueDate": zod.coerce.date(),
   "dueTime": zod.string(),
   "createdAt": zod.coerce.date(),
-  "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']),
+  "status": zod.enum(['pending', 'in_progress', 'pending_review', 'rejected', 'completed', 'overdue']),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
   "evidence": zod.array(zod.object({
@@ -352,9 +397,102 @@ export const CompleteTaskResponse = zod.object({
   "userName": zod.string(),
   "location": zod.string().nullish()
 })),
+  "modelObjectPath": zod.string().nullish(),
+  "comments": zod.array(zod.object({
+  "id": zod.string(),
+  "taskId": zod.string(),
+  "userId": zod.string(),
+  "message": zod.string(),
+  "type": zod.enum(['manager_note', 'supervisor_note', 'supervisor_rejection', 'admin_note']),
+  "createdAt": zod.coerce.date(),
+  "userName": zod.string()
+})),
+  "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
+})
+
+
+/**
+ * @summary Approve or reject a supervisor-created task
+ */
+export const ReviewTaskParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ReviewTaskBody = zod.object({
+  "decision": zod.enum(['approve', 'reject']),
+  "comment": zod.string().optional()
+})
+
+export const ReviewTaskResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "storeId": zod.string(),
+  "storeName": zod.string(),
+  "assignee": zod.string(),
+  "assigneeMemberId": zod.string().nullish(),
+  "assigneeRole": zod.enum(['manager', 'supervisor']).optional(),
+  "batchGroupId": zod.string().nullish(),
+  "category": zod.string(),
+  "priority": zod.enum(['low', 'medium', 'high']),
+  "dueDate": zod.coerce.date(),
+  "dueTime": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "status": zod.enum(['pending', 'in_progress', 'pending_review', 'rejected', 'completed', 'overdue']),
+  "evidenceRequired": zod.boolean(),
+  "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
+  "evidence": zod.array(zod.object({
+  "id": zod.string(),
+  "taskId": zod.string(),
+  "type": zod.enum(['photo', 'video']),
+  "fileName": zod.string(),
+  "objectPath": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "userName": zod.string(),
+  "location": zod.string().nullish()
+})),
+  "modelObjectPath": zod.string().nullish(),
+  "comments": zod.array(zod.object({
+  "id": zod.string(),
+  "taskId": zod.string(),
+  "userId": zod.string(),
+  "message": zod.string(),
+  "type": zod.enum(['manager_note', 'supervisor_note', 'supervisor_rejection', 'admin_note']),
+  "createdAt": zod.coerce.date(),
+  "userName": zod.string()
+})),
+  "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
+  "instructions": zod.string(),
+  "completedAt": zod.string().nullish(),
+  "completedBy": zod.string().nullish()
+})
+
+
+/**
+ * @summary Add a comment to a task
+ */
+export const AddTaskCommentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+
+
+export const AddTaskCommentBody = zod.object({
+  "message": zod.string().min(1)
+})
+
+export const AddTaskCommentResponse = zod.object({
+  "id": zod.string(),
+  "taskId": zod.string(),
+  "userId": zod.string(),
+  "message": zod.string(),
+  "type": zod.enum(['manager_note', 'supervisor_note', 'supervisor_rejection', 'admin_note']),
+  "createdAt": zod.coerce.date(),
+  "userName": zod.string()
 })
 
 
@@ -377,6 +515,7 @@ export const CreateBulkTasksBody = zod.object({
   "dueTime": zod.string(),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
+  "modelObjectPath": zod.string().nullish(),
   "instructions": zod.string()
 })
 
@@ -395,7 +534,7 @@ export const CreateBulkTasksResponseItem = zod.object({
   "dueDate": zod.coerce.date(),
   "dueTime": zod.string(),
   "createdAt": zod.coerce.date(),
-  "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']),
+  "status": zod.enum(['pending', 'in_progress', 'pending_review', 'rejected', 'completed', 'overdue']),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
   "evidence": zod.array(zod.object({
@@ -408,6 +547,17 @@ export const CreateBulkTasksResponseItem = zod.object({
   "userName": zod.string(),
   "location": zod.string().nullish()
 })),
+  "modelObjectPath": zod.string().nullish(),
+  "comments": zod.array(zod.object({
+  "id": zod.string(),
+  "taskId": zod.string(),
+  "userId": zod.string(),
+  "message": zod.string(),
+  "type": zod.enum(['manager_note', 'supervisor_note', 'supervisor_rejection', 'admin_note']),
+  "createdAt": zod.coerce.date(),
+  "userName": zod.string()
+})),
+  "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -439,6 +589,7 @@ export const CreateRecurringTasksBody = zod.object({
   "dueTime": zod.string(),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
+  "modelObjectPath": zod.string().nullish(),
   "instructions": zod.string(),
   "recurrenceMode": zod.enum(['daily_count', 'weekdays_until']),
   "occurrenceCount": zod.number().int().min(1).max(createRecurringTasksBodyOccurrenceCountMax).optional(),
@@ -461,7 +612,7 @@ export const CreateRecurringTasksResponseItem = zod.object({
   "dueDate": zod.coerce.date(),
   "dueTime": zod.string(),
   "createdAt": zod.coerce.date(),
-  "status": zod.enum(['pending', 'in_progress', 'completed', 'overdue']),
+  "status": zod.enum(['pending', 'in_progress', 'pending_review', 'rejected', 'completed', 'overdue']),
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
   "evidence": zod.array(zod.object({
@@ -474,6 +625,17 @@ export const CreateRecurringTasksResponseItem = zod.object({
   "userName": zod.string(),
   "location": zod.string().nullish()
 })),
+  "modelObjectPath": zod.string().nullish(),
+  "comments": zod.array(zod.object({
+  "id": zod.string(),
+  "taskId": zod.string(),
+  "userId": zod.string(),
+  "message": zod.string(),
+  "type": zod.enum(['manager_note', 'supervisor_note', 'supervisor_rejection', 'admin_note']),
+  "createdAt": zod.coerce.date(),
+  "userName": zod.string()
+})),
+  "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -609,7 +771,7 @@ export const CreateTeamMemberBody = zod.object({
   "name": zod.string().min(1),
   "email": zod.string().email(),
   "phone": zod.string().optional(),
-  "role": zod.enum(['manager', 'supervisor']),
+  "role": zod.enum(['manager', 'supervisor', 'admin']),
   "storeId": zod.string().nullish()
 })
 
@@ -639,7 +801,7 @@ export const UpdateTeamMemberBody = zod.object({
   "name": zod.string().min(1).optional(),
   "email": zod.string().email().optional(),
   "phone": zod.string().optional(),
-  "role": zod.enum(['manager', 'supervisor']).optional(),
+  "role": zod.enum(['manager', 'supervisor', 'admin']).optional(),
   "storeId": zod.string().nullish(),
   "active": zod.boolean().optional()
 })
@@ -684,7 +846,8 @@ export const GetRankingsResponseItem = zod.object({
   "storeName": zod.string(),
   "manager": zod.string(),
   "execution": zod.number().int(),
-  "trend": zod.enum(['up', 'down', 'stable'])
+  "trend": zod.enum(['up', 'down', 'stable']),
+  "supervisorName": zod.string()
 })
 export const GetRankingsResponse = zod.array(GetRankingsResponseItem)
 
