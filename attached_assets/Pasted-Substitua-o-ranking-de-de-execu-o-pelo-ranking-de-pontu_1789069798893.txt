@@ -1,0 +1,18 @@
+Substitua o ranking de % de execução pelo ranking de pontuação por velocidade de execução, no mesmo lugar/tela onde o ranking já existe hoje:
+
+1. Para cada tarefa com status = "completed", calcule o tempo decorrido entre createdAt e completedAt.
+2. Atribua pontos por tarefa usando faixas de tempo (ajuste os limites se fizer mais sentido pro negócio, mas mantenha o princípio de "quanto mais rápido, mais pontos", em faixas decrescentes):
+   - Até 1 hora: 100 pontos
+   - Até 6 horas: 80 pontos
+   - Até 24 horas: 60 pontos
+   - Até 3 dias: 40 pontos
+   - Acima de 3 dias: 20 pontos
+3. A pontuação da loja no ranking é a SOMA (ou média, o que for mais simples dado o schema atual) dos pontos de todas as tarefas completed da loja nos últimos 30 dias (mesmo período/ciclo já usado hoje).
+4. Tarefas reprovadas não pontuam enquanto não forem aprovadas — o tempo só é contado quando a tarefa chega em "completed" de fato (aprovada), não quando o gerente marca como pronta.
+5. Junto com a posição no ranking, exiba também o TEMPO MÉDIO de execução da loja (média de completedAt - createdAt das tarefas completed no mesmo período), como um dado informativo ao lado da pontuação — não entra na fórmula de pontos, é só visualização pro admin (ex: "1º lugar - 850 pontos - tempo médio: 4h32min").
+6. Mantenha a mesma lógica de agrupamento por supervisor pro admin, e escopo por lojas vinculadas pro supervisor, igual já existe hoje.
+7. O campo "execution" da loja (usado hoje para ordenar) e o cálculo antigo de % podem ser substituídos ou mantidos ocultos, o que for mais simples e seguro dado o schema atual — não precisa remover a coluna do banco se for arriscado, só não exibir/usar mais no ranking.
+
+Antes de codar, me mostre: como vai calcular a pontuação e o tempo médio (nova função ou dentro da rota /rankings existente), e como vai ficar a exibição no frontend. Aguarde minha confirmação.
+
+Não altere nenhum outro fluxo do sistema (conferência, comentários, visibilidade do admin, etc).
