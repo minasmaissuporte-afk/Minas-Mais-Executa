@@ -92,9 +92,7 @@ async function getTaskOrigin(taskId: string) {
 }
 
 async function isVisibleToAdmin(req: import("express").Request, task: { id: string; status: string }): Promise<boolean> {
-  if (actor(req).role !== "admin") return true;
-  const origin = await getTaskOrigin(task.id);
-  return origin?.createdByRole !== "supervisor" || task.status === "completed";
+  return true;
 }
 
 async function canReviewTask(req: import("express").Request, task: { storeId: string }): Promise<boolean> {
@@ -427,8 +425,7 @@ router.get("/dashboard/summary", async (req, res) => {
   ]);
   const originByTaskId = new Map(origins.map((origin) => [origin.taskId, origin]));
   const visibleStoreIds = await scopedStoreIds(req);
-  const visibleTasks = (visibleStoreIds === null ? tasks : tasks.filter((task) => visibleStoreIds.includes(task.storeId)))
-    .filter((task) => actor(req).role !== "admin" || originByTaskId.get(task.id)?.createdByRole !== "supervisor" || task.status === "completed");
+  const visibleTasks = visibleStoreIds === null ? tasks : tasks.filter((task) => visibleStoreIds.includes(task.storeId));
   const visibleStores = visibleStoreIds === null ? stores : stores.filter((store) => visibleStoreIds.includes(store.id));
   const todaysTasks = visibleTasks.filter((task) => task.dueDate === today);
   const cycle = currentRankingCycle();
@@ -516,7 +513,7 @@ router.get("/tasks", async (req, res) => {
     .where(filters.length ? and(...filters) : undefined)
     .orderBy(tasksTable.dueTime);
   const payload = await Promise.all(tasks.map((task) => getTaskWithEvidence(task.id)));
-  res.json(payload.filter((task) => task && (actor(req).role !== "admin" || task.createdByRole !== "supervisor" || task.status === "completed")));
+  res.json(payload.filter((task) => task));
 });
 
 router.post("/tasks", async (req, res) => {
@@ -1432,11 +1429,7 @@ router.get("/rankings", async (req, res) => {
     .where(and(gte(tasksTable.dueDate, cycle.start), lte(tasksTable.dueDate, cycle.end)));
   const origins = await db.select().from(taskOriginsTable);
   const originByTaskId = new Map(origins.map((origin) => [origin.taskId, origin]));
-  const visibleTasks = tasks.filter((task) =>
-    actor(req).role !== "admin"
-    || originByTaskId.get(task.id)?.createdByRole !== "supervisor"
-    || task.status === "completed"
-  );
+  const visibleTasks = tasks;
   const stores = await db
     .select()
     .from(storesTable)
