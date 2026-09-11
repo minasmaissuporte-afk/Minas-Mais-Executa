@@ -100,7 +100,7 @@ const rankingStoreGroups = {
   ],
   G: [
     "São Joao 1", "Boa esperança", "Lavras 4", "Lafaiete 8", "Divinopolis 5",
-    "Lafaiete 6", "Candeias", "itúna", "Belo horizonte 4", "Lafaiete 1", "Belo horizonte 2",
+    "Lafaiete 6", "Candeias", "Itauna", "Belo horizonte 4", "Lafaiete 1", "Belo horizonte 2",
   ],
   M: [
     "Lafaiete 3", "Belo horizonte 5", "Belo horizonte 3", "Betim", "São João 2",
@@ -114,7 +114,7 @@ const rankingStoreGroups = {
 } as const;
 
 function normalizeRankingStoreName(name: string) {
-  return name.normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
+  return name.normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase().replace(/^loja\s+/, "");
 }
 
 const rankingGroupByStoreName = new Map(
@@ -124,7 +124,10 @@ const rankingGroupByStoreName = new Map(
 );
 
 function rankingGroupForStore(storeName: string) {
-  return rankingGroupByStoreName.get(normalizeRankingStoreName(storeName)) ?? "Sem grupo";
+  const normalizedName = normalizeRankingStoreName(storeName);
+  return rankingGroupByStoreName.get(normalizedName)
+    ?? (/\s\d+$/.test(normalizedName) ? undefined : rankingGroupByStoreName.get(`${normalizedName} 1`))
+    ?? "Sem grupo";
 }
 
 function isNormalizedPrivateObjectPath(path: string): boolean {
