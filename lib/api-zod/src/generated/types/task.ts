@@ -22,6 +22,7 @@ export interface Task {
   assignee: string;
   /** @nullable */
   assigneeMemberId?: string | null;
+  assigneeMemberIds?: string[];
   assigneeRole?: TaskAssigneeRole;
   /** @nullable */
   batchGroupId?: string | null;

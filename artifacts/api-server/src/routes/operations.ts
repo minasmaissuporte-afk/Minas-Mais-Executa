@@ -180,6 +180,23 @@ async function resolveActiveMember(name: string, role: "manager" | "supervisor")
   return matches.length === 1 ? matches[0] : undefined;
 }
 
+async function resolveActiveMembersByIds(ids: string[], role: "manager" | "supervisor") {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  if (!uniqueIds.length) return [];
+  return db
+    .select()
+    .from(teamMembersTable)
+    .where(and(
+      inArray(teamMembersTable.id, uniqueIds),
+      eq(teamMembersTable.role, role),
+      eq(teamMembersTable.active, true),
+    ));
+}
+
+function isPresent<T>(value: T | null | undefined): value is T {
+  return value !== null && value !== undefined;
+}
+
 async function resolveManagerForStore(store: {
   id: string;
   manager: string;
@@ -212,9 +229,11 @@ async function applyMemberStoreAssignment(
   await db.update(teamMembersTable).set({ storeId }).where(eq(teamMembersTable.id, member.id));
 }
 
-function canExecuteTask(req: import("express").Request, task: { assignee: string; assigneeMemberId: string | null }): boolean {
+function canExecuteTask(req: import("express").Request, task: { assignee: string; assigneeMemberId: string | null; assigneeMemberIds?: string[] | null }): boolean {
   const member = actor(req);
-  return member.role === "admin" || task.assigneeMemberId === member.id;
+  return member.role === "admin"
+    || task.assigneeMemberIds?.includes(member.id) === true
+    || task.assigneeMemberId === member.id;
 }
 
 async function ensureSeedData() {
@@ -483,6 +502,11 @@ async function getTaskWithEvidence(id: string) {
   const commentUserNames = new Map(commentUsers.map((user) => [user.id, user.name]));
   return {
     ...task,
+    assigneeMemberIds: task.assigneeMemberIds?.length
+      ? task.assigneeMemberIds
+      : task.assigneeMemberId
+        ? [task.assigneeMemberId]
+        : [],
     evidenceTypes: task.evidenceTypes ?? [],
     evidence: evidence.map((item) => ({
       id: item.id,
@@ -637,27 +661,37 @@ router.post("/tasks", async (req, res) => {
     dueDate: parsed.data.dueDate.toISOString().slice(0, 10),
     evidenceTypes: parsed.data.evidenceTypes ?? [],
     modelObjectPath: parsed.data.modelObjectPath ?? null,
+    assigneeMemberId: null as string | null,
     status: "pending",
   };
-  const assigneeMember = task.assigneeRole === "manager"
-    ? await resolveManagerForStore(selectedStore)
-    : await resolveActiveMember(task.assignee, task.assigneeRole);
-  if (!assigneeMember || !assigneeMember.active || assigneeMember.role !== task.assigneeRole) {
+  const selectedAssigneeIds = [...new Set(parsed.data.assigneeMemberIds ?? [])];
+  const assigneeMembers = task.assigneeRole === "manager"
+    ? [await resolveManagerForStore(selectedStore)].filter(isPresent)
+    : selectedAssigneeIds.length
+      ? await resolveActiveMembersByIds(selectedAssigneeIds, "supervisor")
+      : [await resolveActiveMember(task.assignee, "supervisor")].filter(isPresent);
+  if (!assigneeMembers.length || assigneeMembers.length !== (task.assigneeRole === "manager" ? 1 : selectedAssigneeIds.length || 1)) {
     res.status(400).json({ error: "Responsável não encontrado." });
     return;
   }
+  const assigneeMember = assigneeMembers[0];
   if (task.assigneeRole === "manager" && assigneeMember.storeId && assigneeMember.storeId !== selectedStore.id) {
     res.status(400).json({ error: "O gerente responsável não está vinculado à loja selecionada." });
     return;
   }
-  (task as typeof task & { assigneeMemberId: string }).assigneeMemberId = assigneeMember.id;
+  task.assignee = assigneeMembers.map((member) => member.name.trim()).join(", ");
+  task.assigneeMemberId = assigneeMember.id;
+  const assigneeMemberIds = assigneeMembers.map((member) => member.id);
+  task.assigneeMemberIds = assigneeMemberIds;
   const inserted = await db.transaction(async (tx) => {
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"team-member:" + assigneeMember.id}))`);
-    const [available] = await tx
+    for (const assigneeId of assigneeMemberIds) {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"team-member:" + assigneeId}))`);
+    }
+    const available = await tx
       .select({ id: teamMembersTable.id })
       .from(teamMembersTable)
-      .where(and(eq(teamMembersTable.id, assigneeMember.id), eq(teamMembersTable.active, true)));
-    if (!available) return false;
+      .where(and(inArray(teamMembersTable.id, assigneeMemberIds), eq(teamMembersTable.active, true)));
+    if (!available || available.length !== assigneeMemberIds.length) return false;
     await tx.insert(tasksTable).values(task);
     await tx.insert(taskOriginsTable).values({
       taskId: task.id,
@@ -671,7 +705,11 @@ router.post("/tasks", async (req, res) => {
     return;
   }
   const result = await getTaskWithEvidence(task.id);
-  await notifyTaskAssignees([{ id: task.id, title: task.title, assigneeMemberId: assigneeMember.id }]);
+  await notifyTaskAssignees(assigneeMemberIds.map((assigneeMemberId) => ({
+    id: task.id,
+    title: task.title,
+    assigneeMemberId,
+  })));
   res.status(201).json(result);
 });
 
@@ -695,8 +733,17 @@ router.post("/tasks/bulk", async (req, res) => {
     res.status(400).json({ error: "Caminho do modelo visual inválido." });
     return;
   }
-  if (parsed.data.assigneeRole === "supervisor" && !parsed.data.assignee?.trim()) {
-    res.status(400).json({ error: "Selecione o supervisor responsável." });
+  const selectedSupervisorIds = [...new Set(parsed.data.assigneeMemberIds ?? [])];
+  const selectedSupervisorMembers = parsed.data.assigneeRole === "supervisor"
+    ? selectedSupervisorIds.length
+      ? await resolveActiveMembersByIds(selectedSupervisorIds, "supervisor")
+      : [await resolveActiveMember(parsed.data.assignee ?? "", "supervisor")].filter(isPresent)
+    : [];
+  if (parsed.data.assigneeRole === "supervisor" && (
+    !selectedSupervisorMembers.length
+    || selectedSupervisorMembers.length !== (selectedSupervisorIds.length || 1)
+  )) {
+    res.status(400).json({ error: "Selecione pelo menos um supervisor ativo." });
     return;
   }
   const stores = await db
@@ -716,8 +763,10 @@ router.post("/tasks/bulk", async (req, res) => {
     storeId: store.id,
     storeName: store.name,
     assignee: parsed.data.assigneeRole === "supervisor"
-      ? parsed.data.assignee!.trim()
+      ? selectedSupervisorMembers.map((member) => member.name.trim()).join(", ")
       : store.manager || "Gerente não definido",
+    assigneeMemberId: null as string | null,
+    assigneeMemberIds: parsed.data.assigneeRole === "supervisor" ? selectedSupervisorMembers.map((member) => member.id) : [],
     assigneeRole: parsed.data.assigneeRole,
     batchGroupId,
     category: parsed.data.category,
@@ -732,21 +781,24 @@ router.post("/tasks/bulk", async (req, res) => {
   }));
   for (const task of tasks) {
     const store = stores.find((item) => item.id === task.storeId);
-    const assigneeMember = task.assigneeRole === "manager" && store
-      ? await resolveManagerForStore(store)
-      : await resolveActiveMember(task.assignee, task.assigneeRole);
-    if (!assigneeMember || !assigneeMember.active || assigneeMember.role !== task.assigneeRole) {
+    const assigneeMembers = task.assigneeRole === "manager" && store
+      ? [await resolveManagerForStore(store)].filter(isPresent)
+      : selectedSupervisorMembers;
+    if (!assigneeMembers.length) {
       res.status(400).json({ error: "Responsável não encontrado." });
       return;
     }
+    const assigneeMember = assigneeMembers[0];
     if (task.assigneeRole === "manager" && assigneeMember.storeId && assigneeMember.storeId !== task.storeId) {
       res.status(400).json({ error: `A loja ${task.storeName} não possui um gerente ativo vinculado.` });
       return;
     }
-    (task as typeof task & { assigneeMemberId: string }).assigneeMemberId = assigneeMember.id;
+    task.assignee = assigneeMembers.map((member) => member.name.trim()).join(", ");
+    task.assigneeMemberId = assigneeMember.id;
+    task.assigneeMemberIds = assigneeMembers.map((member) => member.id);
   }
   const inserted = await db.transaction(async (tx) => {
-    const assigneeIds = [...new Set(tasks.map((task) => (task as typeof task & { assigneeMemberId: string }).assigneeMemberId))].sort();
+    const assigneeIds = [...new Set(tasks.flatMap((task) => task.assigneeMemberIds))].sort();
     for (const assigneeId of assigneeIds) {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"team-member:" + assigneeId}))`);
     }
@@ -768,11 +820,11 @@ router.post("/tasks/bulk", async (req, res) => {
     return;
   }
   const created = await Promise.all(tasks.map((task) => getTaskWithEvidence(task.id)));
-  await notifyTaskAssignees(tasks.map((task) => ({
+  await notifyTaskAssignees(tasks.flatMap((task) => task.assigneeMemberIds.map((assigneeMemberId) => ({
     id: task.id,
     title: task.title,
-    assigneeMemberId: (task as typeof task & { assigneeMemberId: string }).assigneeMemberId,
-  })));
+    assigneeMemberId,
+  }))));
   res.status(201).json(created.filter(Boolean));
 });
 
@@ -797,8 +849,17 @@ router.post("/tasks/recurring", async (req, res) => {
     res.status(400).json({ error: "Caminho do modelo visual inválido." });
     return;
   }
-  if (input.assigneeRole === "supervisor" && !input.assignee?.trim()) {
-    res.status(400).json({ error: "Selecione o supervisor responsável." });
+  const selectedSupervisorIds = [...new Set(input.assigneeMemberIds ?? [])];
+  const selectedSupervisorMembers = input.assigneeRole === "supervisor"
+    ? selectedSupervisorIds.length
+      ? await resolveActiveMembersByIds(selectedSupervisorIds, "supervisor")
+      : [await resolveActiveMember(input.assignee ?? "", "supervisor")].filter(isPresent)
+    : [];
+  if (input.assigneeRole === "supervisor" && (
+    !selectedSupervisorMembers.length
+    || selectedSupervisorMembers.length !== (selectedSupervisorIds.length || 1)
+  )) {
+    res.status(400).json({ error: "Selecione pelo menos um supervisor ativo." });
     return;
   }
   const stores = await db
@@ -858,8 +919,10 @@ router.post("/tasks/recurring", async (req, res) => {
       storeId: store.id,
       storeName: store.name,
       assignee: input.assigneeRole === "supervisor"
-        ? input.assignee!.trim()
+        ? selectedSupervisorMembers.map((member) => member.name.trim()).join(", ")
         : store.manager || "Gerente não definido",
+      assigneeMemberId: null as string | null,
+      assigneeMemberIds: input.assigneeRole === "supervisor" ? selectedSupervisorMembers.map((member) => member.id) : [],
       assigneeRole: input.assigneeRole,
       batchGroupId,
       category: input.category,
@@ -874,19 +937,25 @@ router.post("/tasks/recurring", async (req, res) => {
     }));
   });
   for (const task of tasks) {
-    const assigneeMember = await resolveActiveMember(task.assignee, task.assigneeRole);
-    if (!assigneeMember || !assigneeMember.active || assigneeMember.role !== task.assigneeRole) {
+    const store = stores.find((item) => item.id === task.storeId);
+    const assigneeMembers = task.assigneeRole === "manager" && store
+      ? [await resolveManagerForStore(store)].filter(isPresent)
+      : selectedSupervisorMembers;
+    if (!assigneeMembers.length) {
       res.status(400).json({ error: "Responsável não encontrado." });
       return;
     }
+    const assigneeMember = assigneeMembers[0];
     if (task.assigneeRole === "manager" && assigneeMember.storeId !== task.storeId) {
       res.status(400).json({ error: `A loja ${task.storeName} não possui um gerente ativo vinculado.` });
       return;
     }
-    (task as typeof task & { assigneeMemberId: string }).assigneeMemberId = assigneeMember.id;
+    task.assignee = assigneeMembers.map((member) => member.name.trim()).join(", ");
+    task.assigneeMemberId = assigneeMember.id;
+    task.assigneeMemberIds = assigneeMembers.map((member) => member.id);
   }
   const inserted = await db.transaction(async (tx) => {
-    const assigneeIds = [...new Set(tasks.map((task) => (task as typeof task & { assigneeMemberId: string }).assigneeMemberId))].sort();
+    const assigneeIds = [...new Set(tasks.flatMap((task) => task.assigneeMemberIds))].sort();
     for (const assigneeId of assigneeIds) {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${"team-member:" + assigneeId}))`);
     }
@@ -908,11 +977,11 @@ router.post("/tasks/recurring", async (req, res) => {
     return;
   }
   const created = await Promise.all(tasks.map((task) => getTaskWithEvidence(task.id)));
-  await notifyTaskAssignees(tasks.map((task) => ({
+  await notifyTaskAssignees(tasks.flatMap((task) => task.assigneeMemberIds.map((assigneeMemberId) => ({
     id: task.id,
     title: task.title,
-    assigneeMemberId: (task as typeof task & { assigneeMemberId: string }).assigneeMemberId,
-  })));
+    assigneeMemberId,
+  }))));
   res.status(201).json(created.filter(Boolean));
 });
 

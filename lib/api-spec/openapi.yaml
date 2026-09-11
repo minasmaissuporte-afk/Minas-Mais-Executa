@@ -790,6 +790,10 @@ components:
           type: string
         assigneeMemberId:
           type: ["string", "null"]
+        assigneeMemberIds:
+          type: array
+          items:
+            type: string
         assigneeRole:
           type: string
           enum: [manager, supervisor]
@@ -854,6 +858,10 @@ components:
           type: string
         assignee:
           type: string
+        assigneeMemberIds:
+          type: array
+          items:
+            type: string
         assigneeRole:
           type: string
           enum: [manager, supervisor]
@@ -894,6 +902,10 @@ components:
             type: string
         assignee:
           type: string
+        assigneeMemberIds:
+          type: array
+          items:
+            type: string
         assigneeRole:
           type: string
           enum: [manager, supervisor]
@@ -943,6 +955,10 @@ components:
             type: string
         assignee:
           type: string
+        assigneeMemberIds:
+          type: array
+          items:
+            type: string
         assigneeRole:
           type: string
           enum: [manager, supervisor]

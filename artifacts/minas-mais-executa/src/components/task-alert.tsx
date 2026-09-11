@@ -97,7 +97,7 @@ export function TaskAlert({ member, onUnreadChange }: { member: CurrentMember; o
       window.localStorage.setItem(storageKey, JSON.stringify(currentIds));
       return;
     }
-    const newTasks = tasksQuery.data.filter((task) => !saved.includes(task.id) && task.assigneeMemberId === member.id);
+    const newTasks = tasksQuery.data.filter((task) => !saved.includes(task.id) && (task.assigneeMemberId === member.id || task.assigneeMemberIds?.includes(member.id) === true));
     if (newTasks.length) {
       onUnreadChange(newTasks.length);
     }

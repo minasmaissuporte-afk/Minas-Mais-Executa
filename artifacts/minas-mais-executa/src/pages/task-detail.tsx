@@ -36,7 +36,7 @@ export default function TaskDetailPage() {
     client.invalidateQueries({ queryKey: getListTasksQueryKey() });
     client.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
   };
-  const canExecute = !!task && task.status !== 'pending_review' && task.status !== 'completed' && (me.data?.role === 'admin' || task.assigneeMemberId === me.data?.id);
+  const canExecute = !!task && task.status !== 'pending_review' && task.status !== 'completed' && (me.data?.role === 'admin' || task.assigneeMemberId === me.data?.id || task.assigneeMemberIds?.includes(me.data?.id ?? '') === true);
   const canReview = !!task && me.data?.role === 'supervisor' && task.status === 'pending_review';
   const updateStatus = (status: 'pending' | 'in_progress') => {
     if (!task) return;

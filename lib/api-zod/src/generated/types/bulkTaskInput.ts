@@ -16,6 +16,7 @@ export interface BulkTaskInput {
   /** @minItems 1 */
   storeIds: string[];
   assignee?: string;
+  assigneeMemberIds?: string[];
   assigneeRole: BulkTaskInputAssigneeRole;
   category: string;
   priority: BulkTaskInputPriority;

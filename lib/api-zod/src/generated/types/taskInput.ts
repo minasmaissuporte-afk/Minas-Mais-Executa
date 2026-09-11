@@ -16,6 +16,7 @@ export interface TaskInput {
   storeId: string;
   storeName: string;
   assignee: string;
+  assigneeMemberIds?: string[];
   assigneeRole?: TaskInputAssigneeRole;
   category: string;
   priority: TaskInputPriority;

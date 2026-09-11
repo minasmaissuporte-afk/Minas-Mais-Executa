@@ -17,6 +17,7 @@ export interface RecurringTaskInput {
   /** @minItems 1 */
   storeIds: string[];
   assignee?: string;
+  assigneeMemberIds?: string[];
   assigneeRole: RecurringTaskInputAssigneeRole;
   category: string;
   priority: RecurringTaskInputPriority;

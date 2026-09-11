@@ -253,6 +253,7 @@ export interface Task {
   assignee: string;
   /** @nullable */
   assigneeMemberId?: string | null;
+  assigneeMemberIds?: string[];
   assigneeRole?: TaskAssigneeRole;
   /** @nullable */
   batchGroupId?: string | null;
@@ -309,6 +310,7 @@ export interface TaskInput {
   storeId: string;
   storeName: string;
   assignee: string;
+  assigneeMemberIds?: string[];
   assigneeRole?: TaskInputAssigneeRole;
   category: string;
   priority: TaskInputPriority;
@@ -353,6 +355,7 @@ export interface BulkTaskInput {
   /** @minItems 1 */
   storeIds: string[];
   assignee?: string;
+  assigneeMemberIds?: string[];
   assigneeRole: BulkTaskInputAssigneeRole;
   category: string;
   priority: BulkTaskInputPriority;
@@ -410,6 +413,7 @@ export interface RecurringTaskInput {
   /** @minItems 1 */
   storeIds: string[];
   assignee?: string;
+  assigneeMemberIds?: string[];
   assigneeRole: RecurringTaskInputAssigneeRole;
   category: string;
   priority: RecurringTaskInputPriority;

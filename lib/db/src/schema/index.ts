@@ -40,6 +40,7 @@ export const tasksTable = pgTable("tasks", {
   storeName: text("store_name").notNull(),
   assignee: text("assignee").notNull(),
   assigneeMemberId: text("assignee_member_id"),
+  assigneeMemberIds: text("assignee_member_ids").array().notNull().default([]),
   assigneeRole: text("assignee_role").notNull().default("manager"),
   batchGroupId: text("batch_group_id"),
   category: text("category").notNull(),
