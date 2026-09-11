@@ -1,0 +1,94 @@
+Quero otimizar a performance deste aplicativo SEM alterar nenhuma funcionalidade existente, aparência, layout, componentes visuais, textos, fluxos de navegação ou regras de negócio.
+
+OBJETIVO:
+Melhorar principalmente o tempo de carregamento das informações da interface e preparar o sistema para aproximadamente 50 usuários simultâneos.
+
+IMPORTANTE:
+Antes de aplicar qualquer alteração, faça apenas uma análise técnica e me apresente exatamente:
+
+1. quais gargalos de performance você encontrou;
+2. quais arquivos pretende alterar;
+3. quais trechos do backend/frontend pretende modificar;
+4. quais queries do banco serão otimizadas;
+5. quais índices pretende criar no PostgreSQL;
+6. se alguma mudança pode causar risco de regressão;
+7. o ganho de performance esperado;
+8. se alguma funcionalidade ou comportamento poderá mudar.
+
+NÃO FAÇA NENHUMA ALTERAÇÃO AINDA.
+
+Depois dessa análise, pare e aguarde minha autorização.
+
+Eu vou revisar o plano antes de permitir que você execute.
+
+RESTRIÇÕES ABSOLUTAS:
+
+- Não alterar interface visual.
+- Não alterar CSS.
+- Não alterar design.
+- Não alterar cores.
+- Não alterar textos.
+- Não alterar responsividade.
+- Não alterar componentes visuais.
+- Não alterar autenticação ou permissões sem necessidade comprovada.
+- Não remover funcionalidades.
+- Não alterar regras de negócio.
+- Não alterar fluxo de criação ou conclusão de tarefas.
+- Não alterar funcionamento dos anexos/fotos.
+- Não substituir tecnologias ou frameworks.
+- Não migrar banco de dados para outro serviço.
+- Não trocar a hospedagem.
+- Não mudar a estrutura geral do aplicativo sem minha autorização.
+
+FOCO DA ANÁLISE:
+
+1. Investigar possível problema de N+1 queries na listagem de tarefas.
+2. Verificar se a rota de tarefas está fazendo consultas repetidas para cada tarefa, evidência, comentário, usuário ou origem.
+3. Propor uma solução para reduzir dezenas/centenas de queries para poucas queries em lote.
+4. Analisar carregamento da Dashboard e verificar se ela está buscando todas as tarefas quando precisa apenas das tarefas exibidas na tela.
+5. Avaliar filtros, LIMIT, paginação ou endpoints específicos para Dashboard sem alterar o comportamento visual.
+6. Verificar índices ausentes no PostgreSQL, principalmente relacionados a:
+   - tasks.store_id
+   - tasks.status
+   - tasks.due_date
+   - tasks.assignee_member_id
+   - evidences.task_id
+   - task_comments.task_id
+   - stores.supervisor_member_id
+   - team_members.store_id
+   - team_members.clerk_user_id
+7. Avaliar possíveis índices compostos como:
+   - tasks(store_id, due_date)
+   - tasks(store_id, status)
+8. Verificar consultas duplicadas ou dados sendo buscados mais de uma vez.
+9. Verificar chamadas HTTP desnecessárias do frontend.
+10. Analisar configurações de cache/refetch do React Query, caso esteja sendo utilizado.
+11. Verificar se existe processamento pesado durante o startup da aplicação, seed de dados ou inicialização que possa causar lentidão em cold start.
+12. Avaliar configuração do pool de conexões do PostgreSQL.
+13. Não mexer no sistema de upload de fotos se ele já estiver utilizando upload direto para Object Storage, a menos que exista um problema comprovado.
+14. Priorizar alterações simples, seguras e de alto impacto.
+
+META DE PERFORMANCE:
+
+Após as otimizações, buscar aproximadamente:
+
+- ações simples: 100–400 ms;
+- listagens: 200–700 ms;
+- dashboard: idealmente abaixo de 1 segundo;
+- evitar carregamentos comuns de 2–3 segundos quando não houver motivo técnico para isso.
+
+COMPATIBILIDADE:
+
+O sistema continuará hospedado no Replit.
+Banco de dados, backend e aplicação continuam no ecossistema atual.
+A aplicação precisa continuar funcionando exatamente como funciona hoje para o usuário.
+
+MUITO IMPORTANTE:
+
+Não comece a editar o código.
+
+Primeiro faça a auditoria, apresente o plano completo de alterações e finalize sua resposta com:
+
+"Estou aguardando sua autorização antes de aplicar qualquer alteração."
+
+Só depois da minha confirmação você poderá modificar o projeto.
