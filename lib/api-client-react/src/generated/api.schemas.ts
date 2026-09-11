@@ -611,6 +611,8 @@ export interface RankingEntry {
   /** Average elapsed time from task creation to completion, in minutes. */
   averageExecutionMinutes: number;
   trend: RankingEntryTrend;
+  /** Store ranking group defined by the operation. */
+  groupName: string;
   supervisorName: string;
 }
 

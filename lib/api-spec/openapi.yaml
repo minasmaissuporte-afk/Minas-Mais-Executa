@@ -1201,7 +1201,7 @@ components:
                 type: integer
     RankingEntry:
       type: object
-      required: [position, storeName, manager, execution, points, averageExecutionMinutes, trend, supervisorName]
+      required: [position, storeName, manager, execution, points, averageExecutionMinutes, trend, groupName, supervisorName]
       properties:
         position:
           type: integer
@@ -1221,6 +1221,9 @@ components:
         trend:
           type: string
           enum: [up, down, stable]
+        groupName:
+          type: string
+          description: Store ranking group defined by the operation.
         supervisorName:
           type: string
     UploadUrlInput:

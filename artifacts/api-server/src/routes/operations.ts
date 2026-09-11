@@ -93,6 +93,40 @@ function rankingMetrics(tasks: Array<Pick<typeof tasksTable.$inferSelect, "statu
   };
 }
 
+const rankingStoreGroups = {
+  GG: [
+    "Lavras 1", "Lavras 3", "Lafaiete 2", "Lafaiete 4", "Barbacena 1",
+    "Lafaiete 5", "Congonhas", "São João 3", "Campo Belo", "Barbacena 3", "Divinopolis 1",
+  ],
+  G: [
+    "São Joao 1", "Boa esperança", "Lavras 4", "Lafaiete 8", "Divinopolis 5",
+    "Lafaiete 6", "Candeias", "itúna", "Belo horizonte 4", "Lafaiete 1", "Belo horizonte 2",
+  ],
+  M: [
+    "Lafaiete 3", "Belo horizonte 5", "Belo horizonte 3", "Betim", "São João 2",
+    "Barbacena 2", "Pouso Alegre", "Campo Belo 3", "Oliveira", "Alfenas", "Lafaiete 7",
+  ],
+  P: [
+    "Três Corações", "Campo Belo 2", "Lavras 2", "Barbacena 4", "Perdões",
+    "Divinopolis 6", "Divinopolis 3", "Formiga 4", "Formiga 1", "Formiga 2",
+    "Divinopolis 4", "Divinopolis 2",
+  ],
+} as const;
+
+function normalizeRankingStoreName(name: string) {
+  return name.normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
+}
+
+const rankingGroupByStoreName = new Map(
+  Object.entries(rankingStoreGroups).flatMap(([group, stores]) =>
+    stores.map((store) => [normalizeRankingStoreName(store), group] as const),
+  ),
+);
+
+function rankingGroupForStore(storeName: string) {
+  return rankingGroupByStoreName.get(normalizeRankingStoreName(storeName)) ?? "Sem grupo";
+}
+
 function isNormalizedPrivateObjectPath(path: string): boolean {
   return path.startsWith("/objects/")
     && path.length > "/objects/".length
@@ -1901,17 +1935,16 @@ router.get("/rankings", async (req, res) => {
         points: currentMetrics.points,
         averageExecutionMinutes: currentMetrics.averageExecutionMinutes,
         trend,
+        groupName: rankingGroupForStore(store.name),
         supervisorName: store.supervisor || "Sem supervisor",
       };
     })
     .sort((left, right) => right.points - left.points || left.storeName.localeCompare(right.storeName));
 
-  const supervisorPositions = new Map<string, number>();
+  const groupPositions = new Map<string, number>();
   res.json(
     rankedStores.map((entry, index) => {
-      const position = actor(req).role === "admin"
-        ? (supervisorPositions.set(entry.supervisorName, (supervisorPositions.get(entry.supervisorName) ?? 0) + 1), supervisorPositions.get(entry.supervisorName)!)
-        : index + 1;
+      const position = groupPositions.set(entry.groupName, (groupPositions.get(entry.groupName) ?? 0) + 1).get(entry.groupName)!;
       return {
         position,
         ...entry,

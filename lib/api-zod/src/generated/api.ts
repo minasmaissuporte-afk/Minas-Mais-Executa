@@ -951,6 +951,7 @@ export const GetRankingsResponseItem = zod.object({
   "points": zod.number().int().describe('Total speed points from completed tasks in the current 30-day cycle.'),
   "averageExecutionMinutes": zod.number().int().describe('Average elapsed time from task creation to completion, in minutes.'),
   "trend": zod.enum(['up', 'down', 'stable']),
+  "groupName": zod.string().describe('Store ranking group defined by the operation.'),
   "supervisorName": zod.string()
 })
 export const GetRankingsResponse = zod.array(GetRankingsResponseItem)
