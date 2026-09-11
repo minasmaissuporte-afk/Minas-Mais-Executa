@@ -1,5 +1,6 @@
 import { SignIn, SignUp } from '@clerk/react';
 import type { ReactNode } from 'react';
+import logoImage from '@assets/af933122-6827-4305-a122-3f7713fe10e8_1789128021073.png';
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 const appearance = {
@@ -15,7 +16,7 @@ const appearance = {
 };
 
 function AuthFrame({ children, mode }: { children: ReactNode; mode: 'signin' | 'signup' }) {
-  return <div className="login-page"><section className="login-brand"><a className="brand" href={basePath || '/'} data-testid="link-auth-brand"><span className="brand-mark">M</span><span><span className="brand-name">Minas Mais</span><span className="brand-sub">Executa</span></span></a><div className="login-statement"><div className="login-kicker">Operação em primeiro lugar</div><h1>Faça a rotina acontecer.</h1><p>Um lugar calmo para enxergar o que precisa ser feito, comprovar a execução e cuidar melhor de cada loja.</p></div><div className="login-footer">Minas Mais Executa · rede em movimento</div></section><section className="login-form-side"><div className="clerk-wrap" data-testid={`auth-${mode}`}>{children}</div></section></div>;
+  return <div className="login-page"><section className="login-brand"><a className="login-logo-link" href={basePath || '/'} data-testid="link-auth-brand"><img className="login-brand-image" src={logoImage} alt="Minas Executa" /></a><div className="login-statement"><div className="login-kicker">Operação em primeiro lugar</div><h1>Faça a rotina acontecer.</h1><p>Um lugar calmo para enxergar o que precisa ser feito, comprovar a execução e cuidar melhor de cada loja.</p></div><div className="login-footer">Minas Mais Executa · rede em movimento</div></section><section className="login-form-side"><div className="clerk-wrap" data-testid={`auth-${mode}`}>{children}</div></section></div>;
 }
 export function SignInPage() {
   return <AuthFrame mode="signin"><SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" appearance={appearance} /></AuthFrame>;

@@ -15,6 +15,7 @@ import ReportsPage from '@/pages/reports';
 import AdministrationPage from '@/pages/administration';
 import NotFound from '@/pages/not-found';
 import { SignInPage, SignUpPage } from '@/pages/auth';
+import logoImage from '@assets/af933122-6827-4305-a122-3f7713fe10e8_1789128021073.png';
 import './index.css';
 
 const queryClient = new QueryClient();
@@ -34,7 +35,7 @@ function AuthRoutes() {
 function AuthenticatedRoutes() {
   const me = useGetMe();
   const { signOut } = useClerk();
-  if (me.isLoading) return <div className="access-screen"><div className="access-card"><div className="brand-mark">M</div><h1>Preparando sua operação</h1><p>Estamos validando seu acesso com segurança.</p><div className="access-loader" /></div></div>;
+  if (me.isLoading) return <div className="access-screen access-loading-screen"><div className="access-card access-loading-card"><img className="access-brand-image" src={logoImage} alt="Minas Executa" /><h1>Preparando sua operação</h1><p>Estamos validando seu acesso com segurança.</p><div className="access-loader" /></div></div>;
   if (me.isError || !me.data) {
     const status = (me.error as { status?: number } | undefined)?.status;
     const pending = status === 403;
