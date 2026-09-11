@@ -32,6 +32,7 @@ export default function TaskDetailPage() {
   const [reviewComment, setReviewComment] = useState('');
   const [newComment, setNewComment] = useState('');
   const [selectedImage, setSelectedImage] = useState<ImageViewerSelection | null>(null);
+  const [imageScale, setImageScale] = useState(1);
   const [, navigate] = useLocation();
   const task = taskQuery.data;
   const evidence = task?.evidence ?? [];
@@ -40,7 +41,10 @@ export default function TaskDetailPage() {
   useEffect(() => {
     if (!selectedImage) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSelectedImage(null);
+      if (event.key === 'Escape') {
+        setSelectedImage(null);
+        setImageScale(1);
+      }
     };
     document.addEventListener('keydown', handleKeyDown);
     document.body.style.overflow = 'hidden';
@@ -85,11 +89,17 @@ export default function TaskDetailPage() {
   };
   const openModel = () => {
     if (!task?.modelObjectPath) return;
+    setImageScale(1);
     setSelectedImage({ objectPath: task.modelObjectPath, fileName: 'Modelo da tarefa', alt: 'Imagem ampliada do modelo da tarefa' });
   };
   const openEvidenceImage = (item: Evidence) => {
     if (!item.objectPath) return;
+    setImageScale(1);
     setSelectedImage({ objectPath: item.objectPath, fileName: item.fileName, alt: `Evidência ampliada: ${item.fileName}` });
+  };
+  const closeImageViewer = () => {
+    setSelectedImage(null);
+    setImageScale(1);
   };
   const complete = () => {
     if (!task) return;
@@ -136,6 +146,6 @@ export default function TaskDetailPage() {
          <section className="card card-pad" style={{ marginTop: 14 }}><div className="section-title">Resumo rápido</div><div className="stat-meta">Status <StatusPill status={task.status} /></div><div className="stat-meta">Prioridade <PriorityPill priority={task.priority} /></div></section>
        </aside>
       </div>}
-       {selectedImage?.objectPath && <div className="evidence-viewer-backdrop" role="dialog" aria-modal="true" aria-label={`Visualização de ${selectedImage.fileName}`} onClick={() => setSelectedImage(null)}><div className="evidence-viewer" onClick={(event) => event.stopPropagation()}><div className="evidence-viewer-head"><div><div className="eyebrow">Visualização</div><div className="evidence-viewer-title">{selectedImage.fileName}</div></div><button type="button" className="button button-danger evidence-viewer-back-button" onClick={() => setSelectedImage(null)} data-testid="button-back-image-viewer"><ArrowLeft size={14} /> Voltar</button></div><img className="evidence-viewer-image" src={`/api/storage${selectedImage.objectPath}`} alt={selectedImage.alt} /></div></div>}
+       {selectedImage?.objectPath && <div className="evidence-viewer-backdrop" role="dialog" aria-modal="true" aria-label={`Visualização de ${selectedImage.fileName}`} onClick={closeImageViewer}><div className="evidence-viewer" onClick={(event) => event.stopPropagation()}><div className="evidence-viewer-head"><div><div className="eyebrow">Visualização</div><div className="evidence-viewer-title">{selectedImage.fileName}</div></div><button type="button" className="button button-danger evidence-viewer-back-button" onClick={closeImageViewer} data-testid="button-back-image-viewer"><ArrowLeft size={14} /> Voltar</button></div><div className="image-zoom-toolbar" aria-label="Controles de ampliação"><button type="button" className="image-zoom-button" onClick={() => setImageScale((scale) => Math.max(0.5, scale - 0.25))} aria-label="Reduzir imagem" disabled={imageScale <= 0.5}>−</button><button type="button" className="image-zoom-level" onClick={() => setImageScale(1)} aria-label="Restaurar tamanho original">{Math.round(imageScale * 100)}%</button><button type="button" className="image-zoom-button" onClick={() => setImageScale((scale) => Math.min(3, scale + 0.25))} aria-label="Ampliar imagem" disabled={imageScale >= 3}>+</button></div><div className="evidence-viewer-image-scroll"><img className="evidence-viewer-image" style={{ width: `${imageScale * 100}%` }} src={`/api/storage${selectedImage.objectPath}`} alt={selectedImage.alt} /></div></div></div>}
    </div>;
 }
