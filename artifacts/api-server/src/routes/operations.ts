@@ -755,13 +755,21 @@ router.post("/tasks", async (req, res) => {
     res.status(403).json({ error: "Você só pode criar tarefas para as lojas vinculadas ao seu perfil." });
     return;
   }
-  if (actor(req).role === "admin" && parsed.data.assigneeRole !== "supervisor") {
-    res.status(400).json({ error: "Administradores devem atribuir tarefas a um ou mais supervisores." });
+  if (actor(req).role === "admin" && parsed.data.assigneeRole !== "manager" && parsed.data.assigneeRole !== "supervisor") {
+    res.status(400).json({ error: "Administradores devem selecionar supervisores para delimitar as lojas." });
     return;
   }
-  if (actor(req).role === "admin" && !(parsed.data.assigneeMemberIds?.length)) {
+  const selectedSupervisorIds = [...new Set(parsed.data.assigneeMemberIds ?? [])];
+  if (actor(req).role === "admin" && !selectedSupervisorIds.length) {
     res.status(400).json({ error: "Selecione pelo menos um supervisor responsável." });
     return;
+  }
+  if (actor(req).role === "admin") {
+    const activeSupervisors = await resolveActiveMembersByIds(selectedSupervisorIds, "supervisor");
+    if (activeSupervisors.length !== selectedSupervisorIds.length) {
+      res.status(400).json({ error: "Selecione apenas supervisores ativos." });
+      return;
+    }
   }
   if (actor(req).role === "supervisor" && parsed.data.assigneeRole !== "manager") {
     res.status(400).json({ error: "Tarefas criadas pela supervisão devem ser atribuídas a um gerente." });
@@ -847,8 +855,8 @@ router.post("/tasks/bulk", async (req, res) => {
     res.status(400).json({ error: "Dados da tarefa em massa inválidos." });
     return;
   }
-  if (actor(req).role === "admin" && parsed.data.assigneeRole !== "supervisor") {
-    res.status(400).json({ error: "Administradores devem atribuir tarefas a um ou mais supervisores." });
+  if (actor(req).role === "admin" && parsed.data.assigneeRole !== "manager" && parsed.data.assigneeRole !== "supervisor") {
+    res.status(400).json({ error: "Administradores devem selecionar supervisores para delimitar as lojas." });
     return;
   }
   const selectedSupervisorIds = [...new Set(parsed.data.assigneeMemberIds ?? [])];
@@ -856,11 +864,24 @@ router.post("/tasks/bulk", async (req, res) => {
     res.status(400).json({ error: "Selecione pelo menos um supervisor responsável." });
     return;
   }
-  const requestedStoreIds = actor(req).role === "admin"
-    ? await storeIdsForSupervisors(selectedSupervisorIds)
-    : [...new Set(parsed.data.storeIds)];
+  if (actor(req).role === "admin") {
+    const activeSupervisors = await resolveActiveMembersByIds(selectedSupervisorIds, "supervisor");
+    if (activeSupervisors.length !== selectedSupervisorIds.length) {
+      res.status(400).json({ error: "Selecione apenas supervisores ativos." });
+      return;
+    }
+  }
+  const requestedStoreIds = [...new Set(parsed.data.storeIds)];
+  if (actor(req).role === "admin") {
+    const allowedStoreIds = await storeIdsForSupervisors(selectedSupervisorIds);
+    const invalidStoreIds = requestedStoreIds.filter((storeId) => !allowedStoreIds.includes(storeId));
+    if (invalidStoreIds.length) {
+      res.status(400).json({ error: "Uma ou mais lojas selecionadas não pertencem aos supervisores escolhidos." });
+      return;
+    }
+  }
   if (!requestedStoreIds.length) {
-    res.status(400).json({ error: "Os supervisores selecionados não possuem lojas vinculadas." });
+    res.status(400).json({ error: "Selecione pelo menos uma loja." });
     return;
   }
   if (!(await canCreateTask(req, requestedStoreIds))) {
@@ -977,8 +998,8 @@ router.post("/tasks/recurring", async (req, res) => {
     return;
   }
   const input = parsed.data;
-  if (actor(req).role === "admin" && input.assigneeRole !== "supervisor") {
-    res.status(400).json({ error: "Administradores devem atribuir tarefas a um ou mais supervisores." });
+  if (actor(req).role === "admin" && input.assigneeRole !== "manager" && input.assigneeRole !== "supervisor") {
+    res.status(400).json({ error: "Administradores devem selecionar supervisores para delimitar as lojas." });
     return;
   }
   const selectedSupervisorIds = [...new Set(input.assigneeMemberIds ?? [])];
@@ -986,11 +1007,24 @@ router.post("/tasks/recurring", async (req, res) => {
     res.status(400).json({ error: "Selecione pelo menos um supervisor responsável." });
     return;
   }
-  const requestedStoreIds = actor(req).role === "admin"
-    ? await storeIdsForSupervisors(selectedSupervisorIds)
-    : [...new Set(input.storeIds)];
+  if (actor(req).role === "admin") {
+    const activeSupervisors = await resolveActiveMembersByIds(selectedSupervisorIds, "supervisor");
+    if (activeSupervisors.length !== selectedSupervisorIds.length) {
+      res.status(400).json({ error: "Selecione apenas supervisores ativos." });
+      return;
+    }
+  }
+  const requestedStoreIds = [...new Set(input.storeIds)];
+  if (actor(req).role === "admin") {
+    const allowedStoreIds = await storeIdsForSupervisors(selectedSupervisorIds);
+    const invalidStoreIds = requestedStoreIds.filter((storeId) => !allowedStoreIds.includes(storeId));
+    if (invalidStoreIds.length) {
+      res.status(400).json({ error: "Uma ou mais lojas selecionadas não pertencem aos supervisores escolhidos." });
+      return;
+    }
+  }
   if (!requestedStoreIds.length) {
-    res.status(400).json({ error: "Os supervisores selecionados não possuem lojas vinculadas." });
+    res.status(400).json({ error: "Selecione pelo menos uma loja." });
     return;
   }
   if (!(await canCreateTask(req, requestedStoreIds))) {
