@@ -14,6 +14,7 @@ export interface Store {
   manager: string;
   managerMemberId?: string | null;
   supervisor: string;
+  supervisorMemberId?: string | null;
   /**
      * @minimum 0
      * @maximum 100

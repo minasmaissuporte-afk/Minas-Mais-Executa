@@ -589,6 +589,9 @@ components:
           nullable: true
         supervisor:
           type: string
+        supervisorMemberId:
+          type: string
+          nullable: true
         execution:
           type: integer
           minimum: 0

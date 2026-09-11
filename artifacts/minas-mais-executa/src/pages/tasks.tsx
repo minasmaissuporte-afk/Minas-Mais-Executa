@@ -135,31 +135,45 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
    }));
    const selectedSupervisorIds = draft.assigneeMemberIds;
     const allSupervisorsSelected = supervisors.length > 0 && supervisors.every((member) => selectedSupervisorIds.includes(member.id));
-   const toggleSupervisor = (memberId: string) => setDraft((current) => {
-     const assigneeMemberIds = current.assigneeMemberIds.includes(memberId)
-       ? current.assigneeMemberIds.filter((id) => id !== memberId)
-       : [...current.assigneeMemberIds, memberId];
-     return {
-       ...current,
-       assigneeMemberIds,
-       assignee: supervisors.filter((member) => assigneeMemberIds.includes(member.id)).map((member) => member.name).join(', '),
-     };
-   });
-    const toggleAllSupervisors = () => setDraft((current) => {
-      const assigneeMemberIds = allSupervisorsSelected ? [] : supervisors.map((member) => member.id);
+    const supervisorOwnsStore = (store: typeof stores[number], member: typeof supervisors[number]) => (
+      store.supervisorMemberId === member.id
+      || member.storeId === store.id
+      || (store.supervisor && store.supervisor.trim().toLowerCase() === member.name.trim().toLowerCase())
+    );
+    const linkedStoreIdsForSupervisors = (memberIds: string[]) => stores
+      .filter((store) => supervisors.some((member) => memberIds.includes(member.id) && supervisorOwnsStore(store, member)))
+      .map((store) => store.id);
+    const selectSupervisors = (nextIds: string[], role: 'manager' | 'supervisor' = 'supervisor') => setDraft((current) => {
+      const previousIds = current.assigneeRole === 'supervisor' ? current.assigneeMemberIds : [];
+      const previouslyLinkedStoreIds = linkedStoreIdsForSupervisors(previousIds);
+      const nextLinkedStoreIds = linkedStoreIdsForSupervisors(nextIds);
+      const retainedManualStoreIds = current.assigneeRole === 'supervisor'
+        ? current.storeIds.filter((storeId) => !previouslyLinkedStoreIds.includes(storeId) || nextLinkedStoreIds.includes(storeId))
+        : [];
+      const storeIds = [...new Set([...retainedManualStoreIds, ...nextLinkedStoreIds])];
       return {
         ...current,
-        assigneeMemberIds,
-        assignee: supervisors.filter((member) => assigneeMemberIds.includes(member.id)).map((member) => member.name).join(', '),
+        assigneeRole: role,
+        assigneeMemberIds: nextIds,
+        assignee: supervisors.filter((member) => nextIds.includes(member.id)).map((member) => member.name).join(', '),
+        scope: role === 'supervisor' ? 'selected' : current.scope,
+        storeIds: role === 'supervisor' ? storeIds : current.storeIds,
       };
     });
+    const toggleSupervisor = (memberId: string) => {
+      const nextIds = selectedSupervisorIds.includes(memberId)
+        ? selectedSupervisorIds.filter((id) => id !== memberId)
+        : [...selectedSupervisorIds, memberId];
+      selectSupervisors(nextIds);
+    };
+    const toggleAllSupervisors = () => selectSupervisors(allSupervisorsSelected ? [] : supervisors.map((member) => member.id));
    return <div className="modal-backdrop" role="dialog" aria-modal="true"><form className="modal" onSubmit={submit}><div className="modal-head"><div><div className="eyebrow">Nova execução</div><div className="modal-title">Criar tarefa</div></div><button type="button" className="icon-button" onClick={onClose} aria-label="Fechar formulário" data-testid="button-close-create">×</button></div><div className="form-grid">
     <div className="field full"><label htmlFor="task-title">Título</label><input id="task-title" className="input" value={draft.title} onChange={(event) => set('title', event.target.value)} placeholder="Ex.: Conferir exposição da campanha" data-testid="input-task-title" /></div>
      <div className="field full"><label htmlFor="task-description">Descrição</label><textarea id="task-description" className="textarea" value={draft.description} onChange={(event) => set('description', event.target.value)} placeholder="O que precisa ser feito?" data-testid="input-task-description" /></div>
      <div className="field full"><label htmlFor="task-model">Imagem de modelo (opcional)</label><label className="capture-button" htmlFor="task-model"><UploadCloud size={17} /> {uploadingModel ? 'Enviando imagem...' : draft.modelObjectPath ? 'Imagem de modelo anexada' : 'Anexar exemplo visual'}<input id="task-model" type="file" accept="image/*" className="hidden-file" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadModel(file); event.currentTarget.value = ''; }} disabled={uploadingModel} data-testid="input-task-model" /></label>{draft.modelObjectPath && <div className="field-hint">A imagem será exibida separadamente das evidências da execução. <button type="button" className="section-link" onClick={() => setDraft((current) => ({ ...current, modelObjectPath: null }))}>Remover</button></div>}</div>
       <div className="field"><label htmlFor="task-scope">Abrangência</label><select id="task-scope" className="select" value={draft.scope} onChange={(event) => changeScope(event.target.value as 'single' | 'selected' | 'all')} data-testid="select-task-scope"><option value="single">Uma loja</option><option value="selected">Selecionar várias lojas</option><option value="all">Todas as lojas</option></select><label className="scope-checkbox"><input type="checkbox" checked={draft.scope === 'selected'} onChange={(event) => changeScope(event.target.checked ? 'selected' : 'single')} data-testid="checkbox-task-select-stores" /><span><strong>Marcar lojas manualmente</strong><small>Selecione e desmarque as lojas que receberão esta tarefa.</small></span></label></div>
      <div className={`field ${draft.scope !== 'single' ? 'full' : ''}`}><label htmlFor="task-store">{draft.scope === 'selected' ? `Lojas selecionadas (${selectedStoreIds.length})` : 'Loja'}</label>{draft.scope === 'single' ? <select id="task-store" className="select" value={draft.storeId} onChange={(event) => { const store = stores.find((item) => item.id === event.target.value); setDraft((current) => ({ ...current, storeId: event.target.value, storeName: store?.name ?? current.storeName, storeIds: [event.target.value], assignee: current.assigneeRole === 'manager' ? activeManagerForStore(event.target.value)?.name ?? '' : current.assignee })); }} data-testid="select-task-store">{stores.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select> : <div className="store-picker">{draft.scope === 'all' ? <div className="store-picker-all">Todas as {stores.length} lojas serão incluídas.</div> : stores.map((store) => <label className="store-picker-option" key={store.id}><input type="checkbox" checked={draft.storeIds.includes(store.id)} onChange={() => toggleStore(store.id)} data-testid={`checkbox-task-store-${store.id}`} /><span>{store.name}</span><small>{store.city}</small></label>)}</div>}</div>
-      <div className="field"><label htmlFor="task-assignee-role">Responsável</label><select id="task-assignee-role" className="select" value={draft.assigneeRole} onChange={(event) => { const role = event.target.value as 'manager' | 'supervisor'; const assigneeMemberIds = role === 'supervisor' ? supervisors.slice(0, 1).map((member) => member.id) : []; setDraft((current) => ({ ...current, assigneeRole: role, assigneeMemberIds, assignee: role === 'manager' ? activeManagerForStore(current.storeId)?.name ?? '' : supervisors[0]?.name ?? '' })); }} data-testid="select-task-assignee-role"><option value="manager">Gerente de cada loja</option>{!isSupervisor && <option value="supervisor">Supervisor</option>}</select></div>
+      <div className="field"><label htmlFor="task-assignee-role">Responsável</label><select id="task-assignee-role" className="select" value={draft.assigneeRole} onChange={(event) => { const role = event.target.value as 'manager' | 'supervisor'; if (role === 'supervisor') { selectSupervisors(supervisors.slice(0, 1).map((member) => member.id)); } else { setDraft((current) => ({ ...current, assigneeRole: role, assigneeMemberIds: [], assignee: activeManagerForStore(current.storeId)?.name ?? '' })); } }} data-testid="select-task-assignee-role"><option value="manager">Gerente de cada loja</option>{!isSupervisor && <option value="supervisor">Supervisor</option>}</select></div>
       <div className={`field ${draft.assigneeRole === 'supervisor' ? 'full' : ''}`}><label htmlFor="task-assignee">{draft.assigneeRole === 'supervisor' ? `Supervisores escolhidos (${selectedSupervisorIds.length})` : 'Gerente responsável'}</label>{draft.assigneeRole === 'supervisor' ? <div className="store-picker supervisor-picker" id="task-assignee">{supervisors.length ? <><label className="store-picker-all supervisor-select-all"><input type="checkbox" checked={allSupervisorsSelected} onChange={toggleAllSupervisors} data-testid="checkbox-task-all-supervisors" /><span>Selecionar todos os supervisores</span></label>{supervisors.map((member) => <label className="store-picker-option" key={member.id}><input type="checkbox" checked={selectedSupervisorIds.includes(member.id)} onChange={() => toggleSupervisor(member.id)} data-testid={`checkbox-task-supervisor-${member.id}`} /><span>{member.name}</span><small>{member.email}</small></label>)}</> : <div className="store-picker-all">Nenhum supervisor ativo disponível.</div>}</div> : <input id="task-assignee" className="input" value={draft.scope !== 'single' ? 'Gerente de cada loja' : draft.assignee} readOnly data-testid="input-task-manager" />}</div>
     <div className="field"><label htmlFor="task-category">Categoria</label><select id="task-category" className="select" value={draft.category} onChange={(event) => set('category', event.target.value)} data-testid="select-task-category"><option>Operação</option><option>Campanhas</option><option>Qualidade</option><option>Abastecimento</option></select></div>
     <div className="field"><label htmlFor="task-priority">Prioridade</label><select id="task-priority" className="select" value={draft.priority} onChange={(event) => setDraft((current) => ({ ...current, priority: event.target.value as 'low' | 'medium' | 'high' }))} data-testid="select-task-priority"><option value="high">Alta</option><option value="medium">Média</option><option value="low">Baixa</option></select></div>
