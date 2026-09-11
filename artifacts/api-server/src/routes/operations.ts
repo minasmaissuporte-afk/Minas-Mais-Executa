@@ -193,6 +193,16 @@ async function resolveActiveMembersByIds(ids: string[], role: "manager" | "super
     ));
 }
 
+async function storeIdsForSupervisors(supervisorIds: string[]) {
+  const uniqueIds = [...new Set(supervisorIds.filter(Boolean))];
+  if (!uniqueIds.length) return [];
+  const stores = await db
+    .select({ id: storesTable.id })
+    .from(storesTable)
+    .where(inArray(storesTable.supervisorMemberId, uniqueIds));
+  return stores.map((store) => store.id);
+}
+
 function isPresent<T>(value: T | null | undefined): value is T {
   return value !== null && value !== undefined;
 }
@@ -644,6 +654,14 @@ router.post("/tasks", async (req, res) => {
     res.status(403).json({ error: "Você só pode criar tarefas para as lojas vinculadas ao seu perfil." });
     return;
   }
+  if (actor(req).role === "admin" && parsed.data.assigneeRole !== "supervisor") {
+    res.status(400).json({ error: "Administradores devem atribuir tarefas a um ou mais supervisores." });
+    return;
+  }
+  if (actor(req).role === "admin" && !(parsed.data.assigneeMemberIds?.length)) {
+    res.status(400).json({ error: "Selecione pelo menos um supervisor responsável." });
+    return;
+  }
   if (actor(req).role === "supervisor" && parsed.data.assigneeRole !== "manager") {
     res.status(400).json({ error: "Tarefas criadas pela supervisão devem ser atribuídas a um gerente." });
     return;
@@ -655,6 +673,10 @@ router.post("/tasks", async (req, res) => {
   const [selectedStore] = await db.select().from(storesTable).where(eq(storesTable.id, parsed.data.storeId));
   if (!selectedStore) {
     res.status(400).json({ error: "Loja não encontrada." });
+    return;
+  }
+  if (actor(req).role === "admin" && !(await storeIdsForSupervisors(parsed.data.assigneeMemberIds ?? [])).includes(selectedStore.id)) {
+    res.status(400).json({ error: "A loja deve pertencer a um dos supervisores selecionados." });
     return;
   }
   const task = {
@@ -724,7 +746,22 @@ router.post("/tasks/bulk", async (req, res) => {
     res.status(400).json({ error: "Dados da tarefa em massa inválidos." });
     return;
   }
-  const requestedStoreIds = [...new Set(parsed.data.storeIds)];
+  if (actor(req).role === "admin" && parsed.data.assigneeRole !== "supervisor") {
+    res.status(400).json({ error: "Administradores devem atribuir tarefas a um ou mais supervisores." });
+    return;
+  }
+  const selectedSupervisorIds = [...new Set(parsed.data.assigneeMemberIds ?? [])];
+  if (actor(req).role === "admin" && !selectedSupervisorIds.length) {
+    res.status(400).json({ error: "Selecione pelo menos um supervisor responsável." });
+    return;
+  }
+  const requestedStoreIds = actor(req).role === "admin"
+    ? await storeIdsForSupervisors(selectedSupervisorIds)
+    : [...new Set(parsed.data.storeIds)];
+  if (!requestedStoreIds.length) {
+    res.status(400).json({ error: "Os supervisores selecionados não possuem lojas vinculadas." });
+    return;
+  }
   if (!(await canCreateTask(req, requestedStoreIds))) {
     res.status(403).json({ error: "Você só pode criar tarefas para as lojas vinculadas ao seu perfil." });
     return;
@@ -737,7 +774,6 @@ router.post("/tasks/bulk", async (req, res) => {
     res.status(400).json({ error: "Caminho do modelo visual inválido." });
     return;
   }
-  const selectedSupervisorIds = [...new Set(parsed.data.assigneeMemberIds ?? [])];
   const selectedSupervisorMembers = parsed.data.assigneeRole === "supervisor"
     ? selectedSupervisorIds.length
       ? await resolveActiveMembersByIds(selectedSupervisorIds, "supervisor")
@@ -840,7 +876,22 @@ router.post("/tasks/recurring", async (req, res) => {
     return;
   }
   const input = parsed.data;
-  const requestedStoreIds = [...new Set(input.storeIds)];
+  if (actor(req).role === "admin" && input.assigneeRole !== "supervisor") {
+    res.status(400).json({ error: "Administradores devem atribuir tarefas a um ou mais supervisores." });
+    return;
+  }
+  const selectedSupervisorIds = [...new Set(input.assigneeMemberIds ?? [])];
+  if (actor(req).role === "admin" && !selectedSupervisorIds.length) {
+    res.status(400).json({ error: "Selecione pelo menos um supervisor responsável." });
+    return;
+  }
+  const requestedStoreIds = actor(req).role === "admin"
+    ? await storeIdsForSupervisors(selectedSupervisorIds)
+    : [...new Set(input.storeIds)];
+  if (!requestedStoreIds.length) {
+    res.status(400).json({ error: "Os supervisores selecionados não possuem lojas vinculadas." });
+    return;
+  }
   if (!(await canCreateTask(req, requestedStoreIds))) {
     res.status(403).json({ error: "Você só pode criar tarefas para as lojas vinculadas ao seu perfil." });
     return;
@@ -853,7 +904,6 @@ router.post("/tasks/recurring", async (req, res) => {
     res.status(400).json({ error: "Caminho do modelo visual inválido." });
     return;
   }
-  const selectedSupervisorIds = [...new Set(input.assigneeMemberIds ?? [])];
   const selectedSupervisorMembers = input.assigneeRole === "supervisor"
     ? selectedSupervisorIds.length
       ? await resolveActiveMembersByIds(selectedSupervisorIds, "supervisor")

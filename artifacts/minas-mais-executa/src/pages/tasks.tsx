@@ -32,6 +32,14 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
       )
     ));
   };
+  const supervisorOwnsStore = (store: typeof stores[number], member: typeof supervisors[number]) => (
+    store.supervisorMemberId === member.id
+    || member.storeId === store.id
+    || (store.supervisor && store.supervisor.trim().toLowerCase() === member.name.trim().toLowerCase())
+  );
+  const linkedStoreIdsForSupervisors = (memberIds: string[]) => stores
+    .filter((store) => supervisors.some((member) => memberIds.includes(member.id) && supervisorOwnsStore(store, member)))
+    .map((store) => store.id);
   const [notice, setNotice] = useState('');
   const [uploadingModel, setUploadingModel] = useState(false);
   const [repeat, setRepeat] = useState(false);
@@ -49,18 +57,22 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
     setDraft((current) => {
       const selectedStore = stores.find((store) => store.id === current.storeId) ?? stores[0];
       const selectedSupervisorIds = current.assigneeMemberIds.filter((memberId) => supervisors.some((member) => member.id === memberId));
-      const assigneeMemberIds = current.assigneeRole === 'supervisor' && supervisors.length
+      const assigneeRole = isAdmin ? 'supervisor' : current.assigneeRole;
+      const assigneeMemberIds = assigneeRole === 'supervisor' && supervisors.length
         ? selectedSupervisorIds.length ? selectedSupervisorIds : [supervisors[0].id]
         : current.assigneeMemberIds;
-      const canonicalAssignee = current.assigneeRole === 'manager'
+      const canonicalAssignee = assigneeRole === 'manager'
         ? activeManagerForStore(selectedStore.id)?.name ?? ''
         : supervisors.filter((member) => assigneeMemberIds.includes(member.id)).map((member) => member.name).join(', ');
       const availableStoreIds = current.storeIds.filter((storeId) => stores.some((store) => store.id === storeId));
-      const storeIds = availableStoreIds.length ? availableStoreIds : [selectedStore.id];
+      const storeIds = isAdmin
+        ? linkedStoreIdsForSupervisors(assigneeMemberIds)
+        : availableStoreIds.length ? availableStoreIds : [selectedStore.id];
       if (
         current.storeId === selectedStore.id
         && current.storeName === selectedStore.name
         && current.assignee === canonicalAssignee
+        && current.assigneeRole === assigneeRole
         && current.assigneeMemberIds.join(',') === assigneeMemberIds.join(',')
         && current.storeIds.join(',') === storeIds.join(',')
       ) return current;
@@ -68,12 +80,14 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
         ...current,
         storeId: selectedStore.id,
         storeName: selectedStore.name,
+        assigneeRole,
         assignee: canonicalAssignee,
         assigneeMemberIds,
+        scope: isAdmin ? 'selected' : current.scope,
         storeIds,
       };
     });
-  }, [stores, members]);
+  }, [stores, members, isAdmin]);
   const set = (key: string, value: string) => setDraft((current) => ({ ...current, [key]: value }));
   const uploadModel = async (file: File) => {
     setUploadingModel(true);
@@ -92,7 +106,9 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (!draft.title.trim()) { setNotice('Dê um nome para a tarefa antes de salvar.'); return; }
-    const selectedStoreIds = draft.scope === 'all' ? stores.map((store) => store.id) : draft.scope === 'selected' ? draft.storeIds : [draft.storeId];
+    const selectedStoreIds = isAdmin
+      ? linkedStoreIdsForSupervisors(draft.assigneeMemberIds)
+      : draft.scope === 'all' ? stores.map((store) => store.id) : draft.scope === 'selected' ? draft.storeIds : [draft.storeId];
     if (draft.assigneeRole === 'supervisor' && !draft.assigneeMemberIds.length) { setNotice('Selecione pelo menos um supervisor responsável.'); return; }
     if (!stores.length || !selectedStoreIds.length || selectedStoreIds.some((storeId) => !stores.some((store) => store.id === storeId))) { setNotice('Selecione pelo menos uma loja.'); return; }
     if (draft.assigneeRole === 'manager' && draft.scope === 'single' && !draft.assignee.trim()) { setNotice('A loja selecionada ainda não possui um gerente ativo.'); return; }
@@ -114,7 +130,7 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
         recurrenceMode,
         ...(recurrenceMode === 'daily_count' ? { occurrenceCount } : { weekdays, endDate }),
       } }, mutationOptions);
-    } else if (draft.scope !== 'single') {
+    } else if (isAdmin || draft.scope !== 'single') {
       const { storeId: _storeId, storeName: _storeName, scope: _scope, ...common } = draft;
       createBulkTasks.mutate({ data: { ...common, storeIds: selectedStoreIds } }, mutationOptions);
     } else {
@@ -124,7 +140,9 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
   };
   const pending = createTask.isPending || createBulkTasks.isPending || createRecurringTasks.isPending || uploadingModel;
   const weekdayOptions = [{ value: 0, label: 'Dom' }, { value: 1, label: 'Seg' }, { value: 2, label: 'Ter' }, { value: 3, label: 'Qua' }, { value: 4, label: 'Qui' }, { value: 5, label: 'Sex' }, { value: 6, label: 'Sáb' }];
-   const selectedStoreIds = draft.scope === 'all' ? stores.map((store) => store.id) : draft.scope === 'selected' ? draft.storeIds : [draft.storeId];
+    const selectedStoreIds = isAdmin
+      ? linkedStoreIdsForSupervisors(draft.assigneeMemberIds)
+      : draft.scope === 'all' ? stores.map((store) => store.id) : draft.scope === 'selected' ? draft.storeIds : [draft.storeId];
     const scopeAllLabel = isSupervisor ? 'Todas as lojas da minha região' : 'Todas as lojas';
     const scopeSelectionLabel = isSupervisor ? `Lojas da sua região selecionadas (${selectedStoreIds.length})` : `Lojas selecionadas (${selectedStoreIds.length})`;
     const scopeSelectionDescription = isSupervisor ? 'Marque somente as lojas da sua região que receberão esta tarefa.' : 'Selecione e desmarque as lojas que receberão esta tarefa.';
@@ -139,14 +157,6 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
    }));
    const selectedSupervisorIds = draft.assigneeMemberIds;
     const allSupervisorsSelected = supervisors.length > 0 && supervisors.every((member) => selectedSupervisorIds.includes(member.id));
-    const supervisorOwnsStore = (store: typeof stores[number], member: typeof supervisors[number]) => (
-      store.supervisorMemberId === member.id
-      || member.storeId === store.id
-      || (store.supervisor && store.supervisor.trim().toLowerCase() === member.name.trim().toLowerCase())
-    );
-    const linkedStoreIdsForSupervisors = (memberIds: string[]) => stores
-      .filter((store) => supervisors.some((member) => memberIds.includes(member.id) && supervisorOwnsStore(store, member)))
-      .map((store) => store.id);
     const selectSupervisors = (nextIds: string[], role: 'manager' | 'supervisor' = 'supervisor') => setDraft((current) => {
       const previousIds = current.assigneeRole === 'supervisor' ? current.assigneeMemberIds : [];
       const previouslyLinkedStoreIds = linkedStoreIdsForSupervisors(previousIds);
@@ -154,13 +164,13 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
       const retainedManualStoreIds = current.assigneeRole === 'supervisor'
         ? current.storeIds.filter((storeId) => !previouslyLinkedStoreIds.includes(storeId) || nextLinkedStoreIds.includes(storeId))
         : [];
-      const storeIds = [...new Set([...retainedManualStoreIds, ...nextLinkedStoreIds])];
+       const storeIds = isAdmin ? nextLinkedStoreIds : [...new Set([...retainedManualStoreIds, ...nextLinkedStoreIds])];
       return {
         ...current,
         assigneeRole: role,
         assigneeMemberIds: nextIds,
         assignee: supervisors.filter((member) => nextIds.includes(member.id)).map((member) => member.name).join(', '),
-        scope: role === 'supervisor' ? 'selected' : current.scope,
+         scope: role === 'supervisor' ? 'selected' : current.scope,
         storeIds: role === 'supervisor' ? storeIds : current.storeIds,
       };
     });
@@ -175,9 +185,10 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
     <div className="field full"><label htmlFor="task-title">Título</label><input id="task-title" className="input" value={draft.title} onChange={(event) => set('title', event.target.value)} placeholder="Ex.: Conferir exposição da campanha" data-testid="input-task-title" /></div>
      <div className="field full"><label htmlFor="task-description">Descrição</label><textarea id="task-description" className="textarea" value={draft.description} onChange={(event) => set('description', event.target.value)} placeholder="O que precisa ser feito?" data-testid="input-task-description" /></div>
      <div className="field full"><label htmlFor="task-model">Imagem de modelo (opcional)</label><label className="capture-button" htmlFor="task-model"><UploadCloud size={17} /> {uploadingModel ? 'Enviando imagem...' : draft.modelObjectPath ? 'Imagem de modelo anexada' : 'Anexar exemplo visual'}<input id="task-model" type="file" accept="image/*" className="hidden-file" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadModel(file); event.currentTarget.value = ''; }} disabled={uploadingModel} data-testid="input-task-model" /></label>{draft.modelObjectPath && <div className="field-hint">A imagem será exibida separadamente das evidências da execução. <button type="button" className="section-link" onClick={() => setDraft((current) => ({ ...current, modelObjectPath: null }))}>Remover</button></div>}</div>
-      <div className="field"><label htmlFor="task-scope">Abrangência</label><select id="task-scope" className="select" value={draft.scope} onChange={(event) => changeScope(event.target.value as 'single' | 'selected' | 'all')} data-testid="select-task-scope"><option value="single">Uma loja</option><option value="selected">Selecionar várias lojas</option><option value="all">{scopeAllLabel}</option></select><label className="scope-checkbox"><input type="checkbox" checked={draft.scope === 'selected'} onChange={(event) => changeScope(event.target.checked ? 'selected' : 'single')} data-testid="checkbox-task-select-stores" /><span><strong>Marcar lojas manualmente</strong><small>{scopeSelectionDescription}</small></span></label></div>
-      <div className={`field ${draft.scope !== 'single' ? 'full' : ''}`}><label htmlFor="task-store">{draft.scope === 'selected' ? scopeSelectionLabel : 'Loja'}</label>{draft.scope === 'single' ? <select id="task-store" className="select" value={draft.storeId} onChange={(event) => { const store = stores.find((item) => item.id === event.target.value); setDraft((current) => ({ ...current, storeId: event.target.value, storeName: store?.name ?? current.storeName, storeIds: [event.target.value], assignee: current.assigneeRole === 'manager' ? activeManagerForStore(event.target.value)?.name ?? '' : current.assignee })); }} data-testid="select-task-store">{stores.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select> : <div className="store-picker">{draft.scope === 'all' ? <div className="store-picker-all">{isSupervisor ? `Todas as ${stores.length} lojas da sua região serão incluídas.` : `Todas as ${stores.length} lojas serão incluídas.`}</div> : stores.map((store) => <label className="store-picker-option" key={store.id}><input type="checkbox" checked={draft.storeIds.includes(store.id)} onChange={() => toggleStore(store.id)} data-testid={`checkbox-task-store-${store.id}`} /><span>{store.name}</span><small>{store.city}</small></label>)}</div>}</div>
-      <div className="field"><label htmlFor="task-assignee-role">Responsável</label><select id="task-assignee-role" className="select" value={draft.assigneeRole} onChange={(event) => { const role = event.target.value as 'manager' | 'supervisor'; if (role === 'supervisor') { selectSupervisors(supervisors.slice(0, 1).map((member) => member.id)); } else { setDraft((current) => ({ ...current, assigneeRole: role, assigneeMemberIds: [], assignee: activeManagerForStore(current.storeId)?.name ?? '' })); } }} data-testid="select-task-assignee-role"><option value="manager">Gerente de cada loja</option>{!isSupervisor && <option value="supervisor">Supervisor</option>}</select></div>
+     {!isAdmin && <div className="field"><label htmlFor="task-scope">Abrangência</label><select id="task-scope" className="select" value={draft.scope} onChange={(event) => changeScope(event.target.value as 'single' | 'selected' | 'all')} data-testid="select-task-scope"><option value="single">Uma loja</option><option value="selected">Selecionar várias lojas</option><option value="all">{scopeAllLabel}</option></select><label className="scope-checkbox"><input type="checkbox" checked={draft.scope === 'selected'} onChange={(event) => changeScope(event.target.checked ? 'selected' : 'single')} data-testid="checkbox-task-select-stores" /><span><strong>Marcar lojas manualmente</strong><small>{scopeSelectionDescription}</small></span></label></div>}
+       {!isAdmin && <div className={`field ${draft.scope !== 'single' ? 'full' : ''}`}><label htmlFor="task-store">{draft.scope === 'selected' ? scopeSelectionLabel : 'Loja'}</label>{draft.scope === 'single' ? <select id="task-store" className="select" value={draft.storeId} onChange={(event) => { const store = stores.find((item) => item.id === event.target.value); setDraft((current) => ({ ...current, storeId: event.target.value, storeName: store?.name ?? current.storeName, storeIds: [event.target.value], assignee: current.assigneeRole === 'manager' ? activeManagerForStore(event.target.value)?.name ?? '' : current.assignee })); }} data-testid="select-task-store">{stores.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select> : <div className="store-picker">{draft.scope === 'all' ? <div className="store-picker-all">{isSupervisor ? `Todas as ${stores.length} lojas da sua região serão incluídas.` : `Todas as ${stores.length} lojas serão incluídas.`}</div> : stores.map((store) => <label className="store-picker-option" key={store.id}><input type="checkbox" checked={draft.storeIds.includes(store.id)} onChange={() => toggleStore(store.id)} data-testid={`checkbox-task-store-${store.id}`} /><span>{store.name}</span><small>{store.city}</small></label>)}</div>}</div>}
+       {isAdmin && <div className="field full"><div className="field-hint">As lojas serão incluídas automaticamente conforme os supervisores selecionados.</div></div>}
+       {!isAdmin && <div className="field"><label htmlFor="task-assignee-role">Responsável</label><select id="task-assignee-role" className="select" value={draft.assigneeRole} onChange={(event) => { const role = event.target.value as 'manager' | 'supervisor'; if (role === 'supervisor') { selectSupervisors(supervisors.slice(0, 1).map((member) => member.id)); } else { setDraft((current) => ({ ...current, assigneeRole: role, assigneeMemberIds: [], assignee: activeManagerForStore(current.storeId)?.name ?? '' })); } }} data-testid="select-task-assignee-role"><option value="manager">Gerente de cada loja</option>{!isSupervisor && <option value="supervisor">Supervisor</option>}</select></div>}
       <div className={`field ${draft.assigneeRole === 'supervisor' ? 'full' : ''}`}><label htmlFor="task-assignee">{draft.assigneeRole === 'supervisor' ? `Supervisores escolhidos (${selectedSupervisorIds.length})` : 'Gerente responsável'}</label>{draft.assigneeRole === 'supervisor' ? <div className="store-picker supervisor-picker" id="task-assignee">{supervisors.length ? <><label className="store-picker-all supervisor-select-all"><input type="checkbox" checked={allSupervisorsSelected} onChange={toggleAllSupervisors} data-testid="checkbox-task-all-supervisors" /><span>Selecionar todos os supervisores</span></label>{supervisors.map((member) => <label className="store-picker-option" key={member.id}><input type="checkbox" checked={selectedSupervisorIds.includes(member.id)} onChange={() => toggleSupervisor(member.id)} data-testid={`checkbox-task-supervisor-${member.id}`} /><span>{member.name}</span><small>{member.email}</small></label>)}</> : <div className="store-picker-all">Nenhum supervisor ativo disponível.</div>}</div> : <input id="task-assignee" className="input" value={draft.scope !== 'single' ? 'Gerente de cada loja' : draft.assignee} readOnly data-testid="input-task-manager" />}</div>
     <div className="field"><label htmlFor="task-category">Categoria</label><select id="task-category" className="select" value={draft.category} onChange={(event) => set('category', event.target.value)} data-testid="select-task-category"><option>Operação</option><option>Campanhas</option><option>Qualidade</option><option>Abastecimento</option></select></div>
     <div className="field"><label htmlFor="task-priority">Prioridade</label><select id="task-priority" className="select" value={draft.priority} onChange={(event) => setDraft((current) => ({ ...current, priority: event.target.value as 'low' | 'medium' | 'high' }))} data-testid="select-task-priority"><option value="high">Alta</option><option value="medium">Média</option><option value="low">Baixa</option></select></div>
