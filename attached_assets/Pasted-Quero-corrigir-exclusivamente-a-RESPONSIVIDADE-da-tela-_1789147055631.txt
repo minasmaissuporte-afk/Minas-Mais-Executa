@@ -1,0 +1,191 @@
+Quero corrigir exclusivamente a RESPONSIVIDADE da tela/aba de CRIAÇÃO DE NOVA TAREFA.
+
+PROBLEMA ATUAL:
+Em alguns dispositivos, tamanhos de tela ou navegadores, a interface de criação de tarefa fica desalinhada, torta, estourando a largura, com campos fora do lugar ou com espaçamento inadequado.
+
+OBJETIVO:
+Fazer com que a criação de nova tarefa seja responsiva e se adapte automaticamente a qualquer tamanho de tela moderno, sem alterar a identidade visual e sem mudar nenhuma funcionalidade.
+
+IMPORTANTE:
+NÃO altere regras de negócio, textos, campos, permissões, validações, endpoints, backend, banco de dados ou fluxo de criação de tarefas.
+
+NÃO faça redesign.
+
+Quero apenas corrigir:
+- responsividade;
+- alinhamento;
+- largura;
+- quebra de linha;
+- espaçamento;
+- overflow;
+- distribuição dos campos;
+- comportamento em telas menores;
+- compatibilidade entre navegadores.
+
+ANTES DE ALTERAR:
+Faça uma auditoria somente dessa interface e me informe:
+
+1. quais componentes participam da criação da tarefa;
+2. quais arquivos CSS/Tailwind/componentes precisam ser alterados;
+3. quais elementos estão causando overflow ou desalinhamento;
+4. quais breakpoints atuais existem;
+5. quais ajustes pretende fazer;
+6. se algum ajuste visual pode alterar a aparência em desktop;
+7. como pretende preservar exatamente o comportamento atual.
+
+NÃO EDITE AINDA.
+Pare e aguarde minha autorização.
+
+REQUISITOS DE RESPONSIVIDADE:
+
+A tela deve funcionar corretamente pelo menos em:
+
+- 320px
+- 360px
+- 375px
+- 390px
+- 414px
+- 768px
+- 1024px
+- 1280px
+- 1366px
+- 1440px
+- 1920px
+
+E em navegadores modernos como:
+- Chrome;
+- Edge;
+- Firefox;
+- Safari.
+
+REGRAS PARA O LAYOUT:
+
+1. Nenhum conteúdo pode ultrapassar horizontalmente a viewport.
+
+2. Não deve existir scroll horizontal na tela ou no modal de criação de tarefa.
+
+3. Em telas pequenas, campos que hoje aparecem lado a lado devem empilhar verticalmente quando necessário.
+
+4. Em telas maiores, preserve o layout atual sempre que possível.
+
+5. Inputs, selects, comboboxes, date pickers e áreas de texto devem usar largura responsiva.
+
+6. Botões devem permanecer acessíveis e não podem sair da tela.
+
+7. Se houver rodapé de ações com botões como Cancelar/Criar/Salvar:
+   - em desktop, preserve a disposição atual;
+   - em mobile, permita empilhamento ou ajuste responsivo sem cortar conteúdo.
+
+8. Modais/dialogs não podem ultrapassar a altura ou largura da tela.
+Se necessário:
+- utilizar max-width responsivo;
+- max-height adequado à viewport;
+- overflow-y interno;
+- padding adaptativo.
+
+9. Dropdowns, popovers, calendários e selects não podem abrir fora da viewport.
+
+10. Textos longos, nomes de lojas, responsáveis, categorias ou tarefas devem quebrar corretamente sem deformar o layout.
+
+11. Upload/anexo de fotos e vídeos deve se adaptar à largura disponível.
+
+12. Não utilizar larguras fixas que prejudiquem telas menores quando uma largura fluida puder ser usada.
+
+13. Preferir:
+- width: 100%;
+- max-width;
+- min-width: 0;
+- flex-wrap;
+- grid responsivo;
+- breakpoints;
+- clamp();
+- unidades relativas;
+
+quando fizer sentido.
+
+14. Revisar especialmente:
+- flex containers sem flex-wrap;
+- grid com número fixo de colunas;
+- min-width excessivo;
+- width em px;
+- elementos com position absolute;
+- selects com largura fixa;
+- dialogs com dimensões fixas;
+- labels e textos sem quebra;
+- containers sem min-width: 0.
+
+15. NÃO esconder campos para resolver responsividade.
+
+16. NÃO reduzir funcionalidades no mobile.
+
+17. NÃO alterar nenhuma validação existente.
+
+18. NÃO modificar backend ou API para essa tarefa.
+
+19. NÃO alterar componentes fora da criação de nova tarefa, a menos que seja um componente compartilhado e a mudança seja comprovadamente segura.
+
+20. Se um componente compartilhado precisar ser alterado, explique antes quais outras telas podem ser afetadas.
+
+COMPATIBILIDADE:
+
+Quero comportamento responsivo usando CSS/Tailwind/layout do próprio projeto, sem adicionar biblioteca pesada apenas para resolver responsividade.
+
+PRESERVAÇÃO VISUAL:
+
+A versão desktop atual deve permanecer visualmente o mais próxima possível do que existe hoje.
+
+Em tablet e celular, a prioridade é:
+- legibilidade;
+- alinhamento;
+- acesso a todos os campos;
+- nenhuma sobreposição;
+- nenhuma quebra visual;
+- nenhuma rolagem horizontal.
+
+TESTES:
+
+Após a implementação, quero validação nos seguintes tamanhos:
+
+Mobile:
+320x568
+360x800
+375x812
+390x844
+414x896
+
+Tablet:
+768x1024
+820x1180
+
+Desktop:
+1024x768
+1280x720
+1366x768
+1440x900
+1920x1080
+
+Verifique também:
+- zoom do navegador em 100%;
+- zoom em 125%;
+- textos longos;
+- muitos responsáveis selecionados;
+- nomes longos de lojas/categorias;
+- abertura de selects/dropdowns;
+- teclado virtual em mobile, quando aplicável.
+
+MUITO IMPORTANTE:
+
+Primeiro faça apenas a auditoria.
+
+Não altere nenhum arquivo ainda.
+
+Ao final, apresente:
+- causa do problema;
+- arquivos envolvidos;
+- alterações propostas;
+- risco de regressão;
+- dispositivos/tamanhos afetados.
+
+Finalize com:
+
+"Estou aguardando sua autorização antes de aplicar as correções de responsividade."
