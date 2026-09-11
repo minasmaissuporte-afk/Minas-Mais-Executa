@@ -100,7 +100,7 @@ const rankingStoreGroups = {
   ],
   G: [
     "São Joao 1", "Boa esperança", "Lavras 4", "Lafaiete 8", "Divinopolis 5",
-    "Lafaiete 6", "Candeias", "Itauna", "Belo horizonte 4", "Lafaiete 1", "Belo horizonte 2",
+    "Lafaiete 6", "Candeias", "Itauna", "Belo horizonte 4", "Lafaiete 1", "Belo horizonte 2", "Barbacena 5",
   ],
   M: [
     "Lafaiete 3", "Belo horizonte 5", "Belo horizonte 3", "Betim", "São João 2",
