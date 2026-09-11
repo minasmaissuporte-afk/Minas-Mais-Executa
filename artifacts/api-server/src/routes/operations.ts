@@ -125,8 +125,10 @@ const rankingGroupByStoreName = new Map(
 
 function rankingGroupForStore(storeName: string) {
   const normalizedName = normalizeRankingStoreName(storeName);
+  const withoutUnitOne = normalizedName.replace(/\s1$/, "");
   return rankingGroupByStoreName.get(normalizedName)
-    ?? (/\s\d+$/.test(normalizedName) ? undefined : rankingGroupByStoreName.get(`${normalizedName} 1`))
+    ?? (withoutUnitOne === normalizedName ? rankingGroupByStoreName.get(`${normalizedName} 1`) : undefined)
+    ?? (withoutUnitOne !== normalizedName ? rankingGroupByStoreName.get(withoutUnitOne) : undefined)
     ?? "Sem grupo";
 }
 
