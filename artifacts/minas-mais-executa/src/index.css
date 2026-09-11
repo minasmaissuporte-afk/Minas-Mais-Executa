@@ -228,6 +228,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @media (max-width:700px){
   .task-create-modal{padding:18px}
   .task-create-modal .store-picker{grid-template-columns:1fr}
+  .task-create-modal .multi-select-options{grid-template-columns:1fr}
   .task-create-modal .form-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
   .task-create-modal .form-actions .button{width:100%}
 }
