@@ -18,6 +18,7 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
   const stores = storesQuery.data ?? [];
   const members = membersQuery.data ?? [];
   const isSupervisor = me.data?.role === 'supervisor';
+  const isAdmin = me.data?.role === 'admin';
   const supervisors = members.filter((member) => member.role === 'supervisor' && member.active);
   const activeManagerForStore = (storeId: string) => {
     const store = stores.find((item) => item.id === storeId);
@@ -92,9 +93,9 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
     event.preventDefault();
     if (!draft.title.trim()) { setNotice('Dê um nome para a tarefa antes de salvar.'); return; }
     const selectedStoreIds = draft.scope === 'all' ? stores.map((store) => store.id) : draft.scope === 'selected' ? draft.storeIds : [draft.storeId];
+    if (draft.assigneeRole === 'supervisor' && !draft.assigneeMemberIds.length) { setNotice('Selecione pelo menos um supervisor responsável.'); return; }
     if (!stores.length || !selectedStoreIds.length || selectedStoreIds.some((storeId) => !stores.some((store) => store.id === storeId))) { setNotice('Selecione pelo menos uma loja.'); return; }
     if (draft.assigneeRole === 'manager' && draft.scope === 'single' && !draft.assignee.trim()) { setNotice('A loja selecionada ainda não possui um gerente ativo.'); return; }
-    if (draft.assigneeRole === 'supervisor' && !draft.assigneeMemberIds.length) { setNotice('Selecione pelo menos um supervisor responsável.'); return; }
     if (repeat && recurrenceMode === 'weekdays_until' && weekdays.length === 0) { setNotice('Escolha pelo menos um dia da semana.'); return; }
     if (repeat && recurrenceMode === 'weekdays_until' && endDate < draft.dueDate) { setNotice('A data final deve ser posterior à data inicial.'); return; }
     const mutationOptions = {
