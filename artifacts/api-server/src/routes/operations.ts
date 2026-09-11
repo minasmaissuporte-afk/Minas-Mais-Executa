@@ -3,6 +3,8 @@ import { and, desc, eq, gte, inArray, isNull, lte, ne, or, sql } from "drizzle-o
 import {
   AddTaskEvidenceBody,
   AddTaskEvidenceParams,
+  DeleteAllTasksBody,
+  DeleteTaskEvidenceParams,
   AddTaskCommentBody,
   AddTaskCommentParams,
   CompleteTaskParams,
@@ -96,6 +98,31 @@ function isNormalizedPrivateObjectPath(path: string): boolean {
     && !path.includes("\\")
     && !path.split("/").some((segment) => segment === "." || segment === "..")
     && objectStorageService.normalizeObjectEntityPath(path) === path;
+}
+
+async function deleteTaskData(taskIds: string[]) {
+  if (!taskIds.length) return;
+  const [taskRecords, evidence] = await Promise.all([
+    db
+      .select({ modelObjectPath: tasksTable.modelObjectPath })
+      .from(tasksTable)
+      .where(inArray(tasksTable.id, taskIds)),
+    db
+      .select({ objectPath: evidencesTable.objectPath })
+      .from(evidencesTable)
+      .where(inArray(evidencesTable.taskId, taskIds)),
+  ]);
+  await db.transaction(async (tx) => {
+    await tx.delete(evidencesTable).where(inArray(evidencesTable.taskId, taskIds));
+    await tx.delete(taskCommentsTable).where(inArray(taskCommentsTable.taskId, taskIds));
+    await tx.delete(taskOriginsTable).where(inArray(taskOriginsTable.taskId, taskIds));
+    await tx.delete(tasksTable).where(inArray(tasksTable.id, taskIds));
+  });
+  const objectPaths = [...new Set([
+    ...evidence.map((item) => item.objectPath),
+    ...taskRecords.map((item) => item.modelObjectPath),
+  ].filter((path): path is string => Boolean(path)))];
+  await Promise.allSettled(objectPaths.map((path) => objectStorageService.deleteObjectEntity(path)));
 }
 
 async function scopedStoreIds(req: import("express").Request): Promise<string[] | null> {
@@ -952,20 +979,19 @@ router.delete("/tasks/:id", async (req, res) => {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
   }
-  const evidence = await db
-    .select({ objectPath: evidencesTable.objectPath })
-    .from(evidencesTable)
-    .where(eq(evidencesTable.taskId, params.data.id));
-  await db.transaction(async (tx) => {
-    await tx.delete(evidencesTable).where(eq(evidencesTable.taskId, params.data.id));
-    await tx.delete(taskCommentsTable).where(eq(taskCommentsTable.taskId, params.data.id));
-    await tx.delete(taskOriginsTable).where(eq(taskOriginsTable.taskId, params.data.id));
-    await tx.delete(tasksTable).where(eq(tasksTable.id, params.data.id));
-  });
-  await Promise.all([
-    ...evidence.filter((item) => item.objectPath).map((item) => objectStorageService.deleteObjectEntity(item.objectPath!)),
-    ...(task.modelObjectPath ? [objectStorageService.deleteObjectEntity(task.modelObjectPath)] : []),
-  ]);
+  await deleteTaskData([params.data.id]);
+  res.status(204).send();
+});
+
+router.delete("/tasks", async (req, res) => {
+  await seedPromise;
+  if (!requireAdmin(req, res)) return;
+  const body = DeleteAllTasksBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: "Selecione pelo menos uma tarefa para excluir." });
+    return;
+  }
+  await deleteTaskData(body.data.taskIds);
   res.status(204).send();
 });
 
@@ -1012,6 +1038,40 @@ router.post("/tasks/:id/evidence", async (req, res) => {
     ...evidence,
     createdAt: new Date().toISOString(),
   });
+});
+
+router.delete("/tasks/:id/evidence/:evidenceId", async (req, res) => {
+  await seedPromise;
+  const params = DeleteTaskEvidenceParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Identificador da evidência inválido." });
+    return;
+  }
+  const task = await getTaskWithEvidence(params.data.id);
+  if (!task || !(await canAccessTask(req, task)) || !canExecuteTask(req, task)) {
+    res.status(404).json({ error: "Tarefa não encontrada." });
+    return;
+  }
+  if (task.status === "completed" || task.status === "pending_review") {
+    res.status(409).json({ error: "Evidências não podem ser apagadas depois que a execução foi finalizada." });
+    return;
+  }
+  const [evidence] = await db
+    .select({ id: evidencesTable.id, objectPath: evidencesTable.objectPath })
+    .from(evidencesTable)
+    .where(and(
+      eq(evidencesTable.id, params.data.evidenceId),
+      eq(evidencesTable.taskId, params.data.id),
+    ));
+  if (!evidence) {
+    res.status(404).json({ error: "Evidência não encontrada." });
+    return;
+  }
+  await db.delete(evidencesTable).where(eq(evidencesTable.id, evidence.id));
+  if (evidence.objectPath) {
+    await Promise.allSettled([objectStorageService.deleteObjectEntity(evidence.objectPath)]);
+  }
+  res.status(204).send();
 });
 
 router.post("/tasks/:id/complete", async (req, res) => {

@@ -214,6 +214,19 @@ export const CreateTaskResponse = zod.object({
 
 
 /**
+ * @summary Permanently delete the visible operational tasks
+ */
+
+
+
+export const DeleteAllTasksBody = zod.object({
+  "taskIds": zod.array(zod.string()).min(1)
+})
+
+export const DeleteAllTasksResponse = zod.void()
+
+
+/**
  * @summary Get one task
  */
 export const GetTaskParams = zod.object({
@@ -364,6 +377,17 @@ export const AddTaskEvidenceResponse = zod.object({
   "userName": zod.string(),
   "location": zod.string().nullish()
 })
+
+
+/**
+ * @summary Delete evidence before a task is finalized
+ */
+export const DeleteTaskEvidenceParams = zod.object({
+  "id": zod.coerce.string(),
+  "evidenceId": zod.coerce.string()
+})
+
+export const DeleteTaskEvidenceResponse = zod.void()
 
 
 /**

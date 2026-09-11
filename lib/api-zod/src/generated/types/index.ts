@@ -8,6 +8,7 @@
 
 export * from './activity';
 export * from './activityTone';
+export * from './bulkDeleteTasksInput';
 export * from './bulkTaskInput';
 export * from './bulkTaskInputAssigneeRole';
 export * from './bulkTaskInputEvidenceTypesItem';

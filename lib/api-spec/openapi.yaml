@@ -160,6 +160,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Task"
+    delete:
+      operationId: deleteAllTasks
+      tags: [tasks]
+      summary: Permanently delete the visible operational tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkDeleteTasksInput"
+      responses:
+        "204":
+          description: Selected tasks and their evidence permanently deleted
+        "403":
+          description: Only the general administrator can delete tasks
   /tasks/{id}:
     get:
       operationId: getTask
@@ -226,6 +241,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Evidence"
+  /tasks/{id}/evidence/{evidenceId}:
+    delete:
+      operationId: deleteTaskEvidence
+      tags: [tasks]
+      summary: Delete evidence before a task is finalized
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+        - name: evidenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Evidence deleted
+        "403":
+          description: User cannot edit this task
+        "404":
+          description: Task or evidence not found
+        "409":
+          description: Evidence cannot be deleted after task finalization
   /tasks/{id}/complete:
     post:
       operationId: completeTask
@@ -882,6 +918,15 @@ components:
           type: ["string", "null"]
         instructions:
           type: string
+    BulkDeleteTasksInput:
+      type: object
+      required: [taskIds]
+      properties:
+        taskIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
     RecurringTaskInput:
       type: object
       required: [title, description, storeIds, assigneeRole, category, priority, dueDate, dueTime, evidenceRequired, instructions, recurrenceMode]

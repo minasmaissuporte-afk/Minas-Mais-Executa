@@ -21,6 +21,7 @@ import type {
 
 import type {
   Activity,
+  BulkDeleteTasksInput,
   BulkTaskInput,
   CurrentMember,
   DashboardSummary,
@@ -689,6 +690,77 @@ export const useCreateTask = <TError = ErrorType<unknown>,
       return useMutation(getCreateTaskMutationOptions(options));
     }
 
+export const getDeleteAllTasksUrl = () => {
+
+
+
+
+  return `/api/tasks`
+}
+
+/**
+ * @summary Permanently delete the visible operational tasks
+ */
+export const deleteAllTasks = async (bulkDeleteTasksInput: BulkDeleteTasksInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteAllTasksUrl(),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bulkDeleteTasksInput)
+  }
+);}
+
+
+
+
+
+export const getDeleteAllTasksMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAllTasks>>, TError,{data: BodyType<BulkDeleteTasksInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAllTasks>>, TError,{data: BodyType<BulkDeleteTasksInput>}, TContext> => {
+
+const mutationKey = ['deleteAllTasks'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAllTasks>>, {data: BodyType<BulkDeleteTasksInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  deleteAllTasks(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAllTasksMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAllTasks>>>
+    export type DeleteAllTasksMutationBody = BodyType<BulkDeleteTasksInput>
+    export type DeleteAllTasksMutationError = ErrorType<void>
+
+    /**
+ * @summary Permanently delete the visible operational tasks
+ */
+export const useDeleteAllTasks = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAllTasks>>, TError,{data: BodyType<BulkDeleteTasksInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAllTasks>>,
+        TError,
+        {data: BodyType<BulkDeleteTasksInput>},
+        TContext
+      > => {
+      return useMutation(getDeleteAllTasksMutationOptions(options));
+    }
+
 export const getGetTaskUrl = (id: string,) => {
 
 
@@ -979,6 +1051,79 @@ export const useAddTaskEvidence = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAddTaskEvidenceMutationOptions(options));
+    }
+
+export const getDeleteTaskEvidenceUrl = (id: string,
+    evidenceId: string,) => {
+
+
+
+
+  return `/api/tasks/${id}/evidence/${evidenceId}`
+}
+
+/**
+ * @summary Delete evidence before a task is finalized
+ */
+export const deleteTaskEvidence = async (id: string,
+    evidenceId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteTaskEvidenceUrl(id,evidenceId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteTaskEvidenceMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTaskEvidence>>, TError,{id: string;evidenceId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteTaskEvidence>>, TError,{id: string;evidenceId: string}, TContext> => {
+
+const mutationKey = ['deleteTaskEvidence'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteTaskEvidence>>, {id: string;evidenceId: string}> = (props) => {
+          const {id,evidenceId} = props ?? {};
+
+          return  deleteTaskEvidence(id,evidenceId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteTaskEvidenceMutationResult = NonNullable<Awaited<ReturnType<typeof deleteTaskEvidence>>>
+
+    export type DeleteTaskEvidenceMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete evidence before a task is finalized
+ */
+export const useDeleteTaskEvidence = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTaskEvidence>>, TError,{id: string;evidenceId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteTaskEvidence>>,
+        TError,
+        {id: string;evidenceId: string},
+        TContext
+      > => {
+      return useMutation(getDeleteTaskEvidenceMutationOptions(options));
     }
 
 export const getCompleteTaskUrl = (id: string,) => {

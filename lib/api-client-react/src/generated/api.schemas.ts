@@ -365,6 +365,11 @@ export interface BulkTaskInput {
   instructions: string;
 }
 
+export interface BulkDeleteTasksInput {
+  /** @minItems 1 */
+  taskIds: string[];
+}
+
 export type RecurringTaskInputAssigneeRole = typeof RecurringTaskInputAssigneeRole[keyof typeof RecurringTaskInputAssigneeRole];
 
 
