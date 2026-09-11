@@ -26,6 +26,7 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
       && member.active
       && (
         member.storeId === storeId
+        || member.id === store?.managerMemberId
         || (store?.manager && member.name.trim().toLowerCase() === store.manager.trim().toLowerCase())
       )
     ));
@@ -174,7 +175,7 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function TasksPage() {
-  const [search, setSearch] = useState(''); const [status, setStatus] = useState('all'); const [category, setCategory] = useState('all'); const [creating, setCreating] = useState(false);
+  const [search, setSearch] = useState(''); const [status, setStatus] = useState('all'); const [category, setCategory] = useState('all'); const [creating, setCreating] = useState(false); const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const client = useQueryClient();
@@ -220,10 +221,30 @@ export default function TasksPage() {
       },
     });
   };
-  const removeAllTasks = () => {
-    if (!tasks.length || !window.confirm(`Excluir definitivamente as ${tasks.length} tarefas visíveis? Esta ação apagará as tarefas, evidências, comentários e imagens de modelo selecionados.`)) return;
-    deleteAllTasks.mutate({ data: { taskIds: tasks.map((task) => task.id) } }, {
+  const toggleTaskSelection = (taskId: string) => setSelectedTaskIds((current) => {
+    const next = new Set(current);
+    if (next.has(taskId)) next.delete(taskId);
+    else next.add(taskId);
+    return next;
+  });
+  const toggleTaskGroupSelection = (taskIds: string[]) => setSelectedTaskIds((current) => {
+    const next = new Set(current);
+    const shouldSelect = taskIds.some((taskId) => !next.has(taskId));
+    taskIds.forEach((taskId) => shouldSelect ? next.add(taskId) : next.delete(taskId));
+    return next;
+  });
+  const toggleVisibleTaskSelection = () => setSelectedTaskIds((current) => {
+    const next = new Set(current);
+    const shouldSelect = tasks.some((task) => !next.has(task.id));
+    tasks.forEach((task) => shouldSelect ? next.add(task.id) : next.delete(task.id));
+    return next;
+  });
+  const selectedVisibleTaskIds = tasks.filter((task) => selectedTaskIds.has(task.id)).map((task) => task.id);
+  const removeSelectedTasks = () => {
+    if (!selectedVisibleTaskIds.length || !window.confirm(`Excluir definitivamente ${selectedVisibleTaskIds.length} tarefa(s) selecionada(s)? Esta ação apagará as tarefas, evidências, comentários e imagens de modelo.`)) return;
+    deleteAllTasks.mutate({ data: { taskIds: selectedVisibleTaskIds } }, {
       onSuccess: () => {
+        setSelectedTaskIds(new Set());
         client.invalidateQueries({ queryKey: getListTasksQueryKey() });
         client.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
       },
@@ -231,8 +252,8 @@ export default function TasksPage() {
   };
   return <div className="content"><div className="page-head"><div><div className="eyebrow">Ritmo operacional</div><h1 className="page-title">Tarefas</h1><p className="page-intro">Veja, execute e comprove cada combinado da rede.</p></div><div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>{canCreate && <button className="button button-primary" onClick={() => setCreating(true)} data-testid="button-new-task"><Plus size={15} /> Nova tarefa</button>}</div></div>
       <div className="card filters"><div className="search-wrap"><Search size={15} /><input className="input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por tarefa, loja ou responsável" aria-label="Buscar tarefas" data-testid="input-search-tasks" /></div><select className="select" value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filtrar por status" data-testid="select-filter-status"><option value="all">Todos os status</option><option value="pending">Pendentes</option><option value="in_progress">Em execução</option><option value="pending_review">Aguardando conferência</option><option value="rejected">Reprovadas</option><option value="completed">Concluídas</option><option value="overdue">Atrasadas</option></select><select className="select" value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Filtrar por categoria" data-testid="select-filter-category"><option value="all">Todas categorias</option>{categories.map((item) => <option value={item} key={item}>{item}</option>)}</select>{isAdmin && <><label className="date-filter"><span>De</span><input type="date" className="input" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} aria-label="Data inicial" data-testid="input-filter-date-from" /></label><label className="date-filter"><span>Até</span><input type="date" className="input" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} aria-label="Data final" data-testid="input-filter-date-to" /></label>{(dateFrom || dateTo) && <button className="button button-ghost" type="button" onClick={() => { setDateFrom(''); setDateTo(''); }} data-testid="button-clear-date-filter">Limpar datas</button>}</>}<button className="icon-button" aria-label="Filtros adicionais" data-testid="button-filter"><Filter size={15} /></button></div>
-      {isAdmin && <div className="bulk-task-actions"><div><strong>Exclusão em massa</strong><span>A ação respeita a busca e os filtros aplicados.</span></div><button className="button button-danger" onClick={removeAllTasks} disabled={deleteAllTasks.isPending || !tasks.length} data-testid="button-delete-all-tasks"><Trash2 size={15} /> {deleteAllTasks.isPending ? 'Excluindo...' : `Excluir tarefas visíveis (${tasks.length})`}</button></div>}
-      {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isLoading ? <LoadingBlocks rows={2} /> : taskRows.length ? <div className="task-list">{taskRows.map((row) => row.tasks.length > 1 ? <TaskGroupRow key={row.key} tasks={row.tasks} onDelete={isAdmin ? removeTask : undefined} /> : <TaskRow key={row.key} task={row.tasks[0]} onDelete={isAdmin ? removeTask : undefined} />)}</div> : <div className="card"><SearchEmpty /></div>}
+       {isAdmin && <div className="bulk-task-actions"><div><strong>Exclusão por seleção</strong><span>Marque tarefas individuais ou o conjunto inteiro. A seleção respeita a busca e os filtros aplicados.</span></div><label className="bulk-select-all"><input type="checkbox" checked={tasks.length > 0 && tasks.every((task) => selectedTaskIds.has(task.id))} onChange={toggleVisibleTaskSelection} data-testid="checkbox-select-visible-tasks" /><span>Selecionar todas ({tasks.length})</span></label><button className="button button-danger" onClick={removeSelectedTasks} disabled={deleteAllTasks.isPending || !selectedVisibleTaskIds.length} data-testid="button-delete-selected-tasks"><Trash2 size={15} /> {deleteAllTasks.isPending ? 'Excluindo...' : `Excluir selecionadas (${selectedVisibleTaskIds.length})`}</button></div>}
+       {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isLoading ? <LoadingBlocks rows={2} /> : taskRows.length ? <div className="task-list">{taskRows.map((row) => row.tasks.length > 1 ? <TaskGroupRow key={row.key} tasks={row.tasks} onDelete={isAdmin ? removeTask : undefined} selectedTaskIds={selectedTaskIds} onToggleSelect={isAdmin ? toggleTaskSelection : undefined} onToggleGroupSelect={isAdmin ? toggleTaskGroupSelection : undefined} /> : <TaskRow key={row.key} task={row.tasks[0]} onDelete={isAdmin ? removeTask : undefined} selected={selectedTaskIds.has(row.tasks[0].id)} onToggleSelect={isAdmin ? toggleTaskSelection : undefined} />)}</div> : <div className="card"><SearchEmpty /></div>}
     {creating && canCreate && <TaskCreateModal onClose={() => setCreating(false)} />}
   </div>;
 }

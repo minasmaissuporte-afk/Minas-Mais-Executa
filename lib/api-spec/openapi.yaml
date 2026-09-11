@@ -584,6 +584,9 @@ components:
           type: string
         manager:
           type: string
+        managerMemberId:
+          type: string
+          nullable: true
         supervisor:
           type: string
         execution:

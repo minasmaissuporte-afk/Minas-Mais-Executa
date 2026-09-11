@@ -366,6 +366,7 @@ async function ensureSeedData() {
     .onConflictDoNothing();
 
   const storesNeedingLinks = await db.select().from(storesTable);
+  const storesById = new Map(storesNeedingLinks.map((store) => [store.id, store]));
   for (const store of storesNeedingLinks) {
     const manager = store.managerMemberId ? null : await resolveActiveMember(store.manager, "manager");
     const supervisor = store.supervisorMemberId ? null : await resolveActiveMember(store.supervisor, "supervisor");
@@ -392,10 +393,13 @@ async function ensureSeedData() {
   const tasksNeedingLinks = await db.select().from(tasksTable);
   for (const task of tasksNeedingLinks) {
     if (task.assigneeMemberId || (task.assigneeRole !== "manager" && task.assigneeRole !== "supervisor")) continue;
-    const assignee = await resolveActiveMember(task.assignee, task.assigneeRole);
+    const store = storesById.get(task.storeId);
+    const assignee = task.assigneeRole === "manager" && store
+      ? await resolveManagerForStore(store)
+      : await resolveActiveMember(task.assignee, task.assigneeRole);
     if (assignee && (task.assigneeRole !== "manager" || assignee.storeId === task.storeId)) {
       await db.update(tasksTable)
-        .set({ assigneeMemberId: assignee.id, assignee: assignee.name.trim() })
+        .set({ assigneeMemberId: assignee.id, assigneeMemberIds: [assignee.id], assignee: assignee.name.trim() })
         .where(and(
           eq(tasksTable.id, task.id),
           isNull(tasksTable.assigneeMemberId),

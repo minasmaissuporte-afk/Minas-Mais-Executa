@@ -12,6 +12,7 @@ export interface Store {
   city: string;
   region: string;
   manager: string;
+  managerMemberId?: string | null;
   supervisor: string;
   /**
      * @minimum 0

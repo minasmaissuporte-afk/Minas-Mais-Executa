@@ -700,6 +700,7 @@ export const ListStoresResponseItem = zod.object({
   "city": zod.string(),
   "region": zod.string(),
   "manager": zod.string(),
+  "managerMemberId": zod.string().nullish(),
   "supervisor": zod.string(),
   "execution": zod.number().int().min(listStoresResponseExecutionMin).max(listStoresResponseExecutionMax)
 })
@@ -733,6 +734,7 @@ export const CreateStoreResponse = zod.object({
   "city": zod.string(),
   "region": zod.string(),
   "manager": zod.string(),
+  "managerMemberId": zod.string().nullish(),
   "supervisor": zod.string(),
   "execution": zod.number().int().min(createStoreResponseExecutionMin).max(createStoreResponseExecutionMax)
 })
@@ -769,6 +771,7 @@ export const UpdateStoreResponse = zod.object({
   "city": zod.string(),
   "region": zod.string(),
   "manager": zod.string(),
+  "managerMemberId": zod.string().nullish(),
   "supervisor": zod.string(),
   "execution": zod.number().int().min(updateStoreResponseExecutionMin).max(updateStoreResponseExecutionMax)
 })
