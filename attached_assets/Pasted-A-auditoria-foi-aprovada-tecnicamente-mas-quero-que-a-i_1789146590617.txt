@@ -1,0 +1,72 @@
+A auditoria foi aprovada tecnicamente, mas quero que a implementação seja feita de forma conservadora e incremental.
+
+Pode iniciar as otimizações, seguindo estas condições adicionais:
+
+1. NÃO alterar aparência, layout, CSS, textos, navegação, permissões, autenticação ou regras de negócio.
+
+2. Não altere de forma incompatível o contrato atual de GET /tasks inicialmente.
+Prefira criar uma resposta/endpoint resumido de forma aditiva e migrar Dashboard, Tasks, Reports e TaskAlert para ele gradualmente.
+Somente remova ou altere contratos antigos depois de confirmar que nenhum consumidor depende deles.
+
+3. Prioridade máxima:
+- eliminar N+1;
+- criar listagem resumida;
+- criar consulta leve para TaskAlert;
+- otimizar Dashboard;
+- otimizar Reports/Rankings.
+
+4. Para TaskAlert, não carregar tarefas completas a cada 30 segundos.
+Crie uma consulta mínima contendo somente os campos realmente necessários.
+
+5. Para os índices PostgreSQL, não crie índices redundantes.
+Analise as consultas reais e o plano de execução antes de adicionar índices que possam se sobrepor.
+
+6. Não escolha arbitrariamente um pool grande de PostgreSQL.
+Use uma configuração conservadora compatível com os limites do banco do Replit e considere que futuramente poderão existir múltiplas instâncias do Autoscale.
+
+7. No React Query, não aplicar staleTime/cache agressivo globalmente.
+Configure cache por tipo de informação e mantenha invalidação após mutações.
+
+8. Preserve integralmente o comportamento atual de GET /tasks/:id e do sistema de evidências, fotos e vídeos.
+
+9. Na rotina ensureSeedData(), faça somente otimizações seguras.
+Não altere a lógica de compatibilidade ou vinculação de dados legados sem validar que os resultados permanecem exatamente iguais.
+
+10. Faça a implementação em etapas.
+
+FASE 1:
+- N+1
+- listagem resumida
+- TaskAlert
+- Dashboard
+- Reports/Rankings
+
+Antes de seguir para alterações mais sensíveis de pool, cache e startup, valide que o sistema continua funcionando.
+
+11. Instrumente os principais endpoints para comparar tempo de resposta antes e depois.
+
+Quero saber pelo menos o tempo das rotas:
+- tarefas/listagem;
+- tarefa individual;
+- dashboard;
+- rankings/reports;
+- notificações.
+
+12. Após implementar, faça uma revisão de regressão garantindo que:
+- gerente;
+- supervisor;
+- administrador
+
+continuam visualizando exatamente os mesmos dados e funcionalidades permitidas atualmente.
+
+Não faça nenhuma modificação visual.
+
+Ao finalizar a FASE 1, pare e me apresente:
+- arquivos alterados;
+- mudanças feitas;
+- queries antigas vs. novas;
+- riscos encontrados;
+- erros de TypeScript/build/testes;
+- ganho de performance mensurável, se disponível.
+
+Não avance para a próxima fase até eu revisar o resultado.
