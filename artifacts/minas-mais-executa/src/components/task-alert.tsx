@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { getGetPushPublicKeyQueryKey, getListTasksQueryKey, getPushPublicKey, savePushSubscription, useGetPushPublicKey, useListTasks } from '@workspace/api-client-react';
+import { getGetPushPublicKeyQueryKey, getListTaskNotificationsQueryKey, getPushPublicKey, savePushSubscription, useGetPushPublicKey, useListTaskNotifications } from '@workspace/api-client-react';
 import type { CurrentMember } from '@workspace/api-client-react';
 
 type PushStatus = 'checking' | 'registered' | 'permission-required' | 'blocked' | 'unsupported' | 'error';
 const pushEnabled = import.meta.env.PROD || (typeof window !== 'undefined' && window.isSecureContext);
 
 export function TaskAlert({ member, onUnreadChange }: { member: CurrentMember; onUnreadChange: (count: number) => void }) {
-  const tasksQuery = useListTasks(undefined, {
-    query: { queryKey: getListTasksQueryKey(), refetchInterval: 30000 },
+  const tasksQuery = useListTaskNotifications({
+    query: { queryKey: getListTaskNotificationsQueryKey(), refetchInterval: 30000 },
   });
   const publicKeyQuery = useGetPushPublicKey({
     query: { queryKey: getGetPushPublicKeyQueryKey(), staleTime: Infinity, enabled: pushEnabled },

@@ -22,6 +22,7 @@ import {
   UpdateTeamMemberParams,
   DeleteTeamMemberParams,
   ListTasksQueryParams,
+  ListTaskSummariesQueryParams,
   UpdateTaskBody,
   UpdateTaskParams,
   ReviewTaskBody,
@@ -74,7 +75,7 @@ function rankingPointsForElapsedMs(elapsedMs: number) {
   return 20;
 }
 
-function rankingMetrics(tasks: typeof tasksTable.$inferSelect[]) {
+function rankingMetrics(tasks: Array<Pick<typeof tasksTable.$inferSelect, "status" | "completedAt" | "createdAt">>) {
   const completedTasks = tasks.filter((task) => task.status === "completed" && task.completedAt);
   const elapsedTimes = completedTasks
     .map((task) => task.completedAt!.getTime() - task.createdAt.getTime())
@@ -547,15 +548,32 @@ async function getTaskWithEvidence(id: string) {
 
 router.get("/dashboard/summary", async (req, res) => {
   await seedPromise;
-  const [tasks, stores] = await Promise.all([
-    db.select().from(tasksTable),
-    db.select().from(storesTable),
-  ]);
   const visibleStoreIds = await scopedStoreIds(req);
-  const visibleTasks = visibleStoreIds === null ? tasks : tasks.filter((task) => visibleStoreIds.includes(task.storeId));
-  const visibleStores = visibleStoreIds === null ? stores : stores.filter((store) => visibleStoreIds.includes(store.id));
-  const todaysTasks = visibleTasks.filter((task) => task.dueDate === today);
   const cycle = currentRankingCycle();
+  const storeFilter = visibleStoreIds === null ? undefined : inArray(storesTable.id, visibleStoreIds);
+  const taskFilters = [
+    visibleStoreIds === null ? undefined : inArray(tasksTable.storeId, visibleStoreIds),
+    or(
+      eq(tasksTable.dueDate, today),
+      eq(tasksTable.status, "overdue"),
+      and(gte(tasksTable.dueDate, cycle.start), lte(tasksTable.dueDate, cycle.end)),
+    ),
+  ].filter((filter): filter is NonNullable<typeof filter> => filter !== undefined);
+  const [visibleTasks, visibleStores] = await Promise.all([
+    db
+      .select({
+        storeId: tasksTable.storeId,
+        dueDate: tasksTable.dueDate,
+        status: tasksTable.status,
+      })
+      .from(tasksTable)
+      .where(taskFilters.length ? and(...taskFilters) : undefined),
+    db
+      .select()
+      .from(storesTable)
+      .where(storeFilter),
+  ]);
+  const todaysTasks = visibleTasks.filter((task) => task.dueDate === today);
   const cycleTasks = visibleTasks.filter((task) => task.dueDate >= cycle.start && task.dueDate <= cycle.end);
   const completed = todaysTasks.filter((task) => task.status === "completed").length;
   const overdue = visibleTasks.filter((task) => task.status === "overdue").length;
@@ -641,6 +659,89 @@ router.get("/tasks", async (req, res) => {
     .orderBy(tasksTable.dueTime);
   const payload = await Promise.all(tasks.map((task) => getTaskWithEvidence(task.id)));
   res.json(payload.filter((task) => task));
+});
+
+router.get("/tasks/summary", async (req, res) => {
+  await seedPromise;
+  const parsed = ListTaskSummariesQueryParams.safeParse({
+    ...req.query,
+    dateFrom: req.query.dateFrom ? new Date(String(req.query.dateFrom)) : undefined,
+    dateTo: req.query.dateTo ? new Date(String(req.query.dateTo)) : undefined,
+  });
+  if (!parsed.success) {
+    res.status(400).json({ error: "Filtros inválidos." });
+    return;
+  }
+  const filters = [];
+  if (parsed.data.status) filters.push(eq(tasksTable.status, parsed.data.status));
+  if (parsed.data.category) filters.push(eq(tasksTable.category, parsed.data.category));
+  if (parsed.data.storeId) filters.push(eq(tasksTable.storeId, parsed.data.storeId));
+  if (parsed.data.dateFrom) filters.push(gte(tasksTable.dueDate, parsed.data.dateFrom.toISOString().slice(0, 10)));
+  if (parsed.data.dateTo) filters.push(lte(tasksTable.dueDate, parsed.data.dateTo.toISOString().slice(0, 10)));
+  const storeIds = await scopedStoreIds(req);
+  if (storeIds !== null) {
+    if (!storeIds.length || (parsed.data.storeId && !storeIds.includes(parsed.data.storeId))) {
+      res.json([]);
+      return;
+    }
+    filters.push(inArray(tasksTable.storeId, storeIds));
+  }
+  const rows = await db
+    .select({
+      id: tasksTable.id,
+      title: tasksTable.title,
+      storeId: tasksTable.storeId,
+      storeName: tasksTable.storeName,
+      assignee: tasksTable.assignee,
+      assigneeMemberId: tasksTable.assigneeMemberId,
+      assigneeMemberIds: tasksTable.assigneeMemberIds,
+      assigneeRole: tasksTable.assigneeRole,
+      batchGroupId: tasksTable.batchGroupId,
+      category: tasksTable.category,
+      priority: tasksTable.priority,
+      dueDate: tasksTable.dueDate,
+      dueTime: tasksTable.dueTime,
+      createdAt: tasksTable.createdAt,
+      status: tasksTable.status,
+      createdByRole: taskOriginsTable.createdByRole,
+      createdByName: teamMembersTable.name,
+    })
+    .from(tasksTable)
+    .leftJoin(taskOriginsTable, eq(taskOriginsTable.taskId, tasksTable.id))
+    .leftJoin(teamMembersTable, eq(teamMembersTable.id, taskOriginsTable.createdByMemberId))
+    .where(filters.length ? and(...filters) : undefined)
+    .orderBy(tasksTable.dueTime);
+  res.json(rows.map((row) => ({
+    ...row,
+    assigneeMemberIds: row.assigneeMemberIds ?? [],
+    createdByRole: row.createdByRole ?? "admin",
+    createdByName: row.createdByName ?? "Administração",
+    createdAt: row.createdAt.toISOString(),
+  })));
+});
+
+router.get("/tasks/notifications", async (req, res) => {
+  await seedPromise;
+  const storeIds = await scopedStoreIds(req);
+  if (storeIds !== null && !storeIds.length) {
+    res.json([]);
+    return;
+  }
+  const rows = await db
+    .select({
+      id: tasksTable.id,
+      createdAt: tasksTable.createdAt,
+      assigneeMemberId: tasksTable.assigneeMemberId,
+      assigneeMemberIds: tasksTable.assigneeMemberIds,
+    })
+    .from(tasksTable)
+    .where(storeIds === null ? undefined : inArray(tasksTable.storeId, storeIds))
+    .orderBy(desc(tasksTable.createdAt));
+  res.json(rows.map((row) => ({
+    ...row,
+    assigneeMemberIds: row.assigneeMemberIds ?? [],
+    createdAt: row.createdAt.toISOString(),
+  })));
 });
 
 router.post("/tasks", async (req, res) => {
@@ -1716,10 +1817,6 @@ router.get("/rankings", async (req, res) => {
   const region = typeof req.query.region === "string" ? req.query.region.trim() : "";
   const currentCycle = currentRankingCycle(days);
   const previousCycle = previousRankingCycle(currentCycle, days);
-  const tasks = await db
-    .select()
-    .from(tasksTable)
-    .where(and(gte(tasksTable.dueDate, previousCycle.start), lte(tasksTable.dueDate, currentCycle.end)));
   const storeFilters = [
     ids === null ? undefined : inArray(storesTable.id, ids),
     region ? eq(storesTable.region, region) : undefined,
@@ -1728,6 +1825,24 @@ router.get("/rankings", async (req, res) => {
     .select()
     .from(storesTable)
     .where(storeFilters.length ? and(...storeFilters) : undefined);
+  const storeIds = stores.map((store) => store.id);
+  const taskFilters = [
+    gte(tasksTable.dueDate, previousCycle.start),
+    lte(tasksTable.dueDate, currentCycle.end),
+    storeIds.length ? inArray(tasksTable.storeId, storeIds) : undefined,
+  ].filter((filter): filter is NonNullable<typeof filter> => filter !== undefined);
+  const tasks = storeIds.length
+    ? await db
+      .select({
+        storeId: tasksTable.storeId,
+        dueDate: tasksTable.dueDate,
+        status: tasksTable.status,
+        completedAt: tasksTable.completedAt,
+        createdAt: tasksTable.createdAt,
+      })
+      .from(tasksTable)
+      .where(and(...taskFilters))
+    : [];
 
   const rankedStores = stores
     .map((store) => {

@@ -1,11 +1,11 @@
 import { BarChart3, CheckCircle2, Clock3, TrendingUp } from 'lucide-react';
 import { useMemo } from 'react';
-import { getGetDashboardSummaryQueryKey, getGetRankingsQueryKey, getListTasksQueryKey, useGetDashboardSummary, useGetRankings, useListTasks } from '@workspace/api-client-react';
+import { getGetDashboardSummaryQueryKey, getGetRankingsQueryKey, getListTaskSummariesQueryKey, useGetDashboardSummary, useGetRankings, useListTaskSummaries } from '@workspace/api-client-react';
 import { EmptyState, ErrorState, LoadingBlocks } from '@/components/ui-kit';
 
 export default function ReportsPage() {
   const summaryQuery = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey() } });
-  const tasksQuery = useListTasks(undefined, { query: { queryKey: getListTasksQueryKey() } });
+  const tasksQuery = useListTaskSummaries(undefined, { query: { queryKey: getListTaskSummariesQueryKey() } });
   const rankingsQuery = useGetRankings(undefined, { query: { queryKey: getGetRankingsQueryKey() } });
   const summary = summaryQuery.data; const tasks = tasksQuery.data ?? []; const rankings = rankingsQuery.data ?? [];
   const categories = useMemo(() => {

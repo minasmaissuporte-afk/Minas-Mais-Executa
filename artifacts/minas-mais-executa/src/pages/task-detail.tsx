@@ -2,7 +2,7 @@ import { ArrowLeft, CheckCircle2, CircleAlert, MessageSquare, Paperclip, Trash2,
 import type { ChangeEvent } from 'react';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getGetTaskQueryKey, getListTasksQueryKey, useAddTaskComment, useAddTaskEvidence, useCompleteTask, useDeleteTask, useDeleteTaskEvidence, useGetMe, useGetTask, useRequestUploadUrl, useReviewTask, useUpdateTask } from '@workspace/api-client-react';
+import { getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getGetTaskQueryKey, getListTaskSummariesQueryKey, getListTasksQueryKey, useAddTaskComment, useAddTaskEvidence, useCompleteTask, useDeleteTask, useDeleteTaskEvidence, useGetMe, useGetTask, useRequestUploadUrl, useReviewTask, useUpdateTask } from '@workspace/api-client-react';
 import type { Evidence } from '@workspace/api-client-react';
 import { useParams, Link, useLocation } from 'wouter';
 import { EmptyState, ErrorState, EvidenceIcon, formatDate, LoadingBlocks, PriorityPill, StatusPill } from '@/components/ui-kit';
@@ -34,6 +34,7 @@ export default function TaskDetailPage() {
     if (!task) return;
     client.invalidateQueries({ queryKey: getGetTaskQueryKey(task.id) });
     client.invalidateQueries({ queryKey: getListTasksQueryKey() });
+    client.invalidateQueries({ queryKey: getListTaskSummariesQueryKey() });
     client.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
   };
   const canExecute = !!task && task.status !== 'pending_review' && task.status !== 'completed' && (me.data?.role === 'admin' || task.assigneeMemberId === me.data?.id || task.assigneeMemberIds?.includes(me.data?.id ?? '') === true);

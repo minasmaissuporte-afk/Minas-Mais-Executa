@@ -175,6 +175,59 @@ paths:
           description: Selected tasks and their evidence permanently deleted
         "403":
           description: Only the general administrator can delete tasks
+  /tasks/summary:
+    get:
+      operationId: listTaskSummaries
+      tags: [tasks]
+      summary: List lightweight task summaries for operational screens
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: storeId
+          in: query
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          description: Include tasks scheduled on or after this date
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          description: Include tasks scheduled on or before this date
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Lightweight task summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskSummary"
+  /tasks/notifications:
+    get:
+      operationId: listTaskNotifications
+      tags: [tasks]
+      summary: List the minimum task fields needed for notifications
+      responses:
+        "200":
+          description: Notification task metadata
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskNotification"
   /tasks/{id}:
     get:
       operationId: getTask
@@ -849,6 +902,67 @@ components:
           type: ["string", "null"]
         completedBy:
           type: ["string", "null"]
+    TaskSummary:
+      type: object
+      required: [id, title, storeId, storeName, assignee, assigneeMemberIds, assigneeRole, category, priority, dueDate, dueTime, createdAt, status, batchGroupId, createdByRole, createdByName]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        storeId:
+          type: string
+        storeName:
+          type: string
+        assignee:
+          type: string
+        assigneeMemberId:
+          type: ["string", "null"]
+        assigneeMemberIds:
+          type: array
+          items:
+            type: string
+        assigneeRole:
+          type: string
+          enum: [manager, supervisor]
+        batchGroupId:
+          type: ["string", "null"]
+        category:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high]
+        dueDate:
+          type: string
+          format: date
+        dueTime:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, in_progress, pending_review, rejected, completed, overdue]
+        createdByRole:
+          type: string
+          enum: [manager, supervisor, admin]
+        createdByName:
+          type: string
+    TaskNotification:
+      type: object
+      required: [id, createdAt, assigneeMemberIds]
+      properties:
+        id:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        assigneeMemberId:
+          type: ["string", "null"]
+        assigneeMemberIds:
+          type: array
+          items:
+            type: string
     TaskInput:
       type: object
       required: [title, description, storeId, storeName, assignee, category, priority, dueDate, dueTime, evidenceRequired, instructions]

@@ -32,6 +32,26 @@ app.use(
     },
   }),
 );
+app.use((req, res, next) => {
+  const startedAt = process.hrtime.bigint();
+  res.once("finish", () => {
+    const path = req.originalUrl.split("?")[0];
+    const monitored = path === "/api/tasks"
+      || path.startsWith("/api/tasks/")
+      || path === "/api/dashboard/summary"
+      || path === "/api/rankings";
+    if (!monitored) return;
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+    logger.info({
+      performance: true,
+      method: req.method,
+      path,
+      statusCode: res.statusCode,
+      durationMs: Number(durationMs.toFixed(2)),
+    }, "Endpoint performance");
+  });
+  next();
+});
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
 app.use(cors({ credentials: true, origin: true }));

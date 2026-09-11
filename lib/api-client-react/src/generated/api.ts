@@ -30,6 +30,7 @@ import type {
   GetPushPublicKey200,
   GetRankingsParams,
   HealthStatus,
+  ListTaskSummariesParams,
   ListTasksParams,
   ListTeamMembersParams,
   PushSubscriptionInput,
@@ -42,7 +43,9 @@ import type {
   TaskComment,
   TaskCommentInput,
   TaskInput,
+  TaskNotification,
   TaskReviewInput,
+  TaskSummary,
   TaskUpdate,
   TeamMember,
   TeamMemberInput,
@@ -760,6 +763,167 @@ export const useDeleteAllTasks = <TError = ErrorType<void>,
       > => {
       return useMutation(getDeleteAllTasksMutationOptions(options));
     }
+
+export const getListTaskSummariesUrl = (params?: ListTaskSummariesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/tasks/summary?${stringifiedParams}` : `/api/tasks/summary`
+}
+
+/**
+ * @summary List lightweight task summaries for operational screens
+ */
+export const listTaskSummaries = async (params?: ListTaskSummariesParams, options?: Parameters<typeof customFetch>[1]): Promise<TaskSummary[]> => {
+
+  return customFetch<TaskSummary[]>(getListTaskSummariesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTaskSummariesQueryKey = (params?: ListTaskSummariesParams,) => {
+    return [
+    `/api/tasks/summary`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListTaskSummariesQueryOptions = <TData = Awaited<ReturnType<typeof listTaskSummaries>>, TError = ErrorType<unknown>>(params?: ListTaskSummariesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTaskSummaries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTaskSummariesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTaskSummaries>>> = ({ signal }) => listTaskSummaries(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTaskSummaries>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTaskSummariesQueryResult = NonNullable<Awaited<ReturnType<typeof listTaskSummaries>>>
+export type ListTaskSummariesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List lightweight task summaries for operational screens
+ */
+
+export function useListTaskSummaries<TData = Awaited<ReturnType<typeof listTaskSummaries>>, TError = ErrorType<unknown>>(
+ params?: ListTaskSummariesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTaskSummaries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTaskSummariesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListTaskNotificationsUrl = () => {
+
+
+
+
+  return `/api/tasks/notifications`
+}
+
+/**
+ * @summary List the minimum task fields needed for notifications
+ */
+export const listTaskNotifications = async ( options?: Parameters<typeof customFetch>[1]): Promise<TaskNotification[]> => {
+
+  return customFetch<TaskNotification[]>(getListTaskNotificationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTaskNotificationsQueryKey = () => {
+    return [
+    `/api/tasks/notifications`
+    ] as const;
+    }
+
+
+export const getListTaskNotificationsQueryOptions = <TData = Awaited<ReturnType<typeof listTaskNotifications>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTaskNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTaskNotificationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTaskNotifications>>> = ({ signal }) => listTaskNotifications({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTaskNotifications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTaskNotificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listTaskNotifications>>>
+export type ListTaskNotificationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the minimum task fields needed for notifications
+ */
+
+export function useListTaskNotifications<TData = Awaited<ReturnType<typeof listTaskNotifications>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTaskNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTaskNotificationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetTaskUrl = (id: string,) => {
 

@@ -1,7 +1,7 @@
 import { Filter, Plus, Search, Trash2, UploadCloud } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { getGetDashboardSummaryQueryKey, getListStoresQueryKey, getListTasksQueryKey, getListTeamMembersQueryKey, useCreateBulkTasks, useCreateRecurringTasks, useCreateTask, useDeleteAllTasks, useDeleteTask, useGetMe, useListStores, useListTasks, useListTeamMembers, useRequestUploadUrl } from '@workspace/api-client-react';
+import { getGetDashboardSummaryQueryKey, getListStoresQueryKey, getListTaskSummariesQueryKey, getListTasksQueryKey, getListTeamMembersQueryKey, useCreateBulkTasks, useCreateRecurringTasks, useCreateTask, useDeleteAllTasks, useDeleteTask, useGetMe, useListStores, useListTaskSummaries, useListTeamMembers, useRequestUploadUrl } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { todayInput } from '@/lib/demo-data';
 import { ErrorState, LoadingBlocks, SearchEmpty, TaskGroupRow, TaskRow } from '@/components/ui-kit';
@@ -118,6 +118,7 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
       onSuccess: () => {
         client.invalidateQueries({ queryKey: getListTasksQueryKey() });
         client.invalidateQueries({ queryKey: getListTasksQueryKey({ status: 'pending' }) });
+        client.invalidateQueries({ queryKey: getListTaskSummariesQueryKey() });
         client.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
         setNotice(repeat ? `Repetição programada para ${selectedStoreIds.length} loja(s).` : selectedStoreIds.length > 1 ? `Tarefa criada para ${selectedStoreIds.length} lojas.` : 'Tarefa criada com sucesso.'); setTimeout(onClose, 700);
       }, onError: () => setNotice('Não foi possível criar a tarefa.'),
@@ -217,7 +218,7 @@ export default function TasksPage() {
     dateFrom: isAdmin && dateFrom ? dateFrom : undefined,
     dateTo: isAdmin && dateTo ? dateTo : undefined,
   };
-  const query = useListTasks(params, { query: { queryKey: getListTasksQueryKey(params) } });
+   const query = useListTaskSummaries(params, { query: { queryKey: getListTaskSummariesQueryKey(params) } });
   const deleteTask = useDeleteTask();
   const deleteAllTasks = useDeleteAllTasks();
    const data = (query.data ?? []).filter((task) => isAdmin || task.dueDate <= todayInput);
@@ -246,6 +247,7 @@ export default function TasksPage() {
     deleteTask.mutate({ id: task.id }, {
       onSuccess: () => {
         client.invalidateQueries({ queryKey: getListTasksQueryKey() });
+        client.invalidateQueries({ queryKey: getListTaskSummariesQueryKey() });
         client.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
       },
     });
@@ -275,6 +277,7 @@ export default function TasksPage() {
       onSuccess: () => {
         setSelectedTaskIds(new Set());
         client.invalidateQueries({ queryKey: getListTasksQueryKey() });
+         client.invalidateQueries({ queryKey: getListTaskSummariesQueryKey() });
         client.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
       },
     });

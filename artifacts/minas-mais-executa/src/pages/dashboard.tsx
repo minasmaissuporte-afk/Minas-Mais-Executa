@@ -1,5 +1,5 @@
 import { ArrowUpRight, CheckCircle2, CircleAlert, ListChecks, Target } from 'lucide-react';
-import { useGetActivity, useGetDashboardSummary, useListTasks, getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getListTasksQueryKey } from '@workspace/api-client-react';
+import { useGetActivity, useGetDashboardSummary, useListTaskSummaries, getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getListTaskSummariesQueryKey } from '@workspace/api-client-react';
 import type { CurrentMember } from '@workspace/api-client-react';
 import { todayInput } from '@/lib/demo-data';
 import { ActivityItem, EmptyState, ErrorState, LoadingBlocks, MetricCard, TaskRow } from '@/components/ui-kit';
@@ -9,7 +9,7 @@ export default function DashboardPage({ member }: { member: CurrentMember }) {
   const firstName = member.name.split(' ')[0] || 'Usuário';
   const summaryQuery = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey() } });
   const activityQuery = useGetActivity({ query: { queryKey: getGetActivityQueryKey() } });
-  const tasksQuery = useListTasks(undefined, { query: { queryKey: getListTasksQueryKey() } });
+  const tasksQuery = useListTaskSummaries({ dateFrom: todayInput, dateTo: todayInput }, { query: { queryKey: getListTaskSummariesQueryKey({ dateFrom: todayInput, dateTo: todayInput }) } });
   const summary = summaryQuery.data;
   const tasks = (tasksQuery.data ?? []).filter((task) => task.dueDate === todayInput).slice(0, 5);
   const activities = activityQuery.data ?? [];

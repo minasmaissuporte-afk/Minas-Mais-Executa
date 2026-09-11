@@ -280,6 +280,74 @@ export interface Task {
   completedBy?: string | null;
 }
 
+export type TaskSummaryAssigneeRole = typeof TaskSummaryAssigneeRole[keyof typeof TaskSummaryAssigneeRole];
+
+
+export const TaskSummaryAssigneeRole = {
+  manager: 'manager',
+  supervisor: 'supervisor',
+} as const;
+
+export type TaskSummaryPriority = typeof TaskSummaryPriority[keyof typeof TaskSummaryPriority];
+
+
+export const TaskSummaryPriority = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+} as const;
+
+export type TaskSummaryStatus = typeof TaskSummaryStatus[keyof typeof TaskSummaryStatus];
+
+
+export const TaskSummaryStatus = {
+  pending: 'pending',
+  in_progress: 'in_progress',
+  pending_review: 'pending_review',
+  rejected: 'rejected',
+  completed: 'completed',
+  overdue: 'overdue',
+} as const;
+
+export type TaskSummaryCreatedByRole = typeof TaskSummaryCreatedByRole[keyof typeof TaskSummaryCreatedByRole];
+
+
+export const TaskSummaryCreatedByRole = {
+  manager: 'manager',
+  supervisor: 'supervisor',
+  admin: 'admin',
+} as const;
+
+export interface TaskSummary {
+  id: string;
+  title: string;
+  storeId: string;
+  storeName: string;
+  assignee: string;
+  /** @nullable */
+  assigneeMemberId?: string | null;
+  assigneeMemberIds: string[];
+  assigneeRole: TaskSummaryAssigneeRole;
+  /** @nullable */
+  batchGroupId: string | null;
+  category: string;
+  priority: TaskSummaryPriority;
+  dueDate: string;
+  dueTime: string;
+  createdAt: string;
+  status: TaskSummaryStatus;
+  createdByRole: TaskSummaryCreatedByRole;
+  createdByName: string;
+}
+
+export interface TaskNotification {
+  id: string;
+  createdAt: string;
+  /** @nullable */
+  assigneeMemberId?: string | null;
+  assigneeMemberIds: string[];
+}
+
 export type TaskInputAssigneeRole = typeof TaskInputAssigneeRole[keyof typeof TaskInputAssigneeRole];
 
 
@@ -572,6 +640,20 @@ export type GetPushPublicKey200 = {
 };
 
 export type ListTasksParams = {
+status?: string;
+category?: string;
+storeId?: string;
+/**
+ * Include tasks scheduled on or after this date
+ */
+dateFrom?: string;
+/**
+ * Include tasks scheduled on or before this date
+ */
+dateTo?: string;
+};
+
+export type ListTaskSummariesParams = {
 status?: string;
 category?: string;
 storeId?: string;

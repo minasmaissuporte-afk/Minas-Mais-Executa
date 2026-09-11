@@ -230,6 +230,51 @@ export const DeleteAllTasksResponse = zod.void()
 
 
 /**
+ * @summary List lightweight task summaries for operational screens
+ */
+export const ListTaskSummariesQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "category": zod.coerce.string().optional(),
+  "storeId": zod.coerce.string().optional(),
+  "dateFrom": zod.date().optional().describe('Include tasks scheduled on or after this date'),
+  "dateTo": zod.date().optional().describe('Include tasks scheduled on or before this date')
+})
+
+export const ListTaskSummariesResponseItem = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "storeId": zod.string(),
+  "storeName": zod.string(),
+  "assignee": zod.string(),
+  "assigneeMemberId": zod.string().nullish(),
+  "assigneeMemberIds": zod.array(zod.string()),
+  "assigneeRole": zod.enum(['manager', 'supervisor']),
+  "batchGroupId": zod.string().nullable(),
+  "category": zod.string(),
+  "priority": zod.enum(['low', 'medium', 'high']),
+  "dueDate": zod.coerce.date(),
+  "dueTime": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "status": zod.enum(['pending', 'in_progress', 'pending_review', 'rejected', 'completed', 'overdue']),
+  "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
+  "createdByName": zod.string()
+})
+export const ListTaskSummariesResponse = zod.array(ListTaskSummariesResponseItem)
+
+
+/**
+ * @summary List the minimum task fields needed for notifications
+ */
+export const ListTaskNotificationsResponseItem = zod.object({
+  "id": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "assigneeMemberId": zod.string().nullish(),
+  "assigneeMemberIds": zod.array(zod.string())
+})
+export const ListTaskNotificationsResponse = zod.array(ListTaskNotificationsResponseItem)
+
+
+/**
  * @summary Get one task
  */
 export const GetTaskParams = zod.object({

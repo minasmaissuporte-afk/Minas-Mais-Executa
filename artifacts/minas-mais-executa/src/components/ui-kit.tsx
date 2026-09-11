@@ -1,6 +1,6 @@
 import { ArrowDownRight, ArrowUpRight, Camera, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, FileVideo, Search, Store, Trash2 } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
-import type { Activity, Task } from '@workspace/api-client-react';
+import type { Activity, Task, TaskSummary } from '@workspace/api-client-react';
 import { Link } from 'wouter';
 
 export function formatDate(date?: string | null) {
@@ -26,6 +26,7 @@ export function formatDurationMinutes(minutes: number) {
   if (hours) return `${hours}h${remainingMinutes ? `${remainingMinutes}min` : ''}`;
   return `${remainingMinutes}min`;
 }
+type TaskListItem = Task | TaskSummary;
 export function initials(name: string) {
   return name.split(' ').slice(0, 2).map((part) => part[0]).join('').toUpperCase();
 }
@@ -54,7 +55,7 @@ export function StatusPill({ status }: { status: string }) {
 export function PriorityPill({ priority }: { priority: string }) {
   return <span className={`priority priority-${priority}`} data-testid={`priority-pill-${priority}`}>{priorityLabel(priority)}</span>;
 }
-export function TaskRow({ task, onDelete, selected = false, onToggleSelect }: { task: Task; onDelete?: (task: Task) => void; selected?: boolean; onToggleSelect?: (taskId: string) => void }) {
+export function TaskRow({ task, onDelete, selected = false, onToggleSelect }: { task: TaskListItem; onDelete?: (task: TaskListItem) => void; selected?: boolean; onToggleSelect?: (taskId: string) => void }) {
   return <div className={`task-row task-row-result result-${task.status === 'completed' ? 'completed' : 'open'} task-status-${task.status}`} data-testid={`row-task-${task.id}`}>
     {onToggleSelect && <input type="checkbox" className="task-select-checkbox" checked={selected} onChange={() => onToggleSelect(task.id)} onClick={(event) => event.stopPropagation()} aria-label={`Selecionar ${task.title} da ${task.storeName}`} data-testid={`checkbox-select-task-${task.id}`} />}
     <span className={`task-status-dot dot-${task.status}`} aria-hidden="true" />
@@ -67,7 +68,7 @@ export function TaskRow({ task, onDelete, selected = false, onToggleSelect }: { 
    {task.status === 'pending_review' && <span className="status-chip status-pending_review task-row-status-chip">Conferência</span>}{task.status === 'rejected' && <span className="status-chip status-rejected task-row-status-chip">Reprovada</span>}<PriorityPill priority={task.priority} /><span className="task-time">{task.dueTime}</span>{onDelete && <button className="icon-button task-delete-button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onDelete(task); }} aria-label={`Excluir ${task.title}`} data-testid={`button-delete-task-${task.id}`}><Trash2 size={14} /></button>}<ChevronRight size={15} color="hsl(var(--muted-foreground))" />
   </div>;
 }
-export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string>(), onToggleSelect, onToggleGroupSelect }: { tasks: Task[]; onDelete?: (task: Task) => void; selectedTaskIds?: Set<string>; onToggleSelect?: (taskId: string) => void; onToggleGroupSelect?: (taskIds: string[]) => void }) {
+export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string>(), onToggleSelect, onToggleGroupSelect }: { tasks: TaskListItem[]; onDelete?: (task: TaskListItem) => void; selectedTaskIds?: Set<string>; onToggleSelect?: (taskId: string) => void; onToggleGroupSelect?: (taskIds: string[]) => void }) {
   const first = tasks[0];
   if (!first) return null;
   const statuses = new Set(tasks.map((task) => task.status));
