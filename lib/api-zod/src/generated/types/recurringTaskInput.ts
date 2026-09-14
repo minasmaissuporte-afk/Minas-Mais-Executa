@@ -9,6 +9,7 @@ import type { RecurringTaskInputAssigneeRole } from './recurringTaskInputAssigne
 import type { RecurringTaskInputEvidenceTypesItem } from './recurringTaskInputEvidenceTypesItem';
 import type { RecurringTaskInputPriority } from './recurringTaskInputPriority';
 import type { RecurringTaskInputRecurrenceMode } from './recurringTaskInputRecurrenceMode';
+import type { TaskModelAttachment } from './taskModelAttachment';
 
 export interface RecurringTaskInput {
   /** @minLength 1 */
@@ -27,6 +28,7 @@ export interface RecurringTaskInput {
   evidenceTypes?: RecurringTaskInputEvidenceTypesItem[];
   /** @nullable */
   modelObjectPath?: string | null;
+  modelAttachments?: TaskModelAttachment[];
   instructions: string;
   recurrenceMode: RecurringTaskInputRecurrenceMode;
   /**

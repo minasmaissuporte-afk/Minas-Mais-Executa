@@ -12,6 +12,7 @@ import type { TaskCreatedByRole } from './taskCreatedByRole';
 import type { TaskEvidenceTypesItem } from './taskEvidenceTypesItem';
 import type { TaskPriority } from './taskPriority';
 import type { TaskStatus } from './taskStatus';
+import type { TaskModelAttachment } from './taskModelAttachment';
 
 export interface Task {
   id: string;
@@ -37,6 +38,7 @@ export interface Task {
   evidence: Evidence[];
   /** @nullable */
   modelObjectPath?: string | null;
+  modelAttachments?: TaskModelAttachment[];
   comments: TaskComment[];
   createdByRole: TaskCreatedByRole;
   createdByName?: string;

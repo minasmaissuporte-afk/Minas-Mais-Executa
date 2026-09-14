@@ -8,6 +8,7 @@
 import type { BulkTaskInputAssigneeRole } from './bulkTaskInputAssigneeRole';
 import type { BulkTaskInputEvidenceTypesItem } from './bulkTaskInputEvidenceTypesItem';
 import type { BulkTaskInputPriority } from './bulkTaskInputPriority';
+import type { TaskModelAttachment } from './taskModelAttachment';
 
 export interface BulkTaskInput {
   /** @minLength 1 */
@@ -26,5 +27,6 @@ export interface BulkTaskInput {
   evidenceTypes?: BulkTaskInputEvidenceTypesItem[];
   /** @nullable */
   modelObjectPath?: string | null;
+  modelAttachments?: TaskModelAttachment[];
   instructions: string;
 }

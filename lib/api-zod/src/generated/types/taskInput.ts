@@ -8,6 +8,7 @@
 import type { TaskInputAssigneeRole } from './taskInputAssigneeRole';
 import type { TaskInputEvidenceTypesItem } from './taskInputEvidenceTypesItem';
 import type { TaskInputPriority } from './taskInputPriority';
+import type { TaskModelAttachment } from './taskModelAttachment';
 
 export interface TaskInput {
   /** @minLength 1 */
@@ -26,5 +27,6 @@ export interface TaskInput {
   evidenceTypes?: TaskInputEvidenceTypesItem[];
   /** @nullable */
   modelObjectPath?: string | null;
+  modelAttachments?: TaskModelAttachment[];
   instructions: string;
 }

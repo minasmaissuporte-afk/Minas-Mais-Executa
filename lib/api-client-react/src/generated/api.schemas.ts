@@ -229,6 +229,20 @@ export const TaskStatus = {
   overdue: 'overdue',
 } as const;
 
+export type TaskModelAttachmentType = typeof TaskModelAttachmentType[keyof typeof TaskModelAttachmentType];
+
+
+export const TaskModelAttachmentType = {
+  photo: 'photo',
+  video: 'video',
+} as const;
+
+export interface TaskModelAttachment {
+  objectPath: string;
+  fileName: string;
+  type: TaskModelAttachmentType;
+}
+
 export type TaskEvidenceTypesItem = typeof TaskEvidenceTypesItem[keyof typeof TaskEvidenceTypesItem];
 
 
@@ -270,6 +284,7 @@ export interface Task {
   evidence: Evidence[];
   /** @nullable */
   modelObjectPath?: string | null;
+  modelAttachments?: TaskModelAttachment[];
   comments: TaskComment[];
   createdByRole: TaskCreatedByRole;
   createdByName?: string;
@@ -390,6 +405,7 @@ export interface TaskInput {
   evidenceTypes?: TaskInputEvidenceTypesItem[];
   /** @nullable */
   modelObjectPath?: string | null;
+  modelAttachments?: TaskModelAttachment[];
   instructions: string;
 }
 
@@ -435,6 +451,7 @@ export interface BulkTaskInput {
   evidenceTypes?: BulkTaskInputEvidenceTypesItem[];
   /** @nullable */
   modelObjectPath?: string | null;
+  modelAttachments?: TaskModelAttachment[];
   instructions: string;
 }
 
@@ -493,6 +510,7 @@ export interface RecurringTaskInput {
   evidenceTypes?: RecurringTaskInputEvidenceTypesItem[];
   /** @nullable */
   modelObjectPath?: string | null;
+  modelAttachments?: TaskModelAttachment[];
   instructions: string;
   recurrenceMode: RecurringTaskInputRecurrenceMode;
   /**

@@ -795,6 +795,17 @@ components:
           minLength: 10
         location:
           type: string
+    TaskModelAttachment:
+      type: object
+      required: [objectPath, fileName, type]
+      properties:
+        objectPath:
+          type: string
+        fileName:
+          type: string
+        type:
+          type: string
+          enum: [photo, video]
     TaskComment:
       type: object
       required: [id, taskId, userId, message, type, createdAt, userName]
@@ -887,6 +898,10 @@ components:
             $ref: "#/components/schemas/Evidence"
         modelObjectPath:
           type: ["string", "null"]
+        modelAttachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaskModelAttachment"
         comments:
           type: array
           items:
@@ -1004,6 +1019,11 @@ components:
             enum: [photo, video]
         modelObjectPath:
           type: ["string", "null"]
+        modelAttachments:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/TaskModelAttachment"
         instructions:
           type: string
     BulkTaskInput:
@@ -1048,6 +1068,11 @@ components:
             enum: [photo, video]
         modelObjectPath:
           type: ["string", "null"]
+        modelAttachments:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/TaskModelAttachment"
         instructions:
           type: string
     BulkDeleteTasksInput:
@@ -1101,6 +1126,11 @@ components:
             enum: [photo, video]
         modelObjectPath:
           type: ["string", "null"]
+        modelAttachments:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/TaskModelAttachment"
         instructions:
           type: string
         recurrenceMode:

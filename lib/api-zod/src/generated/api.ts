@@ -7,6 +7,11 @@
  */
 import * as zod from 'zod';
 
+const taskModelAttachmentSchema = zod.object({
+  "objectPath": zod.string(),
+  "fileName": zod.string(),
+  "type": zod.enum(['photo', 'video']),
+});
 
 /**
  * @summary Get the authenticated member and server-authorized scope
@@ -127,6 +132,7 @@ export const ListTasksResponseItem = zod.object({
   "location": zod.string().nullish()
 })),
   "modelObjectPath": zod.string().nullish(),
+  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string(),
   "taskId": zod.string(),
@@ -166,6 +172,7 @@ export const CreateTaskBody = zod.object({
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
   "modelObjectPath": zod.string().nullish(),
+  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
   "instructions": zod.string()
 })
 
@@ -199,6 +206,7 @@ export const CreateTaskResponse = zod.object({
   "location": zod.string().nullish()
 })),
   "modelObjectPath": zod.string().nullish(),
+  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string(),
   "taskId": zod.string(),
@@ -311,6 +319,7 @@ export const GetTaskResponse = zod.object({
   "location": zod.string().nullish()
 })),
   "modelObjectPath": zod.string().nullish(),
+  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string(),
   "taskId": zod.string(),
@@ -371,6 +380,7 @@ export const UpdateTaskResponse = zod.object({
   "location": zod.string().nullish()
 })),
   "modelObjectPath": zod.string().nullish(),
+  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string(),
   "taskId": zod.string(),
@@ -477,6 +487,7 @@ export const CompleteTaskResponse = zod.object({
   "location": zod.string().nullish()
 })),
   "modelObjectPath": zod.string().nullish(),
+  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string(),
   "taskId": zod.string(),
@@ -536,6 +547,7 @@ export const ReviewTaskResponse = zod.object({
   "location": zod.string().nullish()
 })),
   "modelObjectPath": zod.string().nullish(),
+  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string(),
   "taskId": zod.string(),
@@ -599,6 +611,7 @@ export const CreateBulkTasksBody = zod.object({
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
   "modelObjectPath": zod.string().nullish(),
+  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
   "instructions": zod.string()
 })
 
@@ -632,6 +645,7 @@ export const CreateBulkTasksResponseItem = zod.object({
   "location": zod.string().nullish()
 })),
   "modelObjectPath": zod.string().nullish(),
+  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string(),
   "taskId": zod.string(),
@@ -676,6 +690,7 @@ export const CreateRecurringTasksBody = zod.object({
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
   "modelObjectPath": zod.string().nullish(),
+  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
   "instructions": zod.string(),
   "recurrenceMode": zod.enum(['daily_count', 'weekdays_until']),
   "occurrenceCount": zod.number().int().min(1).max(createRecurringTasksBodyOccurrenceCountMax).optional(),
@@ -713,6 +728,7 @@ export const CreateRecurringTasksResponseItem = zod.object({
   "location": zod.string().nullish()
 })),
   "modelObjectPath": zod.string().nullish(),
+  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string(),
   "taskId": zod.string(),

@@ -52,7 +52,7 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
   const [draft, setDraft] = useState({
     title: '', description: '', storeId: '', storeName: '', storeIds: [] as string[],
     assignee: '', assigneeMemberIds: [] as string[], assigneeRole: 'manager' as 'manager' | 'supervisor', scope: 'single' as 'single' | 'selected' | 'all', category: 'Operação', priority: 'medium' as 'low' | 'high' | 'medium',
-    dueDate: todayInput, dueTime: '17:00', evidenceRequired: true, evidenceTypes: ['photo'] as ('photo' | 'video')[], modelObjectPath: null as string | null, instructions: '',
+    dueDate: todayInput, dueTime: '17:00', evidenceRequired: true, evidenceTypes: ['photo'] as ('photo' | 'video')[], modelObjectPath: null as string | null, modelAttachments: [] as Array<{ objectPath: string; fileName: string; type: 'photo' | 'video' }>, instructions: '',
   });
   useEffect(() => {
     if (!stores.length) return;
@@ -95,20 +95,34 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
     });
   }, [stores, members, isAdmin]);
   const set = (key: string, value: string) => setDraft((current) => ({ ...current, [key]: value }));
-  const uploadModel = async (file: File) => {
+  const uploadModels = async (files: File[]) => {
+    if (!files.length) return;
     setUploadingModel(true);
+    let uploadedCount = 0;
     try {
-      const upload = await requestUpload.mutateAsync({ data: { name: file.name, size: file.size, contentType: file.type || 'application/octet-stream' } });
-      const response = await fetch(upload.uploadURL, { method: 'PUT', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file });
-      if (!response.ok) throw new Error('Upload failed');
-      setDraft((current) => ({ ...current, modelObjectPath: upload.objectPath }));
-      setNotice('Imagem de modelo anexada.');
+      for (const file of files) {
+        const upload = await requestUpload.mutateAsync({ data: { name: file.name, size: file.size, contentType: file.type || 'application/octet-stream' } });
+        const response = await fetch(upload.uploadURL, { method: 'PUT', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file });
+        if (!response.ok) throw new Error('Upload failed');
+        const type = file.type.startsWith('video/') ? 'video' : 'photo';
+        setDraft((current) => ({
+          ...current,
+          modelObjectPath: current.modelObjectPath ?? upload.objectPath,
+          modelAttachments: [...current.modelAttachments, { objectPath: upload.objectPath, fileName: file.name, type }],
+        }));
+        uploadedCount += 1;
+      }
+      setNotice(`${uploadedCount} exemplo(s) visual(is) anexado(s).`);
     } catch {
-      setNotice('Não foi possível enviar a imagem de modelo.');
+      setNotice(uploadedCount ? `${uploadedCount} exemplo(s) anexado(s), mas não foi possível enviar todos os arquivos.` : 'Não foi possível enviar os exemplos visuais.');
     } finally {
       setUploadingModel(false);
     }
   };
+  const removeModel = (objectPath: string) => setDraft((current) => {
+    const modelAttachments = current.modelAttachments.filter((attachment) => attachment.objectPath !== objectPath);
+    return { ...current, modelAttachments, modelObjectPath: modelAttachments[0]?.objectPath ?? null };
+  });
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (!draft.title.trim()) { setNotice('Dê um nome para a tarefa antes de salvar.'); return; }
@@ -245,7 +259,7 @@ function TaskCreateModal({ onClose }: { onClose: () => void }) {
     return <div className="modal-backdrop task-create-backdrop" role="dialog" aria-modal="true"><form className="modal task-create-modal" onSubmit={submit}><div className="modal-head"><div><div className="eyebrow">Nova execução</div><div className="modal-title">Criar tarefa</div></div><button type="button" className="icon-button" onClick={onClose} aria-label="Fechar formulário" data-testid="button-close-create">×</button></div><div className="form-grid">
     <div className="field full"><label htmlFor="task-title">Título</label><input id="task-title" className="input" value={draft.title} onChange={(event) => set('title', event.target.value)} placeholder="Ex.: Conferir exposição da campanha" data-testid="input-task-title" /></div>
      <div className="field full"><label htmlFor="task-description">Descrição</label><textarea id="task-description" className="textarea" value={draft.description} onChange={(event) => set('description', event.target.value)} placeholder="O que precisa ser feito?" data-testid="input-task-description" /></div>
-     <div className="field full"><label htmlFor="task-model">Imagem de modelo (opcional)</label><label className="capture-button" htmlFor="task-model"><UploadCloud size={17} /> {uploadingModel ? 'Enviando imagem...' : draft.modelObjectPath ? 'Imagem de modelo anexada' : 'Anexar exemplo visual'}<input id="task-model" type="file" accept="image/*" className="hidden-file" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadModel(file); event.currentTarget.value = ''; }} disabled={uploadingModel} data-testid="input-task-model" /></label>{draft.modelObjectPath && <div className="field-hint">A imagem será exibida separadamente das evidências da execução. <button type="button" className="section-link" onClick={() => setDraft((current) => ({ ...current, modelObjectPath: null }))}>Remover</button></div>}</div>
+      <div className="field full"><label htmlFor="task-model">Modelos / exemplos (opcional)</label><label className="capture-button" htmlFor="task-model"><UploadCloud size={17} /> {uploadingModel ? 'Enviando arquivos...' : draft.modelAttachments.length ? `${draft.modelAttachments.length} exemplo(s) anexado(s)` : 'Anexar fotos ou vídeos de exemplo'}<input id="task-model" type="file" accept="image/*,video/*" multiple className="hidden-file" onChange={(event) => { const files = Array.from(event.target.files ?? []); if (files.length) void uploadModels(files); event.currentTarget.value = ''; }} disabled={uploadingModel} data-testid="input-task-model" /></label>{draft.modelAttachments.length > 0 && <><div className="field-hint">Os exemplos serão exibidos separadamente das evidências da execução. Você pode anexar mais arquivos ou remover individualmente.</div><div className="model-upload-list">{draft.modelAttachments.map((attachment) => <div className="model-upload-item" key={attachment.objectPath}><span>{attachment.type === 'video' ? 'Vídeo' : 'Foto'} · {attachment.fileName}</span><button type="button" className="section-link" onClick={() => removeModel(attachment.objectPath)}>Remover</button></div>)}</div></>}</div>
      {!isAdmin && <div className="field"><label htmlFor="task-scope">Abrangência</label><select id="task-scope" className="select" value={draft.scope} onChange={(event) => changeScope(event.target.value as 'single' | 'selected' | 'all')} data-testid="select-task-scope"><option value="single">Uma loja</option><option value="selected">Selecionar várias lojas</option><option value="all">{scopeAllLabel}</option></select><label className="scope-checkbox"><input type="checkbox" checked={draft.scope === 'selected'} onChange={(event) => changeScope(event.target.checked ? 'selected' : 'single')} data-testid="checkbox-task-select-stores" /><span><strong>Marcar lojas manualmente</strong><small>{scopeSelectionDescription}</small></span></label></div>}
        {!isAdmin && <div className={`field ${draft.scope !== 'single' ? 'full' : ''}`}><label htmlFor="task-store">{draft.scope === 'selected' ? scopeSelectionLabel : 'Loja'}</label>{draft.scope === 'single' ? <select id="task-store" className="select" value={draft.storeId} onChange={(event) => { const store = stores.find((item) => item.id === event.target.value); setDraft((current) => ({ ...current, storeId: event.target.value, storeName: store?.name ?? current.storeName, storeIds: [event.target.value], assignee: current.assigneeRole === 'manager' ? activeManagerForStore(event.target.value)?.name ?? '' : current.assignee })); }} data-testid="select-task-store">{stores.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select> : <div className="store-picker">{draft.scope === 'all' ? <div className="store-picker-all">{isSupervisor ? `Todas as ${stores.length} lojas da sua região serão incluídas.` : `Todas as ${stores.length} lojas serão incluídas.`}</div> : stores.map((store) => <label className="store-picker-option" key={store.id}><input type="checkbox" checked={draft.storeIds.includes(store.id)} onChange={() => toggleStore(store.id)} data-testid={`checkbox-task-store-${store.id}`} /><span>{store.name}</span><small>{store.city}</small></label>)}</div>}</div>}
         {isAdmin && <><div className="field"><label htmlFor="task-admin-supervisors-menu">Supervisores</label><details className="multi-select-details" id="task-admin-supervisors-menu"><summary className="multi-select-summary">{adminSupervisorMode === 'all' ? 'Todos os supervisores' : selectedSupervisorIds.length ? `${selectedSupervisorIds.length} supervisor(es) selecionado(s)` : 'Selecionar supervisor'}</summary><div className="multi-select-options"><label className="store-picker-option multi-select-all-option"><input type="checkbox" checked={adminSupervisorMode === 'all'} onChange={() => chooseAdminSupervisorMode(adminSupervisorMode === 'all' ? 'single' : 'all')} data-testid="checkbox-task-admin-all-supervisors" /><span>Todos os supervisores</span><small>Seleciona todas as lojas automaticamente</small></label>{supervisors.length ? supervisors.map((member) => <label className="store-picker-option" key={member.id}><input type="checkbox" checked={selectedSupervisorIds.includes(member.id)} onChange={() => toggleAdminSupervisor(member.id)} data-testid={`checkbox-task-admin-supervisor-${member.id}`} /><span>{member.name}</span><small>{member.email}</small></label>) : <div className="store-picker-all">Nenhum supervisor ativo disponível.</div>}</div></details></div><div className="field full"><label htmlFor="task-admin-stores-menu">Lojas ({selectedStoreIds.length})</label><details className="multi-select-details" id="task-admin-stores-menu"><summary className="multi-select-summary">{adminStoreMode === 'all' ? adminSupervisorMode === 'all' ? 'Todas as lojas selecionadas automaticamente' : 'Selecionar todas as lojas' : selectedStoreIds.length ? `${selectedStoreIds.length} loja(s) selecionada(s)` : 'Escolher lojas'}</summary><div className="multi-select-options"><label className="store-picker-option multi-select-all-option"><input type="checkbox" checked={adminStoreMode === 'all'} onChange={toggleAdminStoreSelectAll} disabled={!selectedSupervisorIds.length} data-testid="checkbox-task-admin-all-stores" /><span>Selecionar todas as lojas</span><small>{adminSupervisorMode === 'all' ? 'Incluídas pelos supervisores selecionados' : 'Todas as lojas permitidas'}</small></label>{allowedAdminStores.length ? allowedAdminStores.map((store) => <label className="store-picker-option" key={store.id}><input type="checkbox" checked={draft.storeIds.includes(store.id)} onChange={() => toggleAdminStore(store.id)} data-testid={`checkbox-task-store-${store.id}`} /><span>{store.name}</span><small>{store.city}</small></label>) : <div className="store-picker-all">Selecione um supervisor para ver as lojas vinculadas.</div>}</div></details><div className="field-hint">A lista mostra somente lojas dos supervisores selecionados.</div></div></>}

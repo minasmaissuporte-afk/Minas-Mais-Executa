@@ -1,6 +1,7 @@
 import {
   boolean,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -52,6 +53,7 @@ export const tasksTable = pgTable("tasks", {
   evidenceTypes: text("evidence_types").array().notNull().default([]),
   instructions: text("instructions").notNull().default(""),
   modelObjectPath: text("model_object_path"),
+  modelAttachments: jsonb("model_attachments").$type<Array<{ objectPath: string; fileName: string; type: "photo" | "video" }>>().notNull().default([]),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   completedBy: text("completed_by"),
   notes: text("notes"),

@@ -140,11 +140,43 @@ function isNormalizedPrivateObjectPath(path: string): boolean {
     && objectStorageService.normalizeObjectEntityPath(path) === path;
 }
 
+type TaskModelAttachment = {
+  objectPath: string;
+  fileName: string;
+  type: "photo" | "video";
+};
+
+function isTaskModelAttachment(value: unknown): value is TaskModelAttachment {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Partial<TaskModelAttachment>;
+  return typeof item.objectPath === "string"
+    && typeof item.fileName === "string"
+    && (item.type === "photo" || item.type === "video");
+}
+
+function modelAttachmentsForTask(task: { modelAttachments?: unknown; modelObjectPath?: string | null }): TaskModelAttachment[] {
+  const attachments = Array.isArray(task.modelAttachments)
+    ? task.modelAttachments.filter(isTaskModelAttachment)
+    : [];
+  if (attachments.length) return attachments;
+  return task.modelObjectPath
+    ? [{ objectPath: task.modelObjectPath, fileName: "Modelo da tarefa", type: "photo" }]
+    : [];
+}
+
+function modelAttachmentsForInput(input: { modelAttachments?: TaskModelAttachment[]; modelObjectPath?: string | null }): TaskModelAttachment[] {
+  return input.modelAttachments?.length
+    ? input.modelAttachments
+    : input.modelObjectPath
+      ? [{ objectPath: input.modelObjectPath, fileName: "Modelo da tarefa", type: "photo" }]
+      : [];
+}
+
 async function deleteTaskData(taskIds: string[]) {
   if (!taskIds.length) return;
   const [taskRecords, evidence] = await Promise.all([
     db
-      .select({ modelObjectPath: tasksTable.modelObjectPath })
+      .select({ modelObjectPath: tasksTable.modelObjectPath, modelAttachments: tasksTable.modelAttachments })
       .from(tasksTable)
       .where(inArray(tasksTable.id, taskIds)),
     db
@@ -160,7 +192,10 @@ async function deleteTaskData(taskIds: string[]) {
   });
   const objectPaths = [...new Set([
     ...evidence.map((item) => item.objectPath),
-    ...taskRecords.map((item) => item.modelObjectPath),
+    ...taskRecords.flatMap((item) => [
+      item.modelObjectPath,
+      ...modelAttachmentsForTask(item).map((attachment) => attachment.objectPath),
+    ]),
   ].filter((path): path is string => Boolean(path)))];
   await Promise.allSettled(objectPaths.map((path) => objectStorageService.deleteObjectEntity(path)));
 }
@@ -573,6 +608,7 @@ async function getTaskWithEvidence(id: string) {
       location: item.location,
     })),
     modelObjectPath: task.modelObjectPath ?? null,
+    modelAttachments: modelAttachmentsForTask(task),
     comments: comments.map((comment) => ({
       ...comment,
       createdAt: comment.createdAt.toISOString(),
@@ -814,7 +850,8 @@ router.post("/tasks", async (req, res) => {
     res.status(400).json({ error: "Tarefas criadas pela supervisão devem ser atribuídas a um gerente." });
     return;
   }
-  if (parsed.data.modelObjectPath && !isNormalizedPrivateObjectPath(parsed.data.modelObjectPath)) {
+  const modelAttachments = modelAttachmentsForInput(parsed.data);
+  if (modelAttachments.some((attachment) => !isNormalizedPrivateObjectPath(attachment.objectPath))) {
     res.status(400).json({ error: "Caminho do modelo visual inválido." });
     return;
   }
@@ -834,7 +871,8 @@ router.post("/tasks", async (req, res) => {
     assigneeRole: parsed.data.assigneeRole ?? "manager",
     dueDate: parsed.data.dueDate.toISOString().slice(0, 10),
     evidenceTypes: parsed.data.evidenceTypes ?? [],
-    modelObjectPath: parsed.data.modelObjectPath ?? null,
+    modelObjectPath: parsed.data.modelObjectPath ?? modelAttachments[0]?.objectPath ?? null,
+    modelAttachments,
     assigneeMemberId: null as string | null,
     status: "pending",
   };
@@ -931,7 +969,8 @@ router.post("/tasks/bulk", async (req, res) => {
     res.status(400).json({ error: "Tarefas criadas pela supervisão devem ser atribuídas a um gerente." });
     return;
   }
-  if (parsed.data.modelObjectPath && !isNormalizedPrivateObjectPath(parsed.data.modelObjectPath)) {
+  const modelAttachments = modelAttachmentsForInput(parsed.data);
+  if (modelAttachments.some((attachment) => !isNormalizedPrivateObjectPath(attachment.objectPath))) {
     res.status(400).json({ error: "Caminho do modelo visual inválido." });
     return;
   }
@@ -976,7 +1015,8 @@ router.post("/tasks/bulk", async (req, res) => {
     dueTime: parsed.data.dueTime,
     evidenceRequired: parsed.data.evidenceRequired,
     evidenceTypes: parsed.data.evidenceTypes ?? [],
-    modelObjectPath: parsed.data.modelObjectPath ?? null,
+    modelObjectPath: parsed.data.modelObjectPath ?? modelAttachments[0]?.objectPath ?? null,
+    modelAttachments,
     instructions: parsed.data.instructions,
     status: "pending",
   }));
@@ -1074,7 +1114,8 @@ router.post("/tasks/recurring", async (req, res) => {
     res.status(400).json({ error: "Tarefas criadas pela supervisão devem ser atribuídas a um gerente." });
     return;
   }
-  if (input.modelObjectPath && !isNormalizedPrivateObjectPath(input.modelObjectPath)) {
+  const modelAttachments = modelAttachmentsForInput(input);
+  if (modelAttachments.some((attachment) => !isNormalizedPrivateObjectPath(attachment.objectPath))) {
     res.status(400).json({ error: "Caminho do modelo visual inválido." });
     return;
   }
@@ -1159,7 +1200,8 @@ router.post("/tasks/recurring", async (req, res) => {
       dueTime: input.dueTime,
       evidenceRequired: input.evidenceRequired,
       evidenceTypes: input.evidenceTypes ?? [],
-      modelObjectPath: input.modelObjectPath ?? null,
+       modelObjectPath: input.modelObjectPath ?? modelAttachments[0]?.objectPath ?? null,
+       modelAttachments,
       instructions: input.instructions,
       status: "pending",
     }));
@@ -1573,7 +1615,7 @@ router.delete("/stores/:id", async (req, res) => {
     .where(eq(tasksTable.storeId, params.data.id));
   const taskIds = linkedTasks.map((task) => task.id);
   const taskModels = taskIds.length
-    ? await db.select({ modelObjectPath: tasksTable.modelObjectPath }).from(tasksTable).where(inArray(tasksTable.id, taskIds))
+    ? await db.select({ modelObjectPath: tasksTable.modelObjectPath, modelAttachments: tasksTable.modelAttachments }).from(tasksTable).where(inArray(tasksTable.id, taskIds))
     : [];
   const evidence = taskIds.length
     ? await db.select({ objectPath: evidencesTable.objectPath }).from(evidencesTable).where(inArray(evidencesTable.taskId, taskIds))
@@ -1590,7 +1632,10 @@ router.delete("/stores/:id", async (req, res) => {
   });
   await Promise.all([
     ...evidence.filter((item) => item.objectPath).map((item) => objectStorageService.deleteObjectEntity(item.objectPath!)),
-    ...taskModels.filter((item) => item.modelObjectPath).map((item) => objectStorageService.deleteObjectEntity(item.modelObjectPath!)),
+    ...taskModels.flatMap((item) => [
+      item.modelObjectPath,
+      ...modelAttachmentsForTask(item).map((attachment) => attachment.objectPath),
+    ].filter((path): path is string => Boolean(path)).map((path) => objectStorageService.deleteObjectEntity(path))),
   ]);
   res.status(204).send();
 });
