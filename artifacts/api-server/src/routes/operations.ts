@@ -1286,13 +1286,24 @@ router.patch("/tasks/:id", async (req, res) => {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
   }
-  if (actor(req).role !== "admin" && (!canExecuteTask(req, task) || Object.keys(body.data).some((key) => key !== "status") || !body.data.status || !["pending", "in_progress", "rejected"].includes(body.data.status))) {
+  const statusOnlyUpdate = Object.keys(body.data).length === 1 && "status" in body.data;
+  const supervisorCanManageStatus = actor(req).role === "supervisor" && statusOnlyUpdate && body.data.status === "pending"
+    ? await canReviewTask(req, task)
+    : false;
+  if (actor(req).role !== "admin" && !supervisorCanManageStatus && (!canExecuteTask(req, task) || !statusOnlyUpdate || !body.data.status || !["pending", "in_progress", "rejected"].includes(body.data.status))) {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
   }
+  if (body.data.status === "pending" && task.status === "pending") {
+    res.status(400).json({ error: "Esta tarefa já está pendente." });
+    return;
+  }
+  const updateData = body.data.status === "pending"
+    ? { ...body.data, completedAt: null, completedBy: null }
+    : body.data;
   await db
     .update(tasksTable)
-    .set(body.data)
+    .set(updateData)
     .where(eq(tasksTable.id, params.data.id));
   const updatedTask = await getTaskWithEvidence(params.data.id);
   if (!updatedTask) {
