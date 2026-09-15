@@ -5,13 +5,24 @@ import { Link } from 'wouter';
 
 export function formatDate(date?: string | null) {
   if (!date) return 'Hoje';
-  const value = /^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T12:00:00` : date;
-  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(new Date(value));
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const value = dateOnly ? `${date}T12:00:00` : date;
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    ...(dateOnly ? {} : { hour: '2-digit', minute: '2-digit' }),
+  }).format(new Date(value));
 }
 export function formatFullDate(date?: string | null) {
   if (!date) return '—';
-  const value = /^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T12:00:00` : date;
-  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value));
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const value = dateOnly ? `${date}T12:00:00` : date;
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    ...(dateOnly ? {} : { hour: '2-digit', minute: '2-digit' }),
+  }).format(new Date(value));
 }
 export function formatTime(date?: string | null) {
   if (!date) return '';
@@ -99,7 +110,7 @@ export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string
   </details>;
 }
 export function ActivityItem({ activity }: { activity: Activity }) {
-  return <div className="activity-item" data-testid={`activity-${activity.id}`}><span className={`activity-mark mark-${activity.tone}`} /><div><div className="activity-title">{activity.title}</div><div className="activity-detail">{activity.detail}</div><div className="activity-date">{formatDate(activity.createdAt)} · {formatTime(activity.createdAt)}</div></div></div>;
+  return <div className="activity-item" data-testid={`activity-${activity.id}`}><span className={`activity-mark mark-${activity.tone}`} /><div><div className="activity-title">{activity.title}</div><div className="activity-detail">{activity.detail}</div><div className="activity-date">{formatDate(activity.createdAt)}</div></div></div>;
 }
 export function MetricCard({ label, value, meta, tone = '' }: { label: string; value: string | number; meta: string; tone?: string }) {
   return <div className={`card stat-card ${tone}`} data-testid={`metric-${label.toLowerCase().replace(/\s+/g, '-')}`}><span className="stat-label">{label}</span><span className="stat-value">{value}</span><span className="stat-meta">{meta}</span></div>;
