@@ -13,6 +13,13 @@ export function formatDate(date?: string | null) {
     ...(dateOnly ? {} : { hour: '2-digit', minute: '2-digit' }),
   }).format(new Date(value));
 }
+export function formatDateTime(date?: string | null) {
+  if (!date) return 'Hoje';
+  const value = /^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T12:00:00` : date;
+  const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(new Date(value));
+  const formattedTime = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+  return `${formattedDate} às ${formattedTime}`;
+}
 export function formatFullDate(date?: string | null) {
   if (!date) return '—';
   const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(date);
