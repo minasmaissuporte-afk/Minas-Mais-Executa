@@ -28,6 +28,7 @@ export interface RecurringTaskInput {
   evidenceTypes?: RecurringTaskInputEvidenceTypesItem[];
   /** @nullable */
   modelObjectPath?: string | null;
+  /** @maxItems 20 */
   modelAttachments?: TaskModelAttachment[];
   instructions: string;
   recurrenceMode: RecurringTaskInputRecurrenceMode;

@@ -6,4 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type TaskModelAttachmentType = 'photo' | 'video';
+export type TaskModelAttachmentType = typeof TaskModelAttachmentType[keyof typeof TaskModelAttachmentType];
+
+
+export const TaskModelAttachmentType = {
+  photo: 'photo',
+  video: 'video',
+} as const;

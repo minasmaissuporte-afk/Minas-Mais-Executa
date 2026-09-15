@@ -7,11 +7,6 @@
  */
 import * as zod from 'zod';
 
-const taskModelAttachmentSchema = zod.object({
-  "objectPath": zod.string(),
-  "fileName": zod.string(),
-  "type": zod.enum(['photo', 'video']),
-});
 
 /**
  * @summary Get the authenticated member and server-authorized scope
@@ -129,10 +124,15 @@ export const ListTasksResponseItem = zod.object({
   "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
-  "location": zod.string().nullish()
+  "location": zod.string().nullish(),
+  "isHistorical": zod.boolean()
 })),
   "modelObjectPath": zod.string().nullish(),
-  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
+  "modelAttachments": zod.array(zod.object({
+  "objectPath": zod.string(),
+  "fileName": zod.string(),
+  "type": zod.enum(['photo', 'video'])
+})).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string(),
   "taskId": zod.string(),
@@ -155,6 +155,8 @@ export const ListTasksResponse = zod.array(ListTasksResponseItem)
  * @summary Create an operational task
  */
 
+export const createTaskBodyModelAttachmentsMax = 20;
+
 
 
 export const CreateTaskBody = zod.object({
@@ -172,7 +174,11 @@ export const CreateTaskBody = zod.object({
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
   "modelObjectPath": zod.string().nullish(),
-  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
+  "modelAttachments": zod.array(zod.object({
+  "objectPath": zod.string(),
+  "fileName": zod.string(),
+  "type": zod.enum(['photo', 'video'])
+})).max(createTaskBodyModelAttachmentsMax).optional(),
   "instructions": zod.string()
 })
 
@@ -203,10 +209,15 @@ export const CreateTaskResponse = zod.object({
   "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
-  "location": zod.string().nullish()
+  "location": zod.string().nullish(),
+  "isHistorical": zod.boolean()
 })),
   "modelObjectPath": zod.string().nullish(),
-  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
+  "modelAttachments": zod.array(zod.object({
+  "objectPath": zod.string(),
+  "fileName": zod.string(),
+  "type": zod.enum(['photo', 'video'])
+})).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string(),
   "taskId": zod.string(),
@@ -316,10 +327,15 @@ export const GetTaskResponse = zod.object({
   "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
-  "location": zod.string().nullish()
+  "location": zod.string().nullish(),
+  "isHistorical": zod.boolean()
 })),
   "modelObjectPath": zod.string().nullish(),
-  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
+  "modelAttachments": zod.array(zod.object({
+  "objectPath": zod.string(),
+  "fileName": zod.string(),
+  "type": zod.enum(['photo', 'video'])
+})).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string(),
   "taskId": zod.string(),
@@ -377,10 +393,15 @@ export const UpdateTaskResponse = zod.object({
   "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
-  "location": zod.string().nullish()
+  "location": zod.string().nullish(),
+  "isHistorical": zod.boolean()
 })),
   "modelObjectPath": zod.string().nullish(),
-  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
+  "modelAttachments": zod.array(zod.object({
+  "objectPath": zod.string(),
+  "fileName": zod.string(),
+  "type": zod.enum(['photo', 'video'])
+})).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string(),
   "taskId": zod.string(),
@@ -435,7 +456,8 @@ export const AddTaskEvidenceResponse = zod.object({
   "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
-  "location": zod.string().nullish()
+  "location": zod.string().nullish(),
+  "isHistorical": zod.boolean()
 })
 
 
@@ -484,10 +506,15 @@ export const CompleteTaskResponse = zod.object({
   "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
-  "location": zod.string().nullish()
+  "location": zod.string().nullish(),
+  "isHistorical": zod.boolean()
 })),
   "modelObjectPath": zod.string().nullish(),
-  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
+  "modelAttachments": zod.array(zod.object({
+  "objectPath": zod.string(),
+  "fileName": zod.string(),
+  "type": zod.enum(['photo', 'video'])
+})).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string(),
   "taskId": zod.string(),
@@ -544,10 +571,15 @@ export const ReviewTaskResponse = zod.object({
   "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
-  "location": zod.string().nullish()
+  "location": zod.string().nullish(),
+  "isHistorical": zod.boolean()
 })),
   "modelObjectPath": zod.string().nullish(),
-  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
+  "modelAttachments": zod.array(zod.object({
+  "objectPath": zod.string(),
+  "fileName": zod.string(),
+  "type": zod.enum(['photo', 'video'])
+})).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string(),
   "taskId": zod.string(),
@@ -595,6 +627,8 @@ export const AddTaskCommentResponse = zod.object({
  */
 
 
+export const createBulkTasksBodyModelAttachmentsMax = 20;
+
 
 
 export const CreateBulkTasksBody = zod.object({
@@ -611,7 +645,11 @@ export const CreateBulkTasksBody = zod.object({
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
   "modelObjectPath": zod.string().nullish(),
-  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
+  "modelAttachments": zod.array(zod.object({
+  "objectPath": zod.string(),
+  "fileName": zod.string(),
+  "type": zod.enum(['photo', 'video'])
+})).max(createBulkTasksBodyModelAttachmentsMax).optional(),
   "instructions": zod.string()
 })
 
@@ -642,10 +680,15 @@ export const CreateBulkTasksResponseItem = zod.object({
   "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
-  "location": zod.string().nullish()
+  "location": zod.string().nullish(),
+  "isHistorical": zod.boolean()
 })),
   "modelObjectPath": zod.string().nullish(),
-  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
+  "modelAttachments": zod.array(zod.object({
+  "objectPath": zod.string(),
+  "fileName": zod.string(),
+  "type": zod.enum(['photo', 'video'])
+})).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string(),
   "taskId": zod.string(),
@@ -669,6 +712,8 @@ export const CreateBulkTasksResponse = zod.array(CreateBulkTasksResponseItem)
  */
 
 
+export const createRecurringTasksBodyModelAttachmentsMax = 20;
+
 export const createRecurringTasksBodyOccurrenceCountMax = 365;
 
 export const createRecurringTasksBodyWeekdaysItemMin = 0;
@@ -690,7 +735,11 @@ export const CreateRecurringTasksBody = zod.object({
   "evidenceRequired": zod.boolean(),
   "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
   "modelObjectPath": zod.string().nullish(),
-  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
+  "modelAttachments": zod.array(zod.object({
+  "objectPath": zod.string(),
+  "fileName": zod.string(),
+  "type": zod.enum(['photo', 'video'])
+})).max(createRecurringTasksBodyModelAttachmentsMax).optional(),
   "instructions": zod.string(),
   "recurrenceMode": zod.enum(['daily_count', 'weekdays_until']),
   "occurrenceCount": zod.number().int().min(1).max(createRecurringTasksBodyOccurrenceCountMax).optional(),
@@ -725,10 +774,15 @@ export const CreateRecurringTasksResponseItem = zod.object({
   "objectPath": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "userName": zod.string(),
-  "location": zod.string().nullish()
+  "location": zod.string().nullish(),
+  "isHistorical": zod.boolean()
 })),
   "modelObjectPath": zod.string().nullish(),
-  "modelAttachments": zod.array(taskModelAttachmentSchema).max(20).optional(),
+  "modelAttachments": zod.array(zod.object({
+  "objectPath": zod.string(),
+  "fileName": zod.string(),
+  "type": zod.enum(['photo', 'video'])
+})).optional(),
   "comments": zod.array(zod.object({
   "id": zod.string(),
   "taskId": zod.string(),

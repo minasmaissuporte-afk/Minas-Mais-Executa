@@ -605,6 +605,7 @@ async function getTaskWithEvidence(id: string) {
       createdAt: item.createdAt.toISOString(),
       userName: item.userName,
       location: item.location,
+      isHistorical: item.isHistorical,
     })),
     modelObjectPath: task.modelObjectPath ?? null,
     modelAttachments: modelAttachmentsForTask(task),
@@ -1377,6 +1378,7 @@ router.post("/tasks/:id/evidence", async (req, res) => {
     objectPath: body.data.objectPath,
     userName: actor(req).name,
     location: body.data.location ?? null,
+    isHistorical: false,
   };
   await db.insert(evidencesTable).values(evidence);
   await db
@@ -1406,7 +1408,11 @@ router.delete("/tasks/:id/evidence/:evidenceId", async (req, res) => {
     return;
   }
   const [evidence] = await db
-    .select({ id: evidencesTable.id, objectPath: evidencesTable.objectPath })
+    .select({
+      id: evidencesTable.id,
+      objectPath: evidencesTable.objectPath,
+      isHistorical: evidencesTable.isHistorical,
+    })
     .from(evidencesTable)
     .where(and(
       eq(evidencesTable.id, params.data.evidenceId),
@@ -1414,6 +1420,10 @@ router.delete("/tasks/:id/evidence/:evidenceId", async (req, res) => {
     ));
   if (!evidence) {
     res.status(404).json({ error: "Evidência não encontrada." });
+    return;
+  }
+  if (evidence.isHistorical) {
+    res.status(409).json({ error: "Evidências históricas não podem ser apagadas." });
     return;
   }
   await db.delete(evidencesTable).where(eq(evidencesTable.id, evidence.id));
@@ -1480,21 +1490,29 @@ router.post("/tasks/:id/review", async (req, res) => {
     return;
   }
   const comment = body.data.comment?.trim() ?? "";
-  if (comment) {
-    await db.insert(taskCommentsTable).values({
-      id: `comment-${crypto.randomUUID()}`,
-      taskId: task.id,
-      userId: actor(req).id,
-      message: comment,
-      type: body.data.decision === "reject" ? "supervisor_rejection" : "supervisor_note",
-    });
-  }
-  await db
-    .update(tasksTable)
-    .set(body.data.decision === "approve"
-      ? { status: "completed", completedAt: new Date() }
-      : { status: "rejected", completedAt: null, completedBy: null })
-    .where(eq(tasksTable.id, task.id));
+  await db.transaction(async (tx) => {
+    if (comment) {
+      await tx.insert(taskCommentsTable).values({
+        id: `comment-${crypto.randomUUID()}`,
+        taskId: task.id,
+        userId: actor(req).id,
+        message: comment,
+        type: body.data.decision === "reject" ? "supervisor_rejection" : "supervisor_note",
+      });
+    }
+    if (body.data.decision === "reject") {
+      await tx
+        .update(evidencesTable)
+        .set({ isHistorical: true })
+        .where(eq(evidencesTable.taskId, task.id));
+    }
+    await tx
+      .update(tasksTable)
+      .set(body.data.decision === "approve"
+        ? { status: "completed", completedAt: new Date() }
+        : { status: "rejected", completedAt: null, completedBy: null })
+      .where(eq(tasksTable.id, task.id));
+  });
   const reviewed = await getTaskWithEvidence(task.id);
   res.json(reviewed);
 });

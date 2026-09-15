@@ -27,6 +27,7 @@ export interface TaskInput {
   evidenceTypes?: TaskInputEvidenceTypesItem[];
   /** @nullable */
   modelObjectPath?: string | null;
+  /** @maxItems 20 */
   modelAttachments?: TaskModelAttachment[];
   instructions: string;
 }

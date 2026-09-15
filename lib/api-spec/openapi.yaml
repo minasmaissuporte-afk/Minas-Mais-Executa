@@ -760,7 +760,7 @@ components:
           type: boolean
     Evidence:
       type: object
-      required: [id, taskId, type, fileName, objectPath, createdAt, userName]
+      required: [id, taskId, type, fileName, objectPath, createdAt, userName, isHistorical]
       properties:
         id:
           type: string
@@ -780,6 +780,8 @@ components:
           type: string
         location:
           type: ["string", "null"]
+        isHistorical:
+          type: boolean
     EvidenceInput:
       type: object
       required: [type, fileName, objectPath]

@@ -10,9 +10,9 @@ import type { TaskAssigneeRole } from './taskAssigneeRole';
 import type { TaskComment } from './taskComment';
 import type { TaskCreatedByRole } from './taskCreatedByRole';
 import type { TaskEvidenceTypesItem } from './taskEvidenceTypesItem';
+import type { TaskModelAttachment } from './taskModelAttachment';
 import type { TaskPriority } from './taskPriority';
 import type { TaskStatus } from './taskStatus';
-import type { TaskModelAttachment } from './taskModelAttachment';
 
 export interface Task {
   id: string;

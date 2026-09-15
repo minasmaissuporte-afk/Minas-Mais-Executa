@@ -75,6 +75,7 @@ export const evidencesTable = pgTable("evidences", {
     .defaultNow(),
   userName: text("user_name").notNull(),
   location: text("location"),
+  isHistorical: boolean("is_historical").notNull().default(false),
 });
 
 export const taskOriginsTable = pgTable("task_origins", {

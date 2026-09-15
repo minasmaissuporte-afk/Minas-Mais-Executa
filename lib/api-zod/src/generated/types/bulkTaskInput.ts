@@ -27,6 +27,7 @@ export interface BulkTaskInput {
   evidenceTypes?: BulkTaskInputEvidenceTypesItem[];
   /** @nullable */
   modelObjectPath?: string | null;
+  /** @maxItems 20 */
   modelAttachments?: TaskModelAttachment[];
   instructions: string;
 }

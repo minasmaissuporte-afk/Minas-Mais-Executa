@@ -143,6 +143,7 @@ export interface Evidence {
   userName: string;
   /** @nullable */
   location?: string | null;
+  isHistorical: boolean;
 }
 
 export type EvidenceInputType = typeof EvidenceInputType[keyof typeof EvidenceInputType];
@@ -160,6 +161,20 @@ export interface EvidenceInput {
   /** @minLength 10 */
   objectPath: string;
   location?: string;
+}
+
+export type TaskModelAttachmentType = typeof TaskModelAttachmentType[keyof typeof TaskModelAttachmentType];
+
+
+export const TaskModelAttachmentType = {
+  photo: 'photo',
+  video: 'video',
+} as const;
+
+export interface TaskModelAttachment {
+  objectPath: string;
+  fileName: string;
+  type: TaskModelAttachmentType;
 }
 
 export type TaskCommentType = typeof TaskCommentType[keyof typeof TaskCommentType];
@@ -228,20 +243,6 @@ export const TaskStatus = {
   completed: 'completed',
   overdue: 'overdue',
 } as const;
-
-export type TaskModelAttachmentType = typeof TaskModelAttachmentType[keyof typeof TaskModelAttachmentType];
-
-
-export const TaskModelAttachmentType = {
-  photo: 'photo',
-  video: 'video',
-} as const;
-
-export interface TaskModelAttachment {
-  objectPath: string;
-  fileName: string;
-  type: TaskModelAttachmentType;
-}
 
 export type TaskEvidenceTypesItem = typeof TaskEvidenceTypesItem[keyof typeof TaskEvidenceTypesItem];
 
@@ -405,6 +406,7 @@ export interface TaskInput {
   evidenceTypes?: TaskInputEvidenceTypesItem[];
   /** @nullable */
   modelObjectPath?: string | null;
+  /** @maxItems 20 */
   modelAttachments?: TaskModelAttachment[];
   instructions: string;
 }
@@ -451,6 +453,7 @@ export interface BulkTaskInput {
   evidenceTypes?: BulkTaskInputEvidenceTypesItem[];
   /** @nullable */
   modelObjectPath?: string | null;
+  /** @maxItems 20 */
   modelAttachments?: TaskModelAttachment[];
   instructions: string;
 }
@@ -510,6 +513,7 @@ export interface RecurringTaskInput {
   evidenceTypes?: RecurringTaskInputEvidenceTypesItem[];
   /** @nullable */
   modelObjectPath?: string | null;
+  /** @maxItems 20 */
   modelAttachments?: TaskModelAttachment[];
   instructions: string;
   recurrenceMode: RecurringTaskInputRecurrenceMode;

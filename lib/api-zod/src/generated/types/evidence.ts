@@ -18,4 +18,5 @@ export interface Evidence {
   userName: string;
   /** @nullable */
   location?: string | null;
+  isHistorical: boolean;
 }

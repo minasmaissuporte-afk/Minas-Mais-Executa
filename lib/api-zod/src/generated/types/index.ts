@@ -53,6 +53,8 @@ export * from './taskInput';
 export * from './taskInputAssigneeRole';
 export * from './taskInputEvidenceTypesItem';
 export * from './taskInputPriority';
+export * from './taskModelAttachment';
+export * from './taskModelAttachmentType';
 export * from './taskNotification';
 export * from './taskPriority';
 export * from './taskReviewInput';
