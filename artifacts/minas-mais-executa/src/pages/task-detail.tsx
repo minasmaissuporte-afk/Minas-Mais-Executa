@@ -1,6 +1,6 @@
 import { ArrowLeft, CheckCircle2, CircleAlert, MessageSquare, Paperclip, Trash2, UploadCloud } from 'lucide-react';
-import type { ChangeEvent } from 'react';
-import { useEffect, useState } from 'react';
+import type { ChangeEvent, TouchEvent as ReactTouchEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getGetTaskQueryKey, getListTaskSummariesQueryKey, getListTasksQueryKey, useAddTaskComment, useAddTaskEvidence, useCompleteTask, useDeleteTask, useDeleteTaskEvidence, useGetMe, useGetTask, useRequestUploadUrl, useReviewTask, useUpdateTask } from '@workspace/api-client-react';
 import type { Evidence, TaskModelAttachment } from '@workspace/api-client-react';
@@ -14,6 +14,104 @@ type ImageViewerSelection = {
   alt: string;
   type: 'photo' | 'video';
 };
+
+type PinchGesture = {
+  mode: 'pinch' | 'pan';
+  startDistance: number;
+  startScale: number;
+  startX: number;
+  startY: number;
+  startOffsetX: number;
+  startOffsetY: number;
+};
+
+function PinchZoomPhoto({ src, alt }: { src: string; alt: string }) {
+  const [transform, setTransform] = useState({ scale: 1, x: 0, y: 0 });
+  const gesture = useRef<PinchGesture | null>(null);
+  const distanceBetweenTouches = (touches: ReactTouchEvent<HTMLDivElement>['touches']) => {
+    const first = touches[0];
+    const second = touches[1];
+    return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
+  };
+  const centerOfTouches = (touches: ReactTouchEvent<HTMLDivElement>['touches']) => ({
+    x: (touches[0].clientX + touches[1].clientX) / 2,
+    y: (touches[0].clientY + touches[1].clientY) / 2,
+  });
+  const handleTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if (event.touches.length >= 2) {
+      const center = centerOfTouches(event.touches);
+      gesture.current = {
+        mode: 'pinch',
+        startDistance: distanceBetweenTouches(event.touches),
+        startScale: transform.scale,
+        startX: center.x,
+        startY: center.y,
+        startOffsetX: transform.x,
+        startOffsetY: transform.y,
+      };
+    } else if (event.touches.length === 1 && transform.scale > 1) {
+      gesture.current = {
+        mode: 'pan',
+        startDistance: 0,
+        startScale: transform.scale,
+        startX: event.touches[0].clientX,
+        startY: event.touches[0].clientY,
+        startOffsetX: transform.x,
+        startOffsetY: transform.y,
+      };
+    }
+  };
+  const handleTouchMove = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const activeGesture = gesture.current;
+    if (!activeGesture) return;
+    event.preventDefault();
+    if (activeGesture.mode === 'pinch' && event.touches.length >= 2) {
+      const center = centerOfTouches(event.touches);
+      const ratio = distanceBetweenTouches(event.touches) / activeGesture.startDistance;
+      const scale = Math.min(4, Math.max(1, activeGesture.startScale * ratio));
+      setTransform({
+        scale,
+        x: activeGesture.startOffsetX + center.x - activeGesture.startX,
+        y: activeGesture.startOffsetY + center.y - activeGesture.startY,
+      });
+      return;
+    }
+    if (activeGesture.mode === 'pan' && event.touches.length === 1) {
+      setTransform({
+        ...transform,
+        x: activeGesture.startOffsetX + event.touches[0].clientX - activeGesture.startX,
+        y: activeGesture.startOffsetY + event.touches[0].clientY - activeGesture.startY,
+      });
+    }
+  };
+  const handleTouchEnd = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if (event.touches.length === 0) {
+      gesture.current = null;
+      if (transform.scale <= 1.02) setTransform({ scale: 1, x: 0, y: 0 });
+    }
+  };
+  useEffect(() => {
+    setTransform({ scale: 1, x: 0, y: 0 });
+    gesture.current = null;
+  }, [src]);
+  return (
+    <div
+      className="evidence-viewer-media-viewport"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+    >
+      <img
+        className="evidence-viewer-image"
+        src={src}
+        alt={alt}
+        draggable={false}
+        style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})` }}
+      />
+    </div>
+  );
+}
 
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -157,6 +255,6 @@ export default function TaskDetailPage() {
          <section className="card card-pad" style={{ marginTop: 14 }}><div className="section-title">Resumo rápido</div><div className="stat-meta">Status <StatusPill status={task.status} /></div><div className="stat-meta">Prioridade <PriorityPill priority={task.priority} /></div></section>
        </aside>
       </div>}
-        {selectedImage?.objectPath && <div className="evidence-viewer-backdrop" role="dialog" aria-modal="true" aria-label={`Visualização de ${selectedImage.fileName}`} onClick={closeImageViewer}><div className="evidence-viewer" onClick={(event) => event.stopPropagation()}><div className="evidence-viewer-head"><div><div className="eyebrow">Visualização</div><div className="evidence-viewer-title">{selectedImage.fileName}</div></div><button type="button" className="button button-danger evidence-viewer-back-button" onClick={closeImageViewer} data-testid="button-back-image-viewer"><ArrowLeft size={14} /> Voltar</button></div><div className="evidence-viewer-image-scroll">{selectedImage.type === 'photo' ? <img className="evidence-viewer-image" src={`/api/storage${selectedImage.objectPath}`} alt={selectedImage.alt} /> : <video className="evidence-viewer-image" controls playsInline autoPlay={false} src={`/api/storage${selectedImage.objectPath}`}>Seu navegador não oferece suporte a vídeo.</video>}</div></div></div>}
+        {selectedImage?.objectPath && <div className="evidence-viewer-backdrop" role="dialog" aria-modal="true" aria-label={`Visualização de ${selectedImage.fileName}`} onClick={closeImageViewer}><div className="evidence-viewer" onClick={(event) => event.stopPropagation()}><div className="evidence-viewer-head"><div><div className="eyebrow">Visualização</div><div className="evidence-viewer-title">{selectedImage.fileName}</div></div><button type="button" className="button button-danger evidence-viewer-back-button" onClick={closeImageViewer} data-testid="button-back-image-viewer"><ArrowLeft size={14} /> Voltar</button></div><div className="evidence-viewer-image-scroll">{selectedImage.type === 'photo' ? <PinchZoomPhoto src={`/api/storage${selectedImage.objectPath}`} alt={selectedImage.alt} /> : <video className="evidence-viewer-image" controls playsInline autoPlay={false} src={`/api/storage${selectedImage.objectPath}`}>Seu navegador não oferece suporte a vídeo.</video>}</div></div></div>}
    </div>;
 }

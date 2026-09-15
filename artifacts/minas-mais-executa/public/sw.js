@@ -1,4 +1,4 @@
-const CACHE_NAME = 'minas-mais-executa-v1';
+const CACHE_NAME = 'minas-mais-executa-v2';
 
 function scopedUrl(path) {
   return new URL(path, self.registration.scope).href;
@@ -44,7 +44,8 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const target = event.notification.data?.url || '/tasks';
+  const rawTarget = event.notification.data?.url || 'tasks';
+  const target = rawTarget.startsWith('/tasks') ? `.${rawTarget}` : rawTarget;
   const targetUrl = new URL(target, self.registration.scope).href;
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {

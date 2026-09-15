@@ -42,7 +42,7 @@ import {
 import { actor, requireAdmin } from "../middlewares/authorization";
 import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
-import { getPushPublicKey, notifyTaskAssignees } from "../lib/push";
+import { getPushPublicKey, notifyTaskAssignees, startPendingTaskPushLoop } from "../lib/push";
 
 const router: IRouter = Router();
 
@@ -498,6 +498,7 @@ async function ensureSeedData() {
 const seedPromise = ensureSeedData().catch((error) => {
   logger.error({ err: error }, "Failed to seed operational data");
 });
+void seedPromise.then(() => startPendingTaskPushLoop());
 
 router.get("/notifications/public-key", async (_req, res) => {
   res.json({ publicKey: getPushPublicKey() });
@@ -1269,6 +1270,16 @@ router.get("/tasks/:id", async (req, res) => {
   if (!(await canAccessTask(req, task)) || !(await isVisibleToAdmin(req, task))) {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
+  }
+  const currentMember = actor(req);
+  if (
+    currentMember.role === "manager"
+    && (task.assigneeMemberId === currentMember.id || task.assigneeMemberIds?.includes(currentMember.id) === true)
+  ) {
+    await db
+      .update(tasksTable)
+      .set({ managerNotificationReadAt: new Date() })
+      .where(and(eq(tasksTable.id, task.id), isNull(tasksTable.managerNotificationReadAt)));
   }
   res.json(task);
 });

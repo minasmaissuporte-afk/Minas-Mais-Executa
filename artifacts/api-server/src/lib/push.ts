@@ -1,7 +1,7 @@
 import { createECDH, createHash } from "node:crypto";
 import webpush from "web-push";
-import { and, eq, inArray } from "drizzle-orm";
-import { db, pushSubscriptionsTable } from "@workspace/db";
+import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
+import { db, pushSubscriptionsTable, tasksTable } from "@workspace/db";
 
 type PushTask = {
   id: string;
@@ -9,7 +9,9 @@ type PushTask = {
   assigneeMemberId: string | null;
 };
 
+const PUSH_REPEAT_INTERVAL_MS = 5 * 60 * 1000;
 let cachedVapidKeys: { publicKey: string; privateKey: string } | null = null;
+let repeatLoopStarted = false;
 
 function getVapidKeys() {
   if (cachedVapidKeys) return cachedVapidKeys;
@@ -38,6 +40,16 @@ export function getPushPublicKey() {
 }
 
 export async function notifyTaskAssignees(tasks: PushTask[]) {
+  const sentTaskIds = await sendPushForTasks(tasks);
+  if (sentTaskIds.size) {
+    await db
+      .update(tasksTable)
+      .set({ managerNotificationSentAt: new Date() })
+      .where(inArray(tasksTable.id, [...sentTaskIds]));
+  }
+}
+
+async function sendPushForTasks(tasks: PushTask[]) {
   const grouped = new Map<string, PushTask[]>();
   for (const task of tasks) {
     if (!task.assigneeMemberId) continue;
@@ -45,7 +57,7 @@ export async function notifyTaskAssignees(tasks: PushTask[]) {
     memberTasks.push(task);
     grouped.set(task.assigneeMemberId, memberTasks);
   }
-  if (!grouped.size) return;
+  if (!grouped.size) return new Set<string>();
 
   getVapidKeys();
   const memberIds = [...grouped.keys()];
@@ -54,6 +66,7 @@ export async function notifyTaskAssignees(tasks: PushTask[]) {
     .from(pushSubscriptionsTable)
     .where(inArray(pushSubscriptionsTable.memberId, memberIds));
 
+  const sentTaskIds = new Set<string>();
   await Promise.all(subscriptions.flatMap((subscription) => {
     const tasksForMember = grouped.get(subscription.memberId) ?? [];
     return tasksForMember.map(async (task) => {
@@ -67,13 +80,14 @@ export async function notifyTaskAssignees(tasks: PushTask[]) {
             title: "Nova tarefa prioritária",
             body: task.title,
             tag: `task-${task.id}`,
-            data: { url: `/tasks/${task.id}` },
+            data: { url: `tasks/${task.id}` },
             requireInteraction: true,
             silent: false,
             vibrate: [300, 100, 300, 100, 500],
           }),
           { TTL: 60, urgency: "high" },
         );
+        sentTaskIds.add(task.id);
       } catch (error) {
         const statusCode = (error as { statusCode?: number }).statusCode;
         if (statusCode === 404 || statusCode === 410) {
@@ -86,4 +100,36 @@ export async function notifyTaskAssignees(tasks: PushTask[]) {
       }
     });
   }));
+  return sentTaskIds;
+}
+
+async function notifyPendingManagerTasks() {
+  const cutoff = new Date(Date.now() - PUSH_REPEAT_INTERVAL_MS);
+  const pendingTasks = await db
+    .select({
+      id: tasksTable.id,
+      title: tasksTable.title,
+      assigneeMemberId: tasksTable.assigneeMemberId,
+    })
+    .from(tasksTable)
+    .where(and(
+      eq(tasksTable.assigneeRole, "manager"),
+      isNull(tasksTable.managerNotificationReadAt),
+      or(isNull(tasksTable.managerNotificationSentAt), lt(tasksTable.managerNotificationSentAt, cutoff)),
+    ));
+  await notifyTaskAssignees(pendingTasks);
+}
+
+export function startPendingTaskPushLoop() {
+  if (repeatLoopStarted) return;
+  repeatLoopStarted = true;
+  void notifyPendingManagerTasks().catch((error) => {
+    console.error("Falha ao verificar notificações repetidas de tarefas.", error);
+  });
+  const loop = setInterval(() => {
+    void notifyPendingManagerTasks().catch((error) => {
+      console.error("Falha ao verificar notificações repetidas de tarefas.", error);
+    });
+  }, PUSH_REPEAT_INTERVAL_MS);
+  loop.unref?.();
 }

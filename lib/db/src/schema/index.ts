@@ -54,6 +54,8 @@ export const tasksTable = pgTable("tasks", {
   instructions: text("instructions").notNull().default(""),
   modelObjectPath: text("model_object_path"),
   modelAttachments: jsonb("model_attachments").$type<Array<{ objectPath: string; fileName: string; type: "photo" | "video" }>>().notNull().default([]),
+  managerNotificationSentAt: timestamp("manager_notification_sent_at", { withTimezone: true }),
+  managerNotificationReadAt: timestamp("manager_notification_read_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   completedBy: text("completed_by"),
   notes: text("notes"),
