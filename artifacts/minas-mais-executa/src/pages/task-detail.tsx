@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, CircleAlert, MessageSquare, Paperclip, Trash2, UploadCloud } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, CircleAlert, Download, MessageCircle, MessageSquare, Paperclip, Share2, Trash2, UploadCloud } from 'lucide-react';
 import type { ChangeEvent, TouchEvent as ReactTouchEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -131,6 +131,7 @@ export default function TaskDetailPage() {
   const [reviewComment, setReviewComment] = useState('');
   const [newComment, setNewComment] = useState('');
   const [selectedImage, setSelectedImage] = useState<ImageViewerSelection | null>(null);
+  const [sharingEvidenceId, setSharingEvidenceId] = useState<string | null>(null);
   const [, navigate] = useLocation();
   const task = taskQuery.data;
   const evidence = task?.evidence ?? [];
@@ -210,6 +211,61 @@ export default function TaskDetailPage() {
   const closeImageViewer = () => {
     setSelectedImage(null);
   };
+  const evidenceUrl = (item: Evidence) => item.objectPath
+    ? new URL(`/api/storage${item.objectPath}`, window.location.origin).toString()
+    : '';
+  const shareEvidence = async (item: Evidence) => {
+    const url = evidenceUrl(item);
+    if (!url || !navigator.share) {
+      setNotice('O compartilhamento do dispositivo não está disponível neste navegador.');
+      return;
+    }
+    setSharingEvidenceId(item.id);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Não foi possível carregar a evidência.');
+      const blob = await response.blob();
+      const file = new File([blob], item.fileName, { type: blob.type || (item.type === 'video' ? 'video/mp4' : 'image/jpeg') });
+      const canShareFile = typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
+      await navigator.share(canShareFile
+        ? { title: `Evidência: ${item.fileName}`, files: [file] }
+        : { title: `Evidência: ${item.fileName}`, text: `Evidência da tarefa ${task?.title ?? ''}`, url });
+      setNotice('Evidência compartilhada.');
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      setNotice('Não foi possível compartilhar a evidência.');
+    } finally {
+      setSharingEvidenceId(null);
+    }
+  };
+  const shareEvidenceOnWhatsApp = (item: Evidence) => {
+    const url = evidenceUrl(item);
+    if (!url) return;
+    const message = `Evidência: ${item.fileName}\n${url}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+  };
+  const saveEvidence = async (item: Evidence) => {
+    const url = evidenceUrl(item);
+    if (!url) return;
+    setSharingEvidenceId(item.id);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Não foi possível carregar a evidência.');
+      const blobUrl = URL.createObjectURL(await response.blob());
+      const anchor = document.createElement('a');
+      anchor.href = blobUrl;
+      anchor.download = item.fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(blobUrl);
+      setNotice('Evidência salva no dispositivo.');
+    } catch {
+      setNotice('Não foi possível salvar a evidência.');
+    } finally {
+      setSharingEvidenceId(null);
+    }
+  };
   const complete = () => {
     if (!task) return;
     completeTask.mutate({ id: task.id }, { onSuccess: () => { invalidateTask(); setNotice('Tarefa concluída.'); }, onError: () => setNotice('Adicione as evidências obrigatórias antes de concluir.') });
@@ -244,7 +300,7 @@ export default function TaskDetailPage() {
          <section className="card card-pad detail-section"><h3>O que precisa ser feito</h3><p className="detail-copy">{task.description || 'Sem descrição adicional.'}</p></section>
          <section className="card card-pad detail-section"><h3>Instruções de comprovação</h3><p className="detail-copy">{task.instructions || 'Registre o resultado da execução com uma observação objetiva.'}</p></section>
             {modelAttachments.length > 0 && <section className="card card-pad detail-section"><h3>Modelos / exemplos <span className="stat-meta">({modelAttachments.length})</span></h3><p className="detail-copy">Use estas referências para conferir o padrão esperado. Elas não contam como evidência da execução.</p><div className="model-attachment-grid">{modelAttachments.map((attachment) => <div className="model-attachment-card" key={attachment.objectPath}>{attachment.type === 'photo' ? <img className="model-preview model-preview-clickable" src={`/api/storage${attachment.objectPath}`} alt={`Modelo: ${attachment.fileName}`} onClick={() => openModelAttachment(attachment)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') openModelAttachment(attachment); }} role="button" tabIndex={0} data-testid={`image-task-model-${attachment.objectPath}`} /> : <video className="model-preview" controls playsInline preload="metadata" src={`/api/storage${attachment.objectPath}`}>Seu navegador não oferece suporte a vídeo.</video>}<div className="model-attachment-meta"><span>{attachment.type === 'video' ? 'Vídeo' : 'Foto'} · {attachment.fileName}</span><button type="button" className="section-link evidence-open" onClick={() => openModelAttachment(attachment)}>Abrir modelo</button></div></div>)}</div></section>}
-              <section className="card card-pad detail-section"><div className="section-heading"><h3 style={{ margin: 0 }}>Evidências <span className="stat-meta">({evidence.length})</span></h3>{task.evidenceRequired && <span className="status-chip status-in_progress">Obrigatória</span>}</div>{evidence.length ? <div className="evidence-list">{evidence.map((item: Evidence) => <div className="evidence-item" key={item.id}><span className="evidence-icon"><EvidenceIcon type={item.type} /></span><div><div className="evidence-file">{item.fileName} {item.isHistorical && <span className="status-chip status-pending_review">Histórico</span>}</div><div className="evidence-by">{item.userName} · {formatDateTime(item.createdAt)}{item.location ? ` · ${item.location}` : ''}</div>{item.objectPath && <>{item.type === 'photo' ? <img className="evidence-preview evidence-preview-clickable" src={`/api/storage${item.objectPath}`} alt={`Evidência: ${item.fileName}`} onClick={() => openEvidenceImage(item)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') openEvidenceImage(item); }} role="button" tabIndex={0} data-testid={`image-evidence-${item.id}`} /> : <video className="evidence-preview" controls playsInline preload="metadata" src={`/api/storage${item.objectPath}`}>Seu navegador não oferece suporte a vídeo.</video>}<div className="evidence-actions">{item.type === 'photo' ? <button type="button" className="section-link evidence-open" onClick={() => openEvidenceImage(item)} data-testid={`button-open-evidence-${item.id}`}>Abrir evidência</button> : <a className="section-link" href={`/api/storage${item.objectPath}`} target="_blank" rel="noreferrer">Abrir evidência</a>}</div></>}{canExecute && !item.isHistorical && <div className="evidence-actions"><button type="button" className="section-link evidence-delete" onClick={() => removeEvidence(item)} disabled={deleteTaskEvidence.isPending} data-testid={`button-delete-evidence-${item.id}`}><Trash2 size={13} /> Remover</button></div>}</div></div>)}</div> : <EmptyState icon={Paperclip} title="Ainda sem evidências" copy="Adicione uma foto ou vídeo para comprovar a execução." />}</section>
+              <section className="card card-pad detail-section"><div className="section-heading"><h3 style={{ margin: 0 }}>Evidências <span className="stat-meta">({evidence.length})</span></h3>{task.evidenceRequired && <span className="status-chip status-in_progress">Obrigatória</span>}</div>{evidence.length ? <div className="evidence-list">{evidence.map((item: Evidence) => <div className="evidence-item" key={item.id}><span className="evidence-icon"><EvidenceIcon type={item.type} /></span><div><div className="evidence-file">{item.fileName} {item.isHistorical && <span className="status-chip status-pending_review">Histórico</span>}</div><div className="evidence-by">{item.userName} · {formatDateTime(item.createdAt)}{item.location ? ` · ${item.location}` : ''}</div>{item.objectPath && <>{item.type === 'photo' ? <img className="evidence-preview evidence-preview-clickable" src={`/api/storage${item.objectPath}`} alt={`Evidência: ${item.fileName}`} onClick={() => openEvidenceImage(item)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') openEvidenceImage(item); }} role="button" tabIndex={0} data-testid={`image-evidence-${item.id}`} /> : <video className="evidence-preview" controls playsInline preload="metadata" src={`/api/storage${item.objectPath}`}>Seu navegador não oferece suporte a vídeo.</video>}<div className="evidence-actions">{item.type === 'photo' ? <button type="button" className="section-link evidence-open" onClick={() => openEvidenceImage(item)} data-testid={`button-open-evidence-${item.id}`}>Abrir evidência</button> : <a className="section-link" href={`/api/storage${item.objectPath}`} target="_blank" rel="noreferrer">Abrir evidência</a>}{me.data?.role === 'admin' && <details className="evidence-share-menu"><summary className="section-link evidence-share-trigger"><Share2 size={13} /> Compartilhar</summary><div className="evidence-share-options"><button type="button" onClick={() => shareEvidence(item)} disabled={sharingEvidenceId === item.id}><Share2 size={13} /> Compartilhar pelo celular</button><button type="button" onClick={() => shareEvidenceOnWhatsApp(item)}><MessageCircle size={13} /> WhatsApp</button><button type="button" onClick={() => saveEvidence(item)} disabled={sharingEvidenceId === item.id}><Download size={13} /> Salvar no telefone</button></div></details>}</div></>}{canExecute && !item.isHistorical && <div className="evidence-actions"><button type="button" className="section-link evidence-delete" onClick={() => removeEvidence(item)} disabled={deleteTaskEvidence.isPending} data-testid={`button-delete-evidence-${item.id}`}><Trash2 size={13} /> Remover</button></div>}</div></div>)}</div> : <EmptyState icon={Paperclip} title="Ainda sem evidências" copy="Adicione uma foto ou vídeo para comprovar a execução." />}</section>
            {rejectionComments.length > 0 && <section className="card card-pad detail-section rejection-feedback" data-testid="rejection-feedback"><div className="section-heading"><h3 style={{ margin: 0 }}>Orientação da reprovação</h3>{task.status === 'rejected' && <span className="status-chip status-rejected">Reprovada</span>}</div><div className="comment-list">{rejectionComments.map((item) => <div className="comment-item" key={item.id}><div className="comment-meta"><strong>{item.userName}</strong><span>{formatDateTime(item.createdAt)}</span></div><div className="comment-message">{item.message}</div></div>)}</div></section>}
           <section className="card card-pad detail-section"><div className="section-heading"><h3 style={{ margin: 0 }}><MessageSquare size={15} style={{ verticalAlign: 'middle', marginRight: 6 }} />Feedback e comentários <span className="stat-meta">({feedbackComments.length})</span></h3></div>{feedbackComments.length > 0 && <div className="comment-list">{feedbackComments.map((item) => <div className="comment-item" key={item.id}><div className="comment-meta"><strong>{item.userName}</strong><span>{formatDateTime(item.createdAt)}</span></div><div className="comment-message">{item.message}</div></div>)}</div>}<div className="field" style={{ marginTop: 12 }}><label htmlFor="task-comment">Adicionar comentário</label><textarea id="task-comment" className="textarea" value={newComment} onChange={(event) => setNewComment(event.target.value)} placeholder="Registre uma observação sobre a execução." data-testid="textarea-task-comment" /></div><button className="button button-ghost" style={{ marginTop: 8 }} onClick={comment} disabled={!newComment.trim() || addComment.isPending}>Adicionar comentário</button></section>
        </div>
