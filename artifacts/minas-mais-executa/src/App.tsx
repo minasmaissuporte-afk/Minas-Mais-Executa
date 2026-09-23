@@ -13,6 +13,7 @@ import TaskDetailPage from '@/pages/task-detail';
 import StoresPage from '@/pages/stores';
 import ReportsPage from '@/pages/reports';
 import AdministrationPage from '@/pages/administration';
+import AccountPage from '@/pages/account';
 import NotFound from '@/pages/not-found';
 import { SignInPage, SignUpPage } from '@/pages/auth';
 import logoImage from '@assets/af933122-6827-4305-a122-3f7713fe10e8_1789128021073.png';
@@ -48,6 +49,7 @@ function AuthenticatedRoutes() {
     <Route path="/tasks/:id" component={TaskDetailPage} />
     <Route path="/stores" component={StoresPage} />
     <Route path="/reports" component={ReportsPage} />
+    <Route path="/account/*?" component={AccountPage} />
     <Route path="/cadastros" component={() => member.role === 'admin' ? <AdministrationPage /> : <Redirect to="/" />} />
     <Route component={NotFound} />
   </Switch></AppShell>;

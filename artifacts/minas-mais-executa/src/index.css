@@ -90,6 +90,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .sidebar-spacer { flex:1; }
 .sidebar-footer { margin-top:22px; padding:17px 10px 4px; border-top:1px solid hsl(211 25% 30%); }
 .user-row { display:flex; align-items:center; gap:10px; }
+.user-row-link{color:inherit;text-decoration:none;border-radius:9px;padding:7px;margin:-7px;transition:background-color .18s ease}.user-row-link:hover{background:hsl(var(--muted))}
+.account-page{min-width:0}.account-profile-card{min-width:0;padding:10px;border:1px solid hsl(var(--border));border-radius:14px;background:hsl(var(--card));box-shadow:var(--shadow-soft)}.account-profile-card .cl-rootBox{width:100%}.account-profile-card .cl-cardBox{max-width:100%;width:100%}
 .avatar { width:33px; height:33px; display:grid; place-items:center; border-radius:50%; color:hsl(211 38% 19%); background:hsl(30 73% 73%); font-size:10px; font-weight:700; }
 .user-name { font-size:12px; font-weight:700; }.user-role { margin-top:2px; color:hsl(39 24% 69%); font-size:10px; }
 
