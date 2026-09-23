@@ -25,7 +25,7 @@ export function AppShell({ children, member }: { children: ReactNode; member: Cu
   const onUnreadChange = useCallback((count: number) => setUnreadTasks((current) => current + count), []);
   const userName = member.name;
   const segment = location.split('/')[1];
-  const pageName = location === '/' ? 'Visão geral' : segment === 'tasks' ? 'Tarefas' : segment === 'stores' ? 'Lojas' : segment === 'cadastros' ? 'Cadastros' : 'Relatórios';
+  const pageName = location === '/' ? 'Visão geral' : segment === 'tasks' ? 'Tarefas' : segment === 'stores' ? 'Lojas' : segment === 'cadastros' ? 'Cadastros' : segment === 'account' ? 'Minha conta' : 'Relatórios';
   return <div className="app-shell">
     <aside className="sidebar">
       <Link href="/" className="brand" data-testid="link-brand"><span className="brand-mark">M</span><span><span className="brand-name">Minas Mais</span><span className="brand-sub">Executa</span></span></Link>
