@@ -223,12 +223,17 @@ export default function TaskDetailPage() {
     }
     setSharingEvidenceId(item.id);
     try {
-      let stores = storesQuery.data;
-      if (!stores) {
-        const storesResult = await storesQuery.refetch();
-        stores = storesResult.data;
+      const storesResult = await storesQuery.refetch();
+      if (storesResult.isError || !storesResult.data) {
+        setNotice('Não foi possível carregar os dados da loja para compartilhar.');
+        return;
       }
-      const managerName = stores?.find((store) => store.id === task?.storeId)?.manager?.trim() || 'Não definido';
+      const store = storesResult.data.find((candidate) => candidate.id === task?.storeId);
+      if (!store) {
+        setNotice('Não foi possível localizar a loja para completar o compartilhamento.');
+        return;
+      }
+      const managerName = store.manager.trim() || 'Não definido';
       const shareText = [
         `Evidência: ${item.fileName}`,
         `Tarefa: ${task?.title ?? 'Não informada'}`,
