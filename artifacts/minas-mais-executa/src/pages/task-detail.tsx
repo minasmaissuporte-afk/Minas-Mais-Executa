@@ -2,7 +2,7 @@ import { ArrowLeft, CheckCircle2, CircleAlert, Download, MessageSquare, Papercli
 import type { ChangeEvent, TouchEvent as ReactTouchEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getGetTaskQueryKey, getListTaskSummariesQueryKey, getListTasksQueryKey, useAddTaskComment, useAddTaskEvidence, useCompleteTask, useDeleteTask, useDeleteTaskEvidence, useGetMe, useGetTask, useRequestUploadUrl, useReviewTask, useUpdateTask } from '@workspace/api-client-react';
+import { getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getGetTaskQueryKey, getListStoresQueryKey, getListTaskSummariesQueryKey, getListTasksQueryKey, useAddTaskComment, useAddTaskEvidence, useCompleteTask, useDeleteTask, useDeleteTaskEvidence, useGetMe, useGetTask, useListStores, useRequestUploadUrl, useReviewTask, useUpdateTask } from '@workspace/api-client-react';
 import type { Evidence, TaskModelAttachment } from '@workspace/api-client-react';
 import { useParams, Link, useLocation } from 'wouter';
 import { EmptyState, ErrorState, EvidenceIcon, formatDate, formatDateTime, LoadingBlocks, PriorityPill, StatusPill } from '@/components/ui-kit';
@@ -119,6 +119,7 @@ export default function TaskDetailPage() {
   const client = useQueryClient();
   const taskQuery = useGetTask(taskId, { query: { queryKey: getGetTaskQueryKey(taskId), enabled: !!taskId } });
   const me = useGetMe();
+  const storesQuery = useListStores({ query: { queryKey: getListStoresQueryKey(), enabled: me.data?.role === 'admin' } });
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
   const addEvidence = useAddTaskEvidence();
@@ -222,14 +223,26 @@ export default function TaskDetailPage() {
     }
     setSharingEvidenceId(item.id);
     try {
+      let stores = storesQuery.data;
+      if (!stores) {
+        const storesResult = await storesQuery.refetch();
+        stores = storesResult.data;
+      }
+      const managerName = stores?.find((store) => store.id === task?.storeId)?.manager?.trim() || 'Não definido';
+      const shareText = [
+        `Evidência: ${item.fileName}`,
+        `Tarefa: ${task?.title ?? 'Não informada'}`,
+        `Loja: ${task?.storeName ?? 'Não informada'}`,
+        `Nome do Gerente: ${managerName}`,
+      ].join('\n');
       const response = await fetch(url);
       if (!response.ok) throw new Error('Não foi possível carregar a evidência.');
       const blob = await response.blob();
       const file = new File([blob], item.fileName, { type: blob.type || (item.type === 'video' ? 'video/mp4' : 'image/jpeg') });
       const canShareFile = typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
       await navigator.share(canShareFile
-        ? { title: `Evidência: ${item.fileName}`, files: [file] }
-        : { title: `Evidência: ${item.fileName}`, text: `Evidência da tarefa ${task?.title ?? ''}`, url });
+        ? { title: `Evidência: ${item.fileName}`, text: shareText, files: [file] }
+        : { title: `Evidência: ${item.fileName}`, text: `${shareText}\n${url}` });
       setNotice('Evidência compartilhada.');
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return;
