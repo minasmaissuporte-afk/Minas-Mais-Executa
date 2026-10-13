@@ -73,11 +73,12 @@ export function StatusPill({ status }: { status: string }) {
 export function PriorityPill({ priority }: { priority: string }) {
   return <span className={`priority priority-${priority}`} data-testid={`priority-pill-${priority}`}>{priorityLabel(priority)}</span>;
 }
-export function TaskRow({ task, onDelete, selected = false, onToggleSelect }: { task: TaskListItem; onDelete?: (task: TaskListItem) => void; selected?: boolean; onToggleSelect?: (taskId: string) => void }) {
+export function TaskRow({ task, onDelete, selected = false, onToggleSelect, onOpenTask }: { task: TaskListItem; onDelete?: (task: TaskListItem) => void; selected?: boolean; onToggleSelect?: (taskId: string) => void; onOpenTask?: () => void }) {
+  const detailHref = task.batchGroupId ? `/tasks/${task.id}?returnTo=stores` : `/tasks/${task.id}`;
   return <div className={`task-row task-row-result result-${task.status === 'completed' ? 'completed' : 'open'} task-status-${task.status}`} data-testid={`row-task-${task.id}`}>
     {onToggleSelect && <input type="checkbox" className="task-select-checkbox" checked={selected} onChange={() => onToggleSelect(task.id)} onClick={(event) => event.stopPropagation()} aria-label={`Selecionar ${task.title} da ${task.storeName}`} data-testid={`checkbox-select-task-${task.id}`} />}
     <span className={`task-status-dot dot-${task.status}`} aria-hidden="true" />
-    <Link href={`/tasks/${task.id}`} className="task-main" data-testid={`link-task-${task.id}`}>
+    <Link href={detailHref} className="task-main" onClick={onOpenTask} data-testid={`link-task-${task.id}`}>
       <div className="task-title">{task.title}</div><div className="task-sub">{task.category} · {task.storeName} · {task.assigneeRole === 'supervisor' ? 'Supervisor: ' : ''}{task.assignee}</div>
       <div className="task-dates">Criada em {formatFullDate(task.createdAt)} por {task.createdByName} · Executar em {formatFullDate(task.dueDate)} às {task.dueTime}</div>
       {task.status === 'pending_review' && <div className="task-row-status-note task-row-status-note-review">Aguardando conferência do supervisor</div>}
@@ -86,7 +87,7 @@ export function TaskRow({ task, onDelete, selected = false, onToggleSelect }: { 
    {task.status === 'pending_review' && <span className="status-chip status-pending_review task-row-status-chip">Conferência</span>}{task.status === 'rejected' && <span className="status-chip status-rejected task-row-status-chip">Reprovada</span>}<PriorityPill priority={task.priority} /><span className="task-time">{task.dueTime}</span>{onDelete && <button className="icon-button task-delete-button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onDelete(task); }} aria-label={`Excluir ${task.title}`} data-testid={`button-delete-task-${task.id}`}><Trash2 size={14} /></button>}<ChevronRight size={15} color="hsl(var(--muted-foreground))" />
   </div>;
 }
-export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string>(), onToggleSelect, onToggleGroupSelect }: { tasks: TaskListItem[]; onDelete?: (task: TaskListItem) => void; selectedTaskIds?: Set<string>; onToggleSelect?: (taskId: string) => void; onToggleGroupSelect?: (taskIds: string[]) => void }) {
+export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string>(), onToggleSelect, onToggleGroupSelect, expanded = false, onExpandedChange, onOpenTask }: { tasks: TaskListItem[]; onDelete?: (task: TaskListItem) => void; selectedTaskIds?: Set<string>; onToggleSelect?: (taskId: string) => void; onToggleGroupSelect?: (taskIds: string[]) => void; expanded?: boolean; onExpandedChange?: (expanded: boolean) => void; onOpenTask?: () => void }) {
   const first = tasks[0];
   if (!first) return null;
   const statuses = new Set(tasks.map((task) => task.status));
@@ -102,7 +103,7 @@ export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string
             ? 'pending'
             : 'completed';
   const resultStatus = tasks.every((task) => task.status === 'completed') ? 'completed' : 'open';
-  return <details className="task-group" data-testid={`group-task-${first.batchGroupId}`}>
+  return <details className="task-group" open={expanded} onToggle={(event) => onExpandedChange?.(event.currentTarget.open)} data-testid={`group-task-${first.batchGroupId}`}>
      <summary className={`task-row task-row-result result-${resultStatus} task-group-summary task-status-${groupStatus}`}>
        {onToggleGroupSelect && <input type="checkbox" className="task-select-checkbox" checked={tasks.length > 0 && tasks.every((task) => selectedTaskIds.has(task.id))} onChange={() => onToggleGroupSelect(tasks.map((task) => task.id))} onClick={(event) => event.stopPropagation()} aria-label={`Selecionar conjunto ${first.title}`} data-testid={`checkbox-select-task-group-${first.batchGroupId}`} />}
        <span className={`task-status-dot dot-${groupStatus}`} aria-hidden="true" />
@@ -113,7 +114,7 @@ export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string
       </span>
        {groupStatus === 'pending_review' && <span className="status-chip status-pending_review task-row-status-chip">Conferência</span>}{groupStatus === 'rejected' && <span className="status-chip status-rejected task-row-status-chip">Reprovada</span>}<PriorityPill priority={first.priority} /><span className="task-time">{first.dueTime}</span><ChevronDown className="task-group-chevron" size={15} />
     </summary>
-     <div className="task-group-items">{tasks.map((task) => <TaskRow key={task.id} task={task} onDelete={onDelete} selected={selectedTaskIds.has(task.id)} onToggleSelect={onToggleSelect} />)}</div>
+      <div className="task-group-items">{tasks.map((task) => <TaskRow key={task.id} task={task} onDelete={onDelete} selected={selectedTaskIds.has(task.id)} onToggleSelect={onToggleSelect} onOpenTask={onOpenTask} />)}</div>
   </details>;
 }
 export function ActivityItem({ activity }: { activity: Activity }) {

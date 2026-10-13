@@ -115,6 +115,7 @@ function PinchZoomPhoto({ src, alt }: { src: string; alt: string }) {
 
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const returnToStoreList = new URLSearchParams(window.location.search).get('returnTo') === 'stores';
   const taskId = id || '';
   const client = useQueryClient();
   const taskQuery = useGetTask(taskId, { query: { queryKey: getGetTaskQueryKey(taskId), enabled: !!taskId } });
@@ -304,7 +305,7 @@ export default function TaskDetailPage() {
     });
   };
    return <div className="content">
-     <div className="task-detail-topbar"><Link href="/tasks" className="section-link" data-testid="link-back-tasks"><ArrowLeft size={13} /> Voltar para tarefas</Link>{me.data?.role === 'admin' && task && <button className="button button-danger" onClick={removeTask} disabled={deleteTask.isPending}><Trash2 size={15} /> {deleteTask.isPending ? 'Excluindo...' : 'Excluir tarefa'}</button>}</div>
+     <div className="task-detail-topbar"><Link href={returnToStoreList ? '/tasks?restoreStores=1' : '/tasks'} className="section-link" data-testid={returnToStoreList ? 'link-back-stores' : 'link-back-tasks'}><ArrowLeft size={13} /> {returnToStoreList ? 'Voltar para lojas' : 'Voltar para tarefas'}</Link>{me.data?.role === 'admin' && task && <button className="button button-danger" onClick={removeTask} disabled={deleteTask.isPending}><Trash2 size={15} /> {deleteTask.isPending ? 'Excluindo...' : 'Excluir tarefa'}</button>}</div>
      {taskQuery.isError ? <ErrorState onRetry={() => taskQuery.refetch()} /> : taskQuery.isLoading ? <LoadingBlocks rows={2} /> : !task ? <EmptyState title="Tarefa não encontrada" copy="Ela pode não estar disponível para o seu acesso." /> : <div className="detail-layout">
        <div>
            <section className="detail-hero"><div className="eyebrow">Execução · {task.category}</div><h1 className="detail-title">{task.title}</h1><div className="detail-meta"><span>{task.storeName}</span><span>•</span><span>{task.assignee}</span><span>•</span><span>Criada por {task.createdByName}</span><span>•</span><span>Em {formatDate(task.createdAt)}</span><span>•</span><span>Executar em {formatDate(task.dueDate)} às {task.dueTime}</span></div>{task.status === 'pending_review' && <div className="task-status-banner task-status-banner-pending_review"><strong>Aguardando conferência do supervisor</strong><span>O gerente concluiu a execução. A tarefa será encerrada após a aprovação.</span></div>}{task.status === 'rejected' && <div className="task-status-banner task-status-banner-rejected"><strong>Tarefa reprovada pelo supervisor</strong><span>Revise a orientação abaixo e inicie uma nova execução.</span></div>}</section>
