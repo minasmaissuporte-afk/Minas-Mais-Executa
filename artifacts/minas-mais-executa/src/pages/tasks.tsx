@@ -1,5 +1,5 @@
 import { Filter, Plus, Search, Trash2, UploadCloud } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { getGetDashboardSummaryQueryKey, getListStoresQueryKey, getListTaskSummariesQueryKey, getListTasksQueryKey, getListTeamMembersQueryKey, useCreateBulkTasks, useCreateRecurringTasks, useCreateTask, useDeleteAllTasks, useDeleteTask, useGetMe, useListStores, useListTaskSummaries, useListTeamMembers, useRequestUploadUrl } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -346,16 +346,13 @@ export default function TasksPage() {
     });
     return rows;
   }, [tasks]);
-  useEffect(() => {
-    if (!returnContext || restoreApplied.current || query.isFetching) return;
+  useLayoutEffect(() => {
+    if (!returnContext || restoreApplied.current || query.isLoading) return;
     restoreApplied.current = true;
-    const frame = window.requestAnimationFrame(() => {
-      window.scrollTo(0, returnContext.scrollY);
-      sessionStorage.removeItem(taskListReturnContextKey);
-      window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.hash}`);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [returnContext, query.isFetching]);
+    window.scrollTo(0, returnContext.scrollY);
+    sessionStorage.removeItem(taskListReturnContextKey);
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.hash}`);
+  }, [returnContext, query.isLoading]);
   const rememberTaskListContext = (groupId: string) => {
     const expanded = new Set(expandedGroupIds);
     expanded.add(groupId);
