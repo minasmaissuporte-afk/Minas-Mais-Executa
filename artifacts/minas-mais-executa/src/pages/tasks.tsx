@@ -15,6 +15,7 @@ type TaskListReturnContext = {
   dateFrom: string;
   dateTo: string;
   expandedGroupIds: string[];
+  orderedTaskIds: string[];
   scrollY: number;
 };
 
@@ -321,7 +322,12 @@ export default function TasksPage() {
   const deleteTask = useDeleteTask();
   const deleteAllTasks = useDeleteAllTasks();
    const data = (query.data ?? []).filter((task) => isAdmin || task.dueDate <= todayInput);
-  const tasks = useMemo(() => data.filter((task) => `${task.title} ${task.storeName} ${task.assignee}`.toLowerCase().includes(search.toLowerCase())), [data, search]);
+   const tasks = useMemo(() => {
+     const matches = data.filter((task) => `${task.title} ${task.storeName} ${task.assignee}`.toLowerCase().includes(search.toLowerCase()));
+     if (!returnContext?.orderedTaskIds.length) return matches;
+     const order = new Map(returnContext.orderedTaskIds.map((taskId, index) => [taskId, index]));
+     return [...matches].sort((first, second) => (order.get(first.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(second.id) ?? Number.MAX_SAFE_INTEGER));
+   }, [data, search, returnContext]);
   const taskRows = useMemo(() => {
     const rows: Array<{ key: string; tasks: typeof tasks }> = [];
     const bulkRows = new Map<string, typeof tasks>();
@@ -361,6 +367,7 @@ export default function TasksPage() {
         dateFrom,
         dateTo,
         expandedGroupIds: [...expanded],
+        orderedTaskIds: tasks.map((task) => task.id),
         scrollY: window.scrollY,
       } satisfies TaskListReturnContext));
     } catch {
@@ -411,7 +418,7 @@ export default function TasksPage() {
   return <div className="content"><div className="page-head"><div><div className="eyebrow">Ritmo operacional</div><h1 className="page-title">Tarefas</h1><p className="page-intro">Veja, execute e comprove cada combinado da rede.</p></div><div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>{canCreate && <button className="button button-primary" onClick={() => setCreating(true)} data-testid="button-new-task"><Plus size={15} /> Nova tarefa</button>}</div></div>
       <div className="card filters"><div className="search-wrap"><Search size={15} /><input className="input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por tarefa, loja ou responsável" aria-label="Buscar tarefas" data-testid="input-search-tasks" /></div><select className="select" value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filtrar por status" data-testid="select-filter-status"><option value="all">Todos os status</option><option value="pending">Pendentes</option><option value="in_progress">Em execução</option><option value="pending_review">Aguardando conferência</option><option value="rejected">Reprovadas</option><option value="completed">Concluídas</option><option value="overdue">Atrasadas</option></select><select className="select" value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Filtrar por categoria" data-testid="select-filter-category"><option value="all">Todas categorias</option>{categories.map((item) => <option value={item} key={item}>{item}</option>)}</select>{isAdmin && <><label className="date-filter"><span>De</span><input type="date" className="input" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} aria-label="Data inicial" data-testid="input-filter-date-from" /></label><label className="date-filter"><span>Até</span><input type="date" className="input" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} aria-label="Data final" data-testid="input-filter-date-to" /></label>{(dateFrom || dateTo) && <button className="button button-ghost" type="button" onClick={() => { setDateFrom(''); setDateTo(''); }} data-testid="button-clear-date-filter">Limpar datas</button>}</>}<button className="icon-button" aria-label="Filtros adicionais" data-testid="button-filter"><Filter size={15} /></button></div>
        {isAdmin && <div className="bulk-task-actions"><div><strong>Exclusão por seleção</strong><span>Marque tarefas individuais ou o conjunto inteiro. A seleção respeita a busca e os filtros aplicados.</span></div><label className="bulk-select-all"><input type="checkbox" checked={tasks.length > 0 && tasks.every((task) => selectedTaskIds.has(task.id))} onChange={toggleVisibleTaskSelection} data-testid="checkbox-select-visible-tasks" /><span>Selecionar todas ({tasks.length})</span></label><button className="button button-danger" onClick={removeSelectedTasks} disabled={deleteAllTasks.isPending || !selectedVisibleTaskIds.length} data-testid="button-delete-selected-tasks"><Trash2 size={15} /> {deleteAllTasks.isPending ? 'Excluindo...' : `Excluir selecionadas (${selectedVisibleTaskIds.length})`}</button></div>}
-        {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isLoading ? <LoadingBlocks rows={2} /> : taskRows.length ? <div className="task-list">{taskRows.map((row) => row.tasks.length > 1 ? <TaskGroupRow key={row.key} tasks={row.tasks} onDelete={isAdmin ? removeTask : undefined} selectedTaskIds={selectedTaskIds} onToggleSelect={isAdmin ? toggleTaskSelection : undefined} onToggleGroupSelect={isAdmin ? toggleTaskGroupSelection : undefined} expanded={expandedGroupIds.has(row.key)} onExpandedChange={(expanded) => setExpandedGroupIds((current) => { const next = new Set(current); if (expanded) next.add(row.key); else next.delete(row.key); return next; })} onOpenTask={() => rememberTaskListContext(row.key)} /> : <TaskRow key={row.key} task={row.tasks[0]} onDelete={isAdmin ? removeTask : undefined} selected={selectedTaskIds.has(row.tasks[0].id)} onToggleSelect={isAdmin ? toggleTaskSelection : undefined} />)}</div> : <div className="card"><SearchEmpty /></div>}
+        {query.isError ? <ErrorState onRetry={() => query.refetch()} /> : query.isLoading ? <LoadingBlocks rows={2} /> : taskRows.length ? <div className="task-list">{taskRows.map((row) => row.tasks.length > 1 ? <TaskGroupRow key={row.key} tasks={row.tasks} onDelete={isAdmin ? removeTask : undefined} selectedTaskIds={selectedTaskIds} onToggleSelect={isAdmin ? toggleTaskSelection : undefined} onToggleGroupSelect={isAdmin ? toggleTaskGroupSelection : undefined} expanded={expandedGroupIds.has(row.key)} onExpandedChange={(expanded) => setExpandedGroupIds((current) => { const next = new Set(current); if (expanded) next.add(row.key); else next.delete(row.key); return next; })} onOpenTask={() => rememberTaskListContext(row.key)} /> : <TaskRow key={row.key} task={row.tasks[0]} onDelete={isAdmin ? removeTask : undefined} selected={selectedTaskIds.has(row.tasks[0].id)} onToggleSelect={isAdmin ? toggleTaskSelection : undefined} onOpenTask={row.tasks[0].batchGroupId ? () => rememberTaskListContext(row.key) : undefined} />)}</div> : <div className="card"><SearchEmpty /></div>}
     {creating && canCreate && <TaskCreateModal onClose={() => setCreating(false)} />}
   </div>;
 }
