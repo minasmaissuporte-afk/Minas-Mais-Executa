@@ -97,6 +97,7 @@ export const taskCommentsTable = pgTable("task_comments", {
 
 export const activityTable = pgTable("activity", {
   id: text("id").primaryKey(),
+  storeId: text("store_id"),
   title: text("title").notNull(),
   detail: text("detail").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })

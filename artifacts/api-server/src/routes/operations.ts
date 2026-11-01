@@ -680,8 +680,15 @@ router.get("/dashboard/summary", async (req, res) => {
 router.get("/activity", async (req, res) => {
   await seedPromise;
   const rows = await db
-    .select()
+    .select({
+      id: activityTable.id,
+      title: activityTable.title,
+      detail: activityTable.detail,
+      createdAt: activityTable.createdAt,
+      tone: activityTable.tone,
+    })
     .from(activityTable)
+    .innerJoin(storesTable, eq(activityTable.storeId, storesTable.id))
     .orderBy(desc(activityTable.createdAt))
     .limit(10);
   if (actor(req).role !== "admin") {
