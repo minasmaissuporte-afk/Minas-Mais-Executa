@@ -11,7 +11,10 @@ export default function DashboardPage({ member }: { member: CurrentMember }) {
   const activityQuery = useGetActivity({ query: { queryKey: getGetActivityQueryKey() } });
   const tasksQuery = useListTaskSummaries({ dateFrom: todayInput, dateTo: todayInput }, { query: { queryKey: getListTaskSummariesQueryKey({ dateFrom: todayInput, dateTo: todayInput }) } });
   const summary = summaryQuery.data;
-  const tasks = (tasksQuery.data ?? []).filter((task) => task.dueDate === todayInput).slice(0, 5);
+  const tasks = (tasksQuery.data ?? [])
+    .filter((task) => task.dueDate === todayInput)
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .slice(0, 5);
   const activities = activityQuery.data ?? [];
   const isNetwork = member.role !== 'manager';
   return <div className="content">
