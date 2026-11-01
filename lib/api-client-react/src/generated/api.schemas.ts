@@ -712,5 +712,9 @@ toDate?: string;
  * @minLength 1
  */
 region?: string;
+/**
+ * @minLength 1
+ */
+supervisor?: string;
 };
 

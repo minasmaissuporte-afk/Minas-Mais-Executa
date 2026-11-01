@@ -1993,9 +1993,11 @@ router.get("/rankings", async (req, res) => {
   const previousToDate = addDaysToDateInput(fromDate, -1);
   const previousFromDate = addDaysToDateInput(previousToDate, -(rangeDays - 1));
   const region = typeof req.query.region === "string" ? req.query.region.trim() : "";
+  const supervisor = typeof req.query.supervisor === "string" ? req.query.supervisor.trim() : "";
   const storeFilters = [
     ids === null ? undefined : inArray(storesTable.id, ids),
     region ? eq(storesTable.region, region) : undefined,
+    supervisor ? eq(storesTable.supervisor, supervisor) : undefined,
   ].filter((filter): filter is NonNullable<typeof filter> => filter !== undefined);
   const stores = await db
     .select()

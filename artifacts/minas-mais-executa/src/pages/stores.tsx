@@ -21,12 +21,14 @@ export default function StoresPage() {
   const [search, setSearch] = useState('');
   const [rankingRange, setRankingRange] = useState(getDefaultRankingRange);
   const [rankingRegion, setRankingRegion] = useState('');
+  const [rankingSupervisor, setRankingSupervisor] = useState('');
   const storesQuery = useListStores({ query: { queryKey: getListStoresQueryKey() } });
   const validRankingRange = Boolean(rankingRange.fromDate && rankingRange.toDate && rankingRange.fromDate <= rankingRange.toDate);
   const rankingParams = {
     fromDate: rankingRange.fromDate,
     toDate: rankingRange.toDate,
     ...(rankingRegion ? { region: rankingRegion } : {}),
+    ...(rankingSupervisor ? { supervisor: rankingSupervisor } : {}),
   };
   const rankingsQuery = useGetRankings(rankingParams, {
     query: {
@@ -37,9 +39,20 @@ export default function StoresPage() {
   const stores = storesQuery.data ?? [];
   const rankings = rankingsQuery.data ?? [];
   const regions = useMemo(() => [...new Set(stores.map((store) => store.region).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [stores]);
+  const supervisors = useMemo(() => [...new Set(stores.map((store) => store.supervisor).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [stores]);
+  const rankingsByStoreName = useMemo(() => new Map(rankings.map((entry) => [entry.storeName, entry])), [rankings]);
+  const rankingGroups = useMemo(() => {
+    const groups = new Map<string, typeof rankings>();
+    rankings.forEach((entry) => groups.set(entry.supervisorName, [...(groups.get(entry.supervisorName) ?? []), entry]));
+    return [...groups.entries()].sort(([first], [second]) => first.localeCompare(second));
+  }, [rankings]);
   const filtered = useMemo(
-    () => stores.filter((store) => `${store.name} ${store.city} ${store.manager}`.toLowerCase().includes(search.toLowerCase())),
-    [stores, search],
+    () => stores
+      .filter((store) => `${store.name} ${store.city} ${store.manager}`.toLowerCase().includes(search.toLowerCase()))
+      .filter((store) => !rankingRegion || store.region === rankingRegion)
+      .filter((store) => !rankingSupervisor || store.supervisor === rankingSupervisor)
+      .sort((first, second) => (rankingsByStoreName.get(second.name)?.points ?? 0) - (rankingsByStoreName.get(first.name)?.points ?? 0) || first.name.localeCompare(second.name)),
+    [stores, search, rankingRegion, rankingSupervisor, rankingsByStoreName],
   );
 
   return <div className="content">
@@ -56,6 +69,43 @@ export default function StoresPage() {
       </div>
     </div>
 
+    <div className="card filters ranking-filters" data-testid="stores-ranking-filters">
+      <label className="ranking-filter">De
+        <input
+          className="input"
+          type="date"
+          value={rankingRange.fromDate}
+          max={rankingRange.toDate || undefined}
+          onChange={(event) => setRankingRange((range) => ({ ...range, fromDate: event.target.value }))}
+          aria-label="Data inicial do ranking"
+          data-testid="input-ranking-from-date"
+        />
+      </label>
+      <label className="ranking-filter">Até
+        <input
+          className="input"
+          type="date"
+          value={rankingRange.toDate}
+          min={rankingRange.fromDate || undefined}
+          onChange={(event) => setRankingRange((range) => ({ ...range, toDate: event.target.value }))}
+          aria-label="Data final do ranking"
+          data-testid="input-ranking-to-date"
+        />
+      </label>
+      <label className="ranking-filter">Região
+        <select className="select" value={rankingRegion} onChange={(event) => setRankingRegion(event.target.value)} data-testid="select-ranking-region">
+          <option value="">Todas as regiões</option>
+          {regions.map((region) => <option key={region} value={region}>{region}</option>)}
+        </select>
+      </label>
+      <label className="ranking-filter">Supervisor
+        <select className="select" value={rankingSupervisor} onChange={(event) => setRankingSupervisor(event.target.value)} data-testid="select-ranking-supervisor">
+          <option value="">Todos os supervisores</option>
+          {supervisors.map((supervisor) => <option key={supervisor} value={supervisor}>{supervisor}</option>)}
+        </select>
+      </label>
+    </div>
+
     <div className="card filters">
       <div className="search-wrap">
         <Search size={15} />
@@ -70,13 +120,13 @@ export default function StoresPage() {
           ? <div className="card table-card">
             <div className="table-scroll">
               <table className="data-table">
-                <thead><tr><th>Loja</th><th>Gerente</th><th>Supervisor</th><th>Região</th><th>Execução</th></tr></thead>
+                <thead><tr><th>Loja</th><th>Gerente</th><th>Supervisor</th><th>Região</th><th>Pontos no período</th></tr></thead>
                 <tbody>{filtered.map((store) => <tr key={store.id} data-testid={`row-store-${store.id}`}>
                   <td><div className="store-name">{store.name}</div><div className="store-city"><MapPin size={10} style={{ verticalAlign: 'middle', marginRight: 3 }} />{store.city}</div></td>
                   <td>{store.manager || 'Não definido'}</td>
                   <td>{store.supervisor || 'Não definido'}</td>
                   <td className="stat-meta">{store.region}</td>
-                  <td><span className={`score ${store.execution >= 90 ? 'score-good' : 'score-mid'}`}>{store.execution.toFixed(1)}%</span></td>
+                  <td><span className="score">{rankingsByStoreName.get(store.name)?.points ?? 0} pts</span></td>
                 </tr>)}</tbody>
               </table>
             </div>
@@ -86,38 +136,8 @@ export default function StoresPage() {
     <section className="card table-card" style={{ marginTop: 18 }}>
       <div className="ranking-heading">
         <div>
-          <div className="section-title">Ranking geral das lojas</div>
-          <div className="stat-meta" style={{ marginTop: 4 }}>Pontuação por tarefa concluída e rapidez, usando a data real de conclusão.</div>
-        </div>
-        <div className="ranking-filters">
-          <label className="ranking-filter">De
-            <input
-              className="input"
-              type="date"
-              value={rankingRange.fromDate}
-              max={rankingRange.toDate || undefined}
-              onChange={(event) => setRankingRange((range) => ({ ...range, fromDate: event.target.value }))}
-              aria-label="Data inicial do ranking"
-              data-testid="input-ranking-from-date"
-            />
-          </label>
-          <label className="ranking-filter">Até
-            <input
-              className="input"
-              type="date"
-              value={rankingRange.toDate}
-              min={rankingRange.fromDate || undefined}
-              onChange={(event) => setRankingRange((range) => ({ ...range, toDate: event.target.value }))}
-              aria-label="Data final do ranking"
-              data-testid="input-ranking-to-date"
-            />
-          </label>
-          <label className="ranking-filter">Região
-            <select className="select" value={rankingRegion} onChange={(event) => setRankingRegion(event.target.value)} data-testid="select-ranking-region">
-              <option value="">Todas as regiões</option>
-              {regions.map((region) => <option key={region} value={region}>{region}</option>)}
-            </select>
-          </label>
+          <div className="section-title">Ranking de lojas por supervisor</div>
+          <div className="stat-meta" style={{ marginTop: 4 }}>Pontuação total por tarefas concluídas e rapidez no período escolhido.</div>
         </div>
       </div>
       {!validRankingRange
@@ -127,20 +147,23 @@ export default function StoresPage() {
           : rankingsQuery.isLoading
             ? <LoadingBlocks rows={2} />
             : rankings.length
-              ? <div className="table-scroll">
-                <table className="data-table">
-                  <thead><tr><th>#</th><th>Loja</th><th>Responsável</th><th>Tarefas concluídas</th><th>Pontos</th><th>Tempo médio</th><th>Tendência</th></tr></thead>
-                  <tbody>{rankings.map((entry) => <tr key={entry.storeName} className={entry.position <= 3 ? `podium podium-${entry.position}` : ''} data-testid={`row-ranking-${entry.position}`}>
-                    <td className="rank">{String(entry.position).padStart(2, '0')}</td>
-                    <td className="store-name">{entry.storeName}</td>
-                    <td>{entry.manager}</td>
-                    <td>{entry.tasksCompleted}</td>
-                    <td><span className="score">{entry.points} pts</span></td>
-                    <td>{formatDurationMinutes(entry.averageExecutionMinutes)}</td>
-                    <td className={`trend-${entry.trend}`} title={`Tendência: ${entry.trend}`}><TrendIcon trend={entry.trend} /></td>
-                  </tr>)}</tbody>
-                </table>
-              </div>
+              ? <div className="ranking-groups">{rankingGroups.map(([supervisor, entries]) => <div className="ranking-group" key={supervisor}>
+                <div className="ranking-group-title">{supervisor}</div>
+                <div className="table-scroll">
+                  <table className="data-table">
+                    <thead><tr><th>#</th><th>Loja</th><th>Responsável</th><th>Tarefas concluídas</th><th>Pontos</th><th>Tempo médio</th><th>Tendência</th></tr></thead>
+                    <tbody>{entries.map((entry, index) => <tr key={entry.storeName} className={index < 3 ? `podium podium-${index + 1}` : ''} data-testid={`row-ranking-${supervisor}-${index + 1}`}>
+                      <td className="rank">{String(index + 1).padStart(2, '0')}</td>
+                      <td className="store-name">{entry.storeName}</td>
+                      <td>{entry.manager}</td>
+                      <td>{entry.tasksCompleted}</td>
+                      <td><span className="score">{entry.points} pts</span></td>
+                      <td>{formatDurationMinutes(entry.averageExecutionMinutes)}</td>
+                      <td className={`trend-${entry.trend}`} title={`Tendência: ${entry.trend}`}><TrendIcon trend={entry.trend} /></td>
+                    </tr>)}</tbody>
+                  </table>
+                </div>
+              </div>)}</div>
               : <EmptyState title="Ranking indisponível" copy="Não há tarefas concluídas nesse período." />}
     </section>
   </div>;

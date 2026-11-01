@@ -1008,10 +1008,12 @@ export const PermanentlyDeleteTeamMemberResponse = zod.void()
 
 
 
+
 export const GetRankingsQueryParams = zod.object({
   "fromDate": zod.date().optional(),
   "toDate": zod.date().optional(),
-  "region": zod.coerce.string().min(1).optional()
+  "region": zod.coerce.string().min(1).optional(),
+  "supervisor": zod.coerce.string().min(1).optional()
 })
 
 export const GetRankingsResponseItem = zod.object({
