@@ -324,7 +324,9 @@ export default function TasksPage() {
    const data = (query.data ?? []).filter((task) => isAdmin || task.dueDate <= todayInput);
    const tasks = useMemo(() => {
      const matches = data.filter((task) => `${task.title} ${task.storeName} ${task.assignee}`.toLowerCase().includes(search.toLowerCase()));
-     if (!returnContext?.orderedTaskIds.length) return matches;
+      if (!returnContext?.orderedTaskIds.length) {
+        return [...matches].sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt));
+      }
      const order = new Map(returnContext.orderedTaskIds.map((taskId, index) => [taskId, index]));
      return [...matches].sort((first, second) => (order.get(first.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(second.id) ?? Number.MAX_SAFE_INTEGER));
    }, [data, search, returnContext]);
