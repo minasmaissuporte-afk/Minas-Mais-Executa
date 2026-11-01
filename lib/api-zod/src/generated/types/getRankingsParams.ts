@@ -5,10 +5,10 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { GetRankingsDays } from './getRankingsDays';
 
 export type GetRankingsParams = {
-days?: GetRankingsDays;
+fromDate?: Date;
+toDate?: Date;
 /**
  * @minLength 1
  */

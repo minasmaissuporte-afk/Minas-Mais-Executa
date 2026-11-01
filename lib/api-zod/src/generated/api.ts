@@ -1005,11 +1005,12 @@ export const PermanentlyDeleteTeamMemberResponse = zod.void()
 /**
  * @summary Get store performance rankings
  */
-export const getRankingsQueryDaysDefault = 30;
+
 
 
 export const GetRankingsQueryParams = zod.object({
-  "days": zod.union([zod.literal(7),zod.literal(30),zod.literal(90)]).default(getRankingsQueryDaysDefault),
+  "fromDate": zod.date().optional(),
+  "toDate": zod.date().optional(),
   "region": zod.coerce.string().min(1).optional()
 })
 
@@ -1018,7 +1019,8 @@ export const GetRankingsResponseItem = zod.object({
   "storeName": zod.string(),
   "manager": zod.string(),
   "execution": zod.number().int().describe('Legacy execution percentage retained for compatibility; not used to rank stores.'),
-  "points": zod.number().int().describe('Total speed points from completed tasks in the current 30-day cycle.'),
+  "tasksCompleted": zod.number().int().describe('Number of tasks completed within the selected completion-date range.'),
+  "points": zod.number().int().describe('Total speed points from completed tasks in the selected completion-date range.'),
   "averageExecutionMinutes": zod.number().int().describe('Average elapsed time from task creation to completion, in minutes.'),
   "trend": zod.enum(['up', 'down', 'stable']),
   "groupName": zod.string().describe('Store ranking group defined by the operation.'),

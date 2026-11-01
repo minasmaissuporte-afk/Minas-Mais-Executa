@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, gte, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import {
   AddTaskEvidenceBody,
   AddTaskEvidenceParams,
@@ -56,14 +56,20 @@ function rankingCycleEndingOn(endDate: Date, days: number) {
   return { start: start.toISOString().slice(0, 10), end: endDate.toISOString().slice(0, 10) };
 }
 
+function addDaysToDateInput(dateInput: string, days: number) {
+  const date = new Date(`${dateInput}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 function currentRankingCycle(days = 30) {
   return rankingCycleEndingOn(new Date(), days);
 }
 
-function previousRankingCycle(currentCycle: { start: string; end: string }, days: number) {
-  const endDate = new Date(`${currentCycle.start}T00:00:00.000Z`);
-  endDate.setUTCDate(endDate.getUTCDate() - 1);
-  return rankingCycleEndingOn(endDate, days);
+function isDateInput(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
 function rankingPointsForElapsedMs(elapsedMs: number) {
@@ -75,20 +81,24 @@ function rankingPointsForElapsedMs(elapsedMs: number) {
   return 20;
 }
 
-function rankingMetrics(tasks: Array<Pick<typeof tasksTable.$inferSelect, "status" | "completedAt" | "createdAt">>) {
-  const completedTasks = tasks.filter((task) => task.status === "completed" && task.completedAt);
-  const elapsedTimes = completedTasks
+function rankingMetrics(
+  completedTasks: Array<Pick<typeof tasksTable.$inferSelect, "status" | "completedAt" | "createdAt">>,
+  dueTasks: Array<Pick<typeof tasksTable.$inferSelect, "status">>,
+) {
+  const validCompletedTasks = completedTasks.filter((task) => task.status === "completed" && task.completedAt);
+  const elapsedTimes = validCompletedTasks
     .map((task) => task.completedAt!.getTime() - task.createdAt.getTime())
     .filter((elapsedMs) => Number.isFinite(elapsedMs) && elapsedMs >= 0);
   const points = elapsedTimes.reduce((total, elapsedMs) => total + rankingPointsForElapsedMs(elapsedMs), 0);
 
   return {
     points,
+    tasksCompleted: elapsedTimes.length,
     averageExecutionMinutes: elapsedTimes.length
       ? Math.round(elapsedTimes.reduce((total, elapsedMs) => total + elapsedMs, 0) / elapsedTimes.length / (60 * 1000))
       : 0,
-    execution: tasks.length
-      ? Math.round((tasks.filter((task) => task.status === "completed").length / tasks.length) * 100)
+    execution: dueTasks.length
+      ? Math.round((dueTasks.filter((task) => task.status === "completed").length / dueTasks.length) * 100)
       : 0,
   };
 }
@@ -1965,11 +1975,24 @@ router.delete("/team-members/:id/permanent", async (req, res) => {
 router.get("/rankings", async (req, res) => {
   await seedPromise;
   const ids = await scopedStoreIds(req);
-  const requestedDays = Number(req.query.days);
-  const days = requestedDays === 7 || requestedDays === 90 ? requestedDays : 30;
+  const requestedFrom = req.query.fromDate;
+  const requestedTo = req.query.toDate;
+  const toDate = requestedTo === undefined ? today : requestedTo;
+  if (!isDateInput(toDate) || (requestedFrom !== undefined && !isDateInput(requestedFrom))) {
+    res.status(400).json({ error: "Informe datas válidas no formato AAAA-MM-DD." });
+    return;
+  }
+  const fromDate = requestedFrom === undefined ? addDaysToDateInput(toDate, -29) : requestedFrom;
+  if (fromDate > toDate) {
+    res.status(400).json({ error: "A data inicial deve ser anterior ou igual à data final." });
+    return;
+  }
+  const rangeDays = Math.floor(
+    (Date.parse(`${toDate}T00:00:00.000Z`) - Date.parse(`${fromDate}T00:00:00.000Z`)) / (24 * 60 * 60 * 1000),
+  ) + 1;
+  const previousToDate = addDaysToDateInput(fromDate, -1);
+  const previousFromDate = addDaysToDateInput(previousToDate, -(rangeDays - 1));
   const region = typeof req.query.region === "string" ? req.query.region.trim() : "";
-  const currentCycle = currentRankingCycle(days);
-  const previousCycle = previousRankingCycle(currentCycle, days);
   const storeFilters = [
     ids === null ? undefined : inArray(storesTable.id, ids),
     region ? eq(storesTable.region, region) : undefined,
@@ -1979,34 +2002,66 @@ router.get("/rankings", async (req, res) => {
     .from(storesTable)
     .where(storeFilters.length ? and(...storeFilters) : undefined);
   const storeIds = stores.map((store) => store.id);
-  const taskFilters = [
-    gte(tasksTable.dueDate, previousCycle.start),
-    lte(tasksTable.dueDate, currentCycle.end),
-    storeIds.length ? inArray(tasksTable.storeId, storeIds) : undefined,
-  ].filter((filter): filter is NonNullable<typeof filter> => filter !== undefined);
-  const tasks = storeIds.length
+  const completionRangeStart = new Date(`${previousFromDate}T00:00:00.000Z`);
+  const completionRangeEnd = new Date(`${addDaysToDateInput(toDate, 1)}T00:00:00.000Z`);
+  const completionTasks = storeIds.length
     ? await db
       .select({
         storeId: tasksTable.storeId,
-        dueDate: tasksTable.dueDate,
         status: tasksTable.status,
         completedAt: tasksTable.completedAt,
         createdAt: tasksTable.createdAt,
       })
       .from(tasksTable)
-      .where(and(...taskFilters))
+      .where(and(
+        inArray(tasksTable.storeId, storeIds),
+        eq(tasksTable.status, "completed"),
+        gte(tasksTable.completedAt, completionRangeStart),
+        lt(tasksTable.completedAt, completionRangeEnd),
+      ))
     : [];
+  const dueTasks = storeIds.length
+    ? await db
+      .select({
+        storeId: tasksTable.storeId,
+        dueDate: tasksTable.dueDate,
+        status: tasksTable.status,
+      })
+      .from(tasksTable)
+      .where(and(
+        inArray(tasksTable.storeId, storeIds),
+        gte(tasksTable.dueDate, previousFromDate),
+        lte(tasksTable.dueDate, toDate),
+      ))
+    : [];
+
+  const currentCompletionStartMs = Date.parse(`${fromDate}T00:00:00.000Z`);
+  const currentCompletionEndMs = Date.parse(`${addDaysToDateInput(toDate, 1)}T00:00:00.000Z`);
+  const previousCompletionStartMs = Date.parse(`${previousFromDate}T00:00:00.000Z`);
+  const previousCompletionEndMs = Date.parse(`${addDaysToDateInput(previousToDate, 1)}T00:00:00.000Z`);
 
   const rankedStores = stores
     .map((store) => {
-      const currentTasks = tasks.filter(
-        (task) => task.storeId === store.id && task.dueDate >= currentCycle.start && task.dueDate <= currentCycle.end,
+      const currentCompletedTasks = completionTasks.filter(
+        (task) => task.storeId === store.id
+          && task.completedAt !== null
+          && task.completedAt.getTime() >= currentCompletionStartMs
+          && task.completedAt.getTime() < currentCompletionEndMs,
       );
-      const previousTasks = tasks.filter(
-        (task) => task.storeId === store.id && task.dueDate >= previousCycle.start && task.dueDate <= previousCycle.end,
+      const previousCompletedTasks = completionTasks.filter(
+        (task) => task.storeId === store.id
+          && task.completedAt !== null
+          && task.completedAt.getTime() >= previousCompletionStartMs
+          && task.completedAt.getTime() < previousCompletionEndMs,
       );
-      const currentMetrics = rankingMetrics(currentTasks);
-      const previousMetrics = rankingMetrics(previousTasks);
+      const currentDueTasks = dueTasks.filter(
+        (task) => task.storeId === store.id && task.dueDate >= fromDate && task.dueDate <= toDate,
+      );
+      const previousDueTasks = dueTasks.filter(
+        (task) => task.storeId === store.id && task.dueDate >= previousFromDate && task.dueDate <= previousToDate,
+      );
+      const currentMetrics = rankingMetrics(currentCompletedTasks, currentDueTasks);
+      const previousMetrics = rankingMetrics(previousCompletedTasks, previousDueTasks);
       const trend = currentMetrics.points > previousMetrics.points
         ? "up"
         : currentMetrics.points < previousMetrics.points
@@ -2017,6 +2072,7 @@ router.get("/rankings", async (req, res) => {
         storeName: store.name,
         manager: store.manager,
         execution: currentMetrics.execution,
+        tasksCompleted: currentMetrics.tasksCompleted,
         points: currentMetrics.points,
         averageExecutionMinutes: currentMetrics.averageExecutionMinutes,
         trend,
@@ -2026,15 +2082,8 @@ router.get("/rankings", async (req, res) => {
     })
     .sort((left, right) => right.points - left.points || left.storeName.localeCompare(right.storeName));
 
-  const groupPositions = new Map<string, number>();
   res.json(
-    rankedStores.map((entry, index) => {
-      const position = groupPositions.set(entry.groupName, (groupPositions.get(entry.groupName) ?? 0) + 1).get(entry.groupName)!;
-      return {
-        position,
-        ...entry,
-      };
-    }),
+    rankedStores.map((entry, index) => ({ position: index + 1, ...entry })),
   );
 });
 

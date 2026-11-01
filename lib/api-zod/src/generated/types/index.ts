@@ -23,7 +23,6 @@ export * from './evidenceInput';
 export * from './evidenceInputType';
 export * from './evidenceType';
 export * from './getPushPublicKey200';
-export * from './getRankingsDays';
 export * from './getRankingsParams';
 export * from './healthStatus';
 export * from './listTasksParams';

@@ -13,7 +13,9 @@ export interface RankingEntry {
   manager: string;
   /** Legacy execution percentage retained for compatibility; not used to rank stores. */
   execution: number;
-  /** Total speed points from completed tasks in the current 30-day cycle. */
+  /** Number of tasks completed within the selected completion-date range. */
+  tasksCompleted: number;
+  /** Total speed points from completed tasks in the selected completion-date range. */
   points: number;
   /** Average elapsed time from task creation to completion, in minutes. */
   averageExecutionMinutes: number;

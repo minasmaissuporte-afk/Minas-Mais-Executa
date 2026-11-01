@@ -556,12 +556,17 @@ paths:
       summary: Get store performance rankings
       parameters:
         - in: query
-          name: days
+          name: fromDate
           required: false
           schema:
-            type: integer
-            enum: [7, 30, 90]
-            default: 30
+            type: string
+            format: date
+        - in: query
+          name: toDate
+          required: false
+          schema:
+            type: string
+            format: date
         - in: query
           name: region
           required: false
@@ -1233,7 +1238,7 @@ components:
                 type: integer
     RankingEntry:
       type: object
-      required: [position, storeName, manager, execution, points, averageExecutionMinutes, trend, groupName, supervisorName]
+      required: [position, storeName, manager, execution, tasksCompleted, points, averageExecutionMinutes, trend, groupName, supervisorName]
       properties:
         position:
           type: integer
@@ -1244,9 +1249,12 @@ components:
         execution:
           type: integer
           description: Legacy execution percentage retained for compatibility; not used to rank stores.
+        tasksCompleted:
+          type: integer
+          description: Number of tasks completed within the selected completion-date range.
         points:
           type: integer
-          description: Total speed points from completed tasks in the current 30-day cycle.
+          description: Total speed points from completed tasks in the selected completion-date range.
         averageExecutionMinutes:
           type: integer
           description: Average elapsed time from task creation to completion, in minutes.

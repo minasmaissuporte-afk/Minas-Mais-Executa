@@ -628,7 +628,9 @@ export interface RankingEntry {
   manager: string;
   /** Legacy execution percentage retained for compatibility; not used to rank stores. */
   execution: number;
-  /** Total speed points from completed tasks in the current 30-day cycle. */
+  /** Number of tasks completed within the selected completion-date range. */
+  tasksCompleted: number;
+  /** Total speed points from completed tasks in the selected completion-date range. */
   points: number;
   /** Average elapsed time from task creation to completion, in minutes. */
   averageExecutionMinutes: number;
@@ -704,19 +706,11 @@ export const ListTeamMembersRole = {
 } as const;
 
 export type GetRankingsParams = {
-days?: GetRankingsDays;
+fromDate?: string;
+toDate?: string;
 /**
  * @minLength 1
  */
 region?: string;
 };
-
-export type GetRankingsDays = typeof GetRankingsDays[keyof typeof GetRankingsDays];
-
-
-export const GetRankingsDays = {
-  NUMBER_7: 7,
-  NUMBER_30: 30,
-  NUMBER_90: 90,
-} as const;
 
