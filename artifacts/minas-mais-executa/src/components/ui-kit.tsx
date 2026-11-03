@@ -94,9 +94,12 @@ export function TaskRow({ task, onDelete, selected = false, onToggleSelect, onOp
     <PriorityPill priority={task.priority} /><span className="task-time">{task.dueTime}</span>{onDelete && <button className="icon-button task-delete-button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onDelete(task); }} aria-label={`Excluir ${task.title}`} data-testid={`button-delete-task-${task.id}`}><Trash2 size={14} /></button>}<ChevronRight size={15} color="hsl(var(--muted-foreground))" />
   </div>;
 }
-export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string>(), onToggleSelect, onToggleGroupSelect, expanded = false, onExpandedChange, onOpenTask }: { tasks: TaskListItem[]; onDelete?: (task: TaskListItem) => void; selectedTaskIds?: Set<string>; onToggleSelect?: (taskId: string) => void; onToggleGroupSelect?: (taskIds: string[]) => void; expanded?: boolean; onExpandedChange?: (expanded: boolean) => void; onOpenTask?: () => void }) {
+export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string>(), onToggleSelect, onToggleGroupSelect, expanded = false, onExpandedChange, onOpenTask, showProgress = false, showTaskStatus = false }: { tasks: TaskListItem[]; onDelete?: (task: TaskListItem) => void; selectedTaskIds?: Set<string>; onToggleSelect?: (taskId: string) => void; onToggleGroupSelect?: (taskIds: string[]) => void; expanded?: boolean; onExpandedChange?: (expanded: boolean) => void; onOpenTask?: () => void; showProgress?: boolean; showTaskStatus?: boolean }) {
   const first = tasks[0];
   if (!first) return null;
+  const completedCount = tasks.filter((task) => task.status === 'completed').length;
+  const waitingReviewCount = tasks.filter((task) => task.status === 'pending_review').length;
+  const notStartedCount = tasks.length - completedCount - waitingReviewCount;
   const statuses = new Set(tasks.map((task) => task.status));
   const groupStatus = statuses.has('rejected')
     ? 'rejected'
@@ -116,12 +119,14 @@ export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string
        <span className={`task-status-dot dot-${groupStatus}`} aria-hidden="true" />
       <span className="task-main">
         <span className="task-title">{first.title}</span>
-        <span className="task-sub"><Store size={13} /> Todas as lojas · {tasks.length} unidades · Clique para acompanhar</span>
+       <span className="task-sub"><Store size={13} /> {showProgress
+         ? `${completedCount}/${tasks.length} lojas concluídas · ${notStartedCount} faltam executar${waitingReviewCount ? ` · ${waitingReviewCount} aguardando conferência` : ''} · clique para abrir as lojas`
+         : `Todas as lojas · ${tasks.length} unidades · Clique para acompanhar`}</span>
         <span className="task-dates">Criada em {formatFullDate(first.createdAt)} · Executar em {formatFullDate(first.dueDate)} às {first.dueTime}</span>
       </span>
-       {groupStatus === 'pending_review' && <span className="status-chip status-pending_review task-row-status-chip">Conferência</span>}{groupStatus === 'rejected' && <span className="status-chip status-rejected task-row-status-chip">Reprovada</span>}<PriorityPill priority={first.priority} /><span className="task-time">{first.dueTime}</span><ChevronDown className="task-group-chevron" size={15} />
+        {showProgress ? <StatusPill status={groupStatus} /> : groupStatus === 'pending_review' ? <span className="status-chip status-pending_review task-row-status-chip">Conferência</span> : groupStatus === 'rejected' ? <span className="status-chip status-rejected task-row-status-chip">Reprovada</span> : null}<PriorityPill priority={first.priority} /><span className="task-time">{first.dueTime}</span><ChevronDown className="task-group-chevron" size={15} />
     </summary>
-      <div className="task-group-items">{tasks.map((task) => <TaskRow key={task.id} task={task} onDelete={onDelete} selected={selectedTaskIds.has(task.id)} onToggleSelect={onToggleSelect} onOpenTask={onOpenTask} />)}</div>
+       <div className="task-group-items">{tasks.map((task) => <TaskRow key={task.id} task={task} onDelete={onDelete} selected={selectedTaskIds.has(task.id)} onToggleSelect={onToggleSelect} onOpenTask={onOpenTask} showStatus={showTaskStatus} />)}</div>
   </details>;
 }
 export function ActivityItem({ activity }: { activity: Activity }) {

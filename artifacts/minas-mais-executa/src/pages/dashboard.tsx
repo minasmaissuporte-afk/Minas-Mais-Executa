@@ -1,8 +1,9 @@
 import { ArrowUpRight, CheckCircle2, CircleAlert, ListChecks, Target } from 'lucide-react';
+import { useMemo } from 'react';
 import { useGetActivity, useGetDashboardSummary, useListTaskSummaries, getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getListTaskSummariesQueryKey } from '@workspace/api-client-react';
 import type { CurrentMember } from '@workspace/api-client-react';
 import { todayInput } from '@/lib/demo-data';
-import { ActivityItem, EmptyState, ErrorState, LoadingBlocks, MetricCard, TaskRow } from '@/components/ui-kit';
+import { ActivityItem, EmptyState, ErrorState, LoadingBlocks, MetricCard, TaskGroupRow, TaskRow } from '@/components/ui-kit';
 import { Link } from 'wouter';
 
 export default function DashboardPage({ member }: { member: CurrentMember }) {
@@ -11,10 +12,30 @@ export default function DashboardPage({ member }: { member: CurrentMember }) {
   const activityQuery = useGetActivity({ query: { queryKey: getGetActivityQueryKey() } });
   const tasksQuery = useListTaskSummaries({ dateFrom: todayInput, dateTo: todayInput }, { query: { queryKey: getListTaskSummariesQueryKey({ dateFrom: todayInput, dateTo: todayInput }) } });
   const summary = summaryQuery.data;
-  const tasks = (tasksQuery.data ?? [])
-    .filter((task) => task.dueDate === todayInput)
-    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
-    .slice(0, 5);
+  const taskRows = useMemo(() => {
+    const todayTasks = (tasksQuery.data ?? [])
+      .filter((task) => task.dueDate === todayInput)
+      .sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt));
+    const rows: Array<{ key: string; tasks: typeof todayTasks }> = [];
+    const batchRows = new Map<string, typeof todayTasks>();
+
+    todayTasks.forEach((task) => {
+      if (!task.batchGroupId) {
+        rows.push({ key: task.id, tasks: [task] });
+        return;
+      }
+      const existing = batchRows.get(task.batchGroupId);
+      if (existing) {
+        existing.push(task);
+      } else {
+        const group = [task];
+        batchRows.set(task.batchGroupId, group);
+        rows.push({ key: task.batchGroupId, tasks: group });
+      }
+    });
+
+    return rows.slice(0, 5);
+  }, [tasksQuery.data]);
   const activities = activityQuery.data ?? [];
   const isNetwork = member.role !== 'manager';
   return <div className="content">
@@ -27,7 +48,7 @@ export default function DashboardPage({ member }: { member: CurrentMember }) {
       <MetricCard label="Atrasadas" value={summary.overdue} meta="Requer ação imediata" tone="stat-alert" />
     </div>
     <div className="dashboard-grid">
-       <section className="card card-pad"><div className="section-heading"><div><div className="section-title">Fila de execução</div><div className="stat-meta">Cada linha é uma tarefa · Vermelho: aberta, atrasada ou reprovada · Amarelo: aguardando conferência · Verde: concluída</div></div><Link href="/tasks" className="section-link" data-testid="link-view-all-tasks">Ver todas <ArrowUpRight size={13} /></Link></div>{tasksQuery.isLoading ? <LoadingBlocks rows={2} /> : tasks.length ? <div className="task-stack" data-testid="dashboard-task-queue">{tasks.map((task) => <TaskRow key={task.id} task={task} showStatus />)}</div> : <EmptyState title="Sem tarefas hoje" copy="As tarefas do dia aparecerão aqui." />}</section>
+       <section className="card card-pad"><div className="section-heading"><div><div className="section-title">Fila de execução</div><div className="stat-meta">Tarefas gerais agrupam as lojas; abra uma para ver cada unidade. Vermelho: aberta, atrasada ou reprovada · Amarelo: aguardando conferência · Verde: concluída</div></div><Link href="/tasks" className="section-link" data-testid="link-view-all-tasks">Ver todas <ArrowUpRight size={13} /></Link></div>{tasksQuery.isLoading ? <LoadingBlocks rows={2} /> : taskRows.length ? <div className="task-stack" data-testid="dashboard-task-queue">{taskRows.map((row) => row.tasks.length > 1 ? <TaskGroupRow key={row.key} tasks={row.tasks} showProgress showTaskStatus /> : <TaskRow key={row.key} task={row.tasks[0]} showStatus />)}</div> : <EmptyState title="Sem tarefas hoje" copy="As tarefas do dia aparecerão aqui." />}</section>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <section className="card card-pad execution-card"><div className="section-heading"><div className="section-title">Ritmo da operação</div><span className="muted" style={{ fontSize: 9 }}>hoje</span></div><div className="execution-number">{summary.execution.toFixed(1)}<small>%</small></div><div className="muted" style={{ margin: '6px 0 13px', fontSize: 10 }}>Meta diária: 90%</div><div className="progress-track"><div className="progress-fill" style={{ width: `${Math.min(summary.execution, 100)}%` }} /></div></section>
         <section className="card card-pad"><div className="section-heading"><div className="section-title">Atividade recente</div><span className="stat-meta">últimas 24h</span></div>{activityQuery.isLoading ? <LoadingBlocks rows={1} /> : activities.length ? <div className="activity-list">{activities.slice(0, 4).map((activity) => <ActivityItem activity={activity} key={activity.id} />)}</div> : <EmptyState icon={Target} title="Sem atividade recente" copy="As próximas movimentações aparecerão aqui." />}</section>
