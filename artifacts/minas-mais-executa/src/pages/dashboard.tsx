@@ -10,16 +10,16 @@ export default function DashboardPage({ member }: { member: CurrentMember }) {
   const firstName = member.name.split(' ')[0] || 'Usuário';
   const summaryQuery = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey() } });
   const activityQuery = useGetActivity({ query: { queryKey: getGetActivityQueryKey() } });
-  const tasksQuery = useListTaskSummaries({ dateFrom: todayInput, dateTo: todayInput }, { query: { queryKey: getListTaskSummariesQueryKey({ dateFrom: todayInput, dateTo: todayInput }) } });
+  const tasksQuery = useListTaskSummaries({ dateTo: todayInput }, { query: { queryKey: getListTaskSummariesQueryKey({ dateTo: todayInput }), refetchInterval: 30000 } });
   const summary = summaryQuery.data;
   const taskRows = useMemo(() => {
-    const todayTasks = (tasksQuery.data ?? [])
-      .filter((task) => task.dueDate === todayInput)
+    const dueTasks = (tasksQuery.data ?? [])
+      .filter((task) => task.dueDate <= todayInput)
       .sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt));
-    const rows: Array<{ key: string; tasks: typeof todayTasks }> = [];
-    const taskGroups = new Map<string, typeof todayTasks>();
+    const rows: Array<{ key: string; tasks: typeof dueTasks }> = [];
+    const taskGroups = new Map<string, typeof dueTasks>();
 
-    todayTasks.forEach((task) => {
+    dueTasks.forEach((task) => {
       const title = task.title.trim().replace(/\s+/g, ' ').toLocaleLowerCase('pt-BR');
       const category = task.category.trim().replace(/\s+/g, ' ').toLocaleLowerCase('pt-BR');
       const taskIdentity = `${title}::${category}::${task.dueDate}::${task.dueTime}`;
@@ -33,7 +33,7 @@ export default function DashboardPage({ member }: { member: CurrentMember }) {
       }
     });
 
-    return rows.slice(0, 5);
+    return rows.filter((row) => !row.tasks.every((task) => task.status === 'completed'));
   }, [tasksQuery.data]);
   const activities = activityQuery.data ?? [];
   const isNetwork = member.role !== 'manager';
@@ -53,7 +53,7 @@ export default function DashboardPage({ member }: { member: CurrentMember }) {
          <div className="section-heading">
            <div>
              <div className="section-title">Fila de execução</div>
-             <div className="stat-meta">Tarefas iguais são agrupadas entre lojas; abra uma para ver cada unidade. Vermelho: aberta, atrasada ou reprovada · Amarelo: aguardando conferência · Verde: concluída</div>
+              <div className="stat-meta">Tarefas iguais são agrupadas entre lojas; abra uma para ver cada unidade. Vermelho: ainda falta execução · Amarelo: aguardando aprovação/conferência · concluídas por todas as lojas saem da fila</div>
            </div>
            <Link href="/tasks" className="section-link" data-testid="link-view-all-tasks">Ver todas <ArrowUpRight size={13} /></Link>
          </div>
@@ -61,9 +61,9 @@ export default function DashboardPage({ member }: { member: CurrentMember }) {
            ? <ErrorState onRetry={() => tasksQuery.refetch()} />
            : tasksQuery.isLoading
              ? <LoadingBlocks rows={2} />
-             : taskRows.length
-               ? <div className="task-stack" data-testid="dashboard-task-queue">{taskRows.map((row) => row.tasks.length > 1 ? <TaskGroupRow key={row.key} groupId={`dashboard-${row.key}`} tasks={row.tasks} showProgress showTaskStatus /> : <TaskRow key={row.key} task={row.tasks[0]} showStatus />)}</div>
-               : <EmptyState title="Sem tarefas hoje" copy="As tarefas do dia aparecerão aqui." />}
+              : taskRows.length
+                ? <div className="task-stack" data-testid="dashboard-task-queue">{taskRows.map((row) => row.tasks.length > 1 ? <TaskGroupRow key={row.key} groupId={`dashboard-${row.key}`} tasks={row.tasks} showProgress showTaskStatus executionQueue /> : <TaskRow key={row.key} task={row.tasks[0]} showStatus />)}</div>
+                : <EmptyState title="Sem tarefas pendentes" copy="As tarefas que ainda precisam ser concluídas aparecerão aqui." />}
        </section>
        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
          {summary && <section className="card card-pad execution-card">
