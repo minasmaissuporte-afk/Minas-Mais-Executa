@@ -46,9 +46,21 @@ import { getPushPublicKey, notifyTaskAssignees } from "../lib/push";
 
 const router: IRouter = Router();
 
-const now = new Date();
-const today = now.toISOString().slice(0, 10);
 const objectStorageService = new ObjectStorageService();
+
+function dateInputInSaoPaulo(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  if (!year || !month || !day) throw new Error("Não foi possível determinar a data local.");
+  return `${year}-${month}-${day}`;
+}
 
 function rankingCycleEndingOn(endDate: Date, days: number) {
   const start = new Date(endDate);
@@ -633,6 +645,7 @@ async function getTaskWithEvidence(id: string) {
 
 router.get("/dashboard/summary", async (req, res) => {
   await seedPromise;
+  const today = dateInputInSaoPaulo(new Date());
   const visibleStoreIds = await scopedStoreIds(req);
   const cycle = currentRankingCycle();
   const storeFilter = visibleStoreIds === null ? undefined : inArray(storesTable.id, visibleStoreIds);
@@ -1977,7 +1990,7 @@ router.get("/rankings", async (req, res) => {
   const ids = await scopedStoreIds(req);
   const requestedFrom = req.query.fromDate;
   const requestedTo = req.query.toDate;
-  const toDate = requestedTo === undefined ? today : requestedTo;
+  const toDate = requestedTo === undefined ? dateInputInSaoPaulo(new Date()) : requestedTo;
   if (!isDateInput(toDate) || (requestedFrom !== undefined && !isDateInput(requestedFrom))) {
     res.status(400).json({ error: "Informe datas válidas no formato AAAA-MM-DD." });
     return;
