@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getGetPushPublicKeyQueryKey, getListTaskNotificationsQueryKey, getPushPublicKey, savePushSubscription, useGetPushPublicKey, useListTaskNotifications } from '@workspace/api-client-react';
 import type { CurrentMember } from '@workspace/api-client-react';
 
-type PushStatus = 'checking' | 'registered' | 'permission-required' | 'blocked' | 'unsupported' | 'error';
+export type PushStatus = 'checking' | 'registered' | 'permission-required' | 'blocked' | 'unsupported' | 'error';
 const pushEnabled = import.meta.env.PROD || (typeof window !== 'undefined' && window.isSecureContext);
 
-export function TaskAlert({ member, onUnreadChange }: { member: CurrentMember; onUnreadChange: (count: number) => void }) {
+export function TaskAlert({ member, onUnreadChange, onPushStatusChange }: { member: CurrentMember; onUnreadChange: (count: number) => void; onPushStatusChange: (status: PushStatus, activate: () => void) => void }) {
   const tasksQuery = useListTaskNotifications({
     query: { queryKey: getListTaskNotificationsQueryKey(), refetchInterval: 30000 },
   });
@@ -17,7 +17,10 @@ export function TaskAlert({ member, onUnreadChange }: { member: CurrentMember; o
   const [activatingPush, setActivatingPush] = useState(false);
 
   useEffect(() => {
-    if (!pushEnabled) return;
+    if (!pushEnabled) {
+      setPushStatus('unsupported');
+      return;
+    }
     let cancelled = false;
     const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
     if (!supported) {
@@ -62,7 +65,7 @@ export function TaskAlert({ member, onUnreadChange }: { member: CurrentMember; o
     };
   }, [publicKeyQuery.data?.publicKey, publicKeyQuery.isError]);
 
-  const enablePush = async () => {
+  const enablePush = useCallback(async () => {
     if (!publicKeyQuery.data?.publicKey || activatingPush) return;
     setActivatingPush(true);
     setPushError('');
@@ -86,7 +89,11 @@ export function TaskAlert({ member, onUnreadChange }: { member: CurrentMember; o
     } finally {
       setActivatingPush(false);
     }
-  };
+  }, [activatingPush, publicKeyQuery.data?.publicKey]);
+
+  useEffect(() => {
+    onPushStatusChange(pushStatus, () => { void enablePush(); });
+  }, [enablePush, onPushStatusChange, pushStatus]);
 
   useEffect(() => {
     if (!tasksQuery.data) return;
@@ -112,7 +119,7 @@ export function TaskAlert({ member, onUnreadChange }: { member: CurrentMember; o
       <div className="push-notification-notice" role="status">
         <div>
           <strong>Notificações indisponíveis neste navegador</strong>
-          <p>Abra o Minas Mais Executa pelo aplicativo instalado na Tela de Início do iPhone.</p>
+          <p>No iPhone, adicione o app à Tela de Início e abra por lá. Em outros aparelhos, tente um navegador compatível.</p>
         </div>
       </div>
     );
@@ -134,7 +141,7 @@ export function TaskAlert({ member, onUnreadChange }: { member: CurrentMember; o
     <div className="push-notification-notice" role="status">
       <div>
         <strong>Ative as notificações</strong>
-        <p>{pushError || 'Receba um aviso neste iPhone quando uma nova tarefa for atribuída a você.'}</p>
+        <p>{pushError || 'Receba um aviso neste aparelho quando uma nova tarefa for atribuída a você.'}</p>
       </div>
       <button className="button button-primary" type="button" onClick={() => void enablePush()} disabled={activatingPush || !publicKeyQuery.data?.publicKey}>
         {activatingPush ? 'Ativando...' : pushStatus === 'error' ? 'Tentar novamente' : 'Ativar'}
