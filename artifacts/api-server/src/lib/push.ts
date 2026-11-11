@@ -1,12 +1,19 @@
 import { createECDH, createHash } from "node:crypto";
 import webpush from "web-push";
 import { and, eq, inArray } from "drizzle-orm";
-import { db, pushSubscriptionsTable } from "@workspace/db";
+import { db, pushSubscriptionsTable, storesTable, teamMembersTable } from "@workspace/db";
 
 type PushTask = {
   id: string;
   title: string;
-  assigneeMemberId: string | null;
+  assigneeMemberId: string;
+};
+
+type NewTaskNotification = {
+  id: string;
+  title: string;
+  storeId: string;
+  assigneeMemberIds: string[];
 };
 
 let cachedVapidKeys: { publicKey: string; privateKey: string } | null = null;
@@ -37,16 +44,36 @@ export function getPushPublicKey() {
   return getVapidKeys().publicKey;
 }
 
-export async function notifyTaskAssignees(tasks: PushTask[]) {
-  await sendPushForTasks(tasks);
+export async function notifyTaskAssigneesAndSupervisors(tasks: NewTaskNotification[]) {
+  if (!tasks.length) return;
+
+  const storeIds = [...new Set(tasks.map((task) => task.storeId))];
+  const supervisors = await db
+    .select({ storeId: storesTable.id, memberId: teamMembersTable.id })
+    .from(storesTable)
+    .innerJoin(teamMembersTable, eq(teamMembersTable.id, storesTable.supervisorMemberId))
+    .where(and(inArray(storesTable.id, storeIds), eq(teamMembersTable.active, true)));
+  const supervisorByStore = new Map(supervisors.map(({ storeId, memberId }) => [storeId, memberId]));
+
+  const notifications = tasks.flatMap((task) => {
+    const recipients = new Set([
+      ...task.assigneeMemberIds,
+      supervisorByStore.get(task.storeId),
+    ].filter((memberId): memberId is string => Boolean(memberId)));
+    return [...recipients].map((assigneeMemberId) => ({
+      id: task.id,
+      title: task.title,
+      assigneeMemberId,
+    }));
+  });
+  await sendPushForTasks(notifications);
 }
 
 async function sendPushForTasks(tasks: PushTask[]): Promise<void> {
   const grouped = new Map<string, PushTask[]>();
   for (const task of tasks) {
-    if (!task.assigneeMemberId) continue;
     const memberTasks = grouped.get(task.assigneeMemberId) ?? [];
-    memberTasks.push(task);
+    if (!memberTasks.some((memberTask) => memberTask.id === task.id)) memberTasks.push(task);
     grouped.set(task.assigneeMemberId, memberTasks);
   }
   if (!grouped.size) return;

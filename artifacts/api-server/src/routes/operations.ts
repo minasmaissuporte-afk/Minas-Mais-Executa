@@ -42,7 +42,7 @@ import {
 import { actor, requireAdmin } from "../middlewares/authorization";
 import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
-import { getPushPublicKey, notifyTaskAssignees } from "../lib/push";
+import { getPushPublicKey, notifyTaskAssigneesAndSupervisors } from "../lib/push";
 
 const router: IRouter = Router();
 
@@ -947,11 +947,12 @@ router.post("/tasks", async (req, res) => {
     return;
   }
   const result = await getTaskWithEvidence(task.id);
-  await notifyTaskAssignees(assigneeMemberIds.map((assigneeMemberId) => ({
+  await notifyTaskAssigneesAndSupervisors([{
     id: task.id,
     title: task.title,
-    assigneeMemberId,
-  })));
+    storeId: task.storeId,
+    assigneeMemberIds,
+  }]);
   res.status(201).json(result);
 });
 
@@ -1091,11 +1092,12 @@ router.post("/tasks/bulk", async (req, res) => {
     return;
   }
   const created = await Promise.all(tasks.map((task) => getTaskWithEvidence(task.id)));
-  await notifyTaskAssignees(tasks.flatMap((task) => task.assigneeMemberIds.map((assigneeMemberId) => ({
+  await notifyTaskAssigneesAndSupervisors(tasks.map((task) => ({
     id: task.id,
     title: task.title,
-    assigneeMemberId,
-  }))));
+    storeId: task.storeId,
+    assigneeMemberIds: task.assigneeMemberIds,
+  })));
   res.status(201).json(created.filter(Boolean));
 });
 
@@ -1277,11 +1279,12 @@ router.post("/tasks/recurring", async (req, res) => {
     return;
   }
   const created = await Promise.all(tasks.map((task) => getTaskWithEvidence(task.id)));
-  await notifyTaskAssignees(tasks.flatMap((task) => task.assigneeMemberIds.map((assigneeMemberId) => ({
+  await notifyTaskAssigneesAndSupervisors(tasks.map((task) => ({
     id: task.id,
     title: task.title,
-    assigneeMemberId,
-  }))));
+    storeId: task.storeId,
+    assigneeMemberIds: task.assigneeMemberIds,
+  })));
   res.status(201).json(created.filter(Boolean));
 });
 
