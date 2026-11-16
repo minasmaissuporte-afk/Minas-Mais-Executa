@@ -16,3 +16,9 @@ Ao criar uma tarefa, notifique por push os responsáveis atribuídos e o supervi
 **Why:** Supervisores precisam acompanhar novas tarefas das lojas, mesmo quando a execução foi atribuída ao gerente.
 
 **How to apply:** Aplicar a regra nas criações individuais, em lote e recorrentes, usando o vínculo ativo da loja e as assinaturas de push já registradas.
+
+Quando um gerente concluir uma tarefa e ela passar para aguardando conferência, notifique por push o supervisor ativo vinculado à loja e direcione o alerta para a tarefa.
+
+**Why:** O supervisor precisa saber que a execução está pronta para conferência sem depender de abrir o app para descobrir.
+
+**How to apply:** Enviar o aviso depois de salvar o status `pending_review`; uma falha de push não deve desfazer nem ocultar a conclusão da tarefa.

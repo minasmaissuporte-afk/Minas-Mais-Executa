@@ -7,6 +7,8 @@ type PushTask = {
   id: string;
   title: string;
   assigneeMemberId: string;
+  notificationTitle?: string;
+  notificationBody?: string;
 };
 
 type NewTaskNotification = {
@@ -69,6 +71,28 @@ export async function notifyTaskAssigneesAndSupervisors(tasks: NewTaskNotificati
   await sendPushForTasks(notifications);
 }
 
+export async function notifySupervisorTaskReadyForReview(task: {
+  id: string;
+  title: string;
+  storeId: string;
+  storeName: string;
+}) {
+  const [supervisor] = await db
+    .select({ memberId: teamMembersTable.id })
+    .from(storesTable)
+    .innerJoin(teamMembersTable, eq(teamMembersTable.id, storesTable.supervisorMemberId))
+    .where(and(eq(storesTable.id, task.storeId), eq(teamMembersTable.active, true)));
+  if (!supervisor) return;
+
+  await sendPushForTasks([{
+    id: task.id,
+    title: task.title,
+    assigneeMemberId: supervisor.memberId,
+    notificationTitle: "Tarefa aguardando conferência",
+    notificationBody: `O gerente concluiu "${task.title}" na loja ${task.storeName}. Entre no app para fazer a conferência.`,
+  }]);
+}
+
 async function sendPushForTasks(tasks: PushTask[]): Promise<void> {
   const grouped = new Map<string, PushTask[]>();
   for (const task of tasks) {
@@ -95,8 +119,8 @@ async function sendPushForTasks(tasks: PushTask[]): Promise<void> {
             keys: { p256dh: subscription.p256dh, auth: subscription.auth },
           },
           JSON.stringify({
-            title: "Nova tarefa prioritária",
-            body: task.title,
+            title: task.notificationTitle ?? "Nova tarefa prioritária",
+            body: task.notificationBody ?? task.title,
             tag: `task-${task.id}`,
             data: { url: `tasks/${task.id}` },
             requireInteraction: true,

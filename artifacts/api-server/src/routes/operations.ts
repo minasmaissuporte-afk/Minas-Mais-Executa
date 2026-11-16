@@ -42,7 +42,11 @@ import {
 import { actor, requireAdmin } from "../middlewares/authorization";
 import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
-import { getPushPublicKey, notifyTaskAssigneesAndSupervisors } from "../lib/push";
+import {
+  getPushPublicKey,
+  notifySupervisorTaskReadyForReview,
+  notifyTaskAssigneesAndSupervisors,
+} from "../lib/push";
 
 const router: IRouter = Router();
 
@@ -1502,6 +1506,18 @@ router.post("/tasks/:id/complete", async (req, res) => {
     })
     .where(eq(tasksTable.id, params.data.id));
   const completed = await getTaskWithEvidence(params.data.id);
+  if (requiresSupervisorReview) {
+    try {
+      await notifySupervisorTaskReadyForReview({
+        id: task.id,
+        title: task.title,
+        storeId: task.storeId,
+        storeName: task.storeName,
+      });
+    } catch (error) {
+      req.log.error({ error, taskId: task.id }, "Falha ao avisar o supervisor sobre tarefa aguardando conferência.");
+    }
+  }
   res.json(completed);
 });
 
