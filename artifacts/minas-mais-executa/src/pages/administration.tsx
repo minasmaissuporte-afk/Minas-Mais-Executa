@@ -25,6 +25,20 @@ type MemberDraft = { name: string; email: string; phone: string; role: Extract<T
 const emptyStore: StoreDraft = { name: '', city: '', region: '', manager: '', supervisor: '' };
 const emptyMember: MemberDraft = { name: '', email: '', phone: '', role: 'manager', storeId: null };
 
+function mutationErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === 'object') {
+    const errorObject = error as { data?: unknown; message?: unknown };
+    if (errorObject.data && typeof errorObject.data === 'object') {
+      const serverMessage = (errorObject.data as Record<string, unknown>).error;
+      if (typeof serverMessage === 'string' && serverMessage.trim()) return serverMessage;
+    }
+    if (typeof errorObject.message === 'string' && errorObject.message.trim()) {
+      return errorObject.message.replace(/^HTTP \d+ [^:]*:\s*/, '');
+    }
+  }
+  return fallback;
+}
+
 function FormModal({ children, title, eyebrow, onClose }: { children: React.ReactNode; title: string; eyebrow: string; onClose: () => void }) {
   return <div className="modal-backdrop" role="dialog" aria-modal="true">
     <div className="modal">
@@ -72,31 +86,39 @@ function StoreForm({ initial, onClose, stores, members }: { initial?: Store; onC
   </FormModal>;
 }
 
-function MemberForm({ initial, onClose, stores }: { initial?: TeamMember; onClose: () => void; stores: Store[] }) {
+function MemberForm({ initial, onClose, stores, members }: { initial?: TeamMember; onClose: () => void; stores: Store[]; members: TeamMember[] }) {
   const client = useQueryClient();
   const createMember = useCreateTeamMember();
   const updateMember = useUpdateTeamMember();
   const [draft, setDraft] = useState<MemberDraft>(initial ? { name: initial.name, email: initial.email, phone: initial.phone, role: initial.role as MemberDraft['role'], storeId: initial.storeId } : emptyMember);
   const [notice, setNotice] = useState('');
   const mutation = initial ? updateMember : createMember;
+  const duplicateEmail = members.some((member) =>
+    member.id !== initial?.id && member.email.trim().toLowerCase() === draft.email.trim().toLowerCase(),
+  );
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!draft.name.trim() || !draft.email.trim()) {
       setNotice('Preencha nome e e-mail.');
       return;
     }
+    if (duplicateEmail) {
+      setNotice('Este e-mail já está cadastrado. Reative ou edite o cadastro existente; para uma pessoa nova, use o e-mail individual dela.');
+      return;
+    }
+    setNotice('');
     const data = { ...draft };
     if (initial) {
-      updateMember.mutate({ id: initial.id, data }, { onSuccess: () => { client.invalidateQueries({ queryKey: getListTeamMembersQueryKey() }); client.invalidateQueries({ queryKey: getListStoresQueryKey() }); onClose(); }, onError: () => setNotice('Não foi possível atualizar o colaborador.') });
+      updateMember.mutate({ id: initial.id, data }, { onSuccess: () => { client.invalidateQueries({ queryKey: getListTeamMembersQueryKey() }); client.invalidateQueries({ queryKey: getListStoresQueryKey() }); onClose(); }, onError: (error) => setNotice(mutationErrorMessage(error, 'Não foi possível atualizar o colaborador.')) });
     } else {
-      createMember.mutate({ data }, { onSuccess: () => { client.invalidateQueries({ queryKey: getListTeamMembersQueryKey() }); client.invalidateQueries({ queryKey: getListStoresQueryKey() }); onClose(); }, onError: () => setNotice('Não foi possível cadastrar o colaborador.') });
+      createMember.mutate({ data }, { onSuccess: () => { client.invalidateQueries({ queryKey: getListTeamMembersQueryKey() }); client.invalidateQueries({ queryKey: getListStoresQueryKey() }); onClose(); }, onError: (error) => setNotice(mutationErrorMessage(error, 'Não foi possível cadastrar o colaborador.')) });
     }
   };
   return <FormModal title={initial ? 'Editar colaborador' : 'Cadastrar colaborador'} eyebrow={initial ? 'Atualização de acesso' : 'Nova pessoa'} onClose={onClose}>
     <form onSubmit={submit}>
       <div className="form-grid">
         <div className="field full"><label htmlFor="member-name">Nome completo</label><input id="member-name" className="input" value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Ex.: Daniela Souza" data-testid="input-member-name" /></div>
-        <div className="field"><label htmlFor="member-email">E-mail</label><input id="member-email" type="email" className="input" value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} placeholder="daniela@empresa.com" data-testid="input-member-email" /></div>
+        <div className="field"><label htmlFor="member-email">E-mail</label><input id="member-email" type="email" className="input" value={draft.email} onChange={(event) => { setNotice(''); setDraft((current) => ({ ...current, email: event.target.value })); }} placeholder="daniela@empresa.com" aria-invalid={duplicateEmail} aria-describedby={duplicateEmail ? 'member-email-hint' : undefined} data-testid="input-member-email" />{duplicateEmail && <span id="member-email-hint" className="field-hint" role="status">Este e-mail já pertence a um cadastro. Edite ou reative esse colaborador.</span>}</div>
         <div className="field"><label htmlFor="member-phone">Telefone</label><input id="member-phone" className="input" value={draft.phone} onChange={(event) => setDraft((current) => ({ ...current, phone: event.target.value }))} placeholder="(31) 99999-0000" data-testid="input-member-phone" /></div>
          <div className="field"><label htmlFor="member-role">Perfil</label><select id="member-role" className="select" value={draft.role} onChange={(event) => setDraft((current) => ({ ...current, role: event.target.value as MemberDraft['role'], storeId: event.target.value !== 'manager' ? null : current.storeId }))} data-testid="select-member-role"><option value="manager">Gerente de loja</option><option value="supervisor">Supervisor</option><option value="admin">Administrador</option></select></div>
          <div className="field"><label htmlFor="member-store">Loja principal</label><select id="member-store" className="select" value={draft.storeId ?? ''} onChange={(event) => setDraft((current) => ({ ...current, storeId: event.target.value || null }))} disabled={draft.role !== 'manager'} data-testid="select-member-store"><option value="">Sem loja definida</option>{stores.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select><span className="field-hint">{draft.role === 'manager' ? 'A loja principal do gerente.' : 'Este perfil acompanha a rede inteira.'}</span></div>
@@ -156,7 +178,7 @@ export default function AdministrationPage() {
           client.invalidateQueries({ queryKey: getListStoresQueryKey() });
           setNotice('Colaborador excluído definitivamente.');
         },
-        onError: () => setNotice('Não foi possível excluir: o colaborador pode possuir histórico de tarefas. Nesse caso, use Desativar.'),
+        onError: (error) => setNotice(mutationErrorMessage(error, 'Não foi possível excluir o colaborador. Se houver histórico de tarefas, use Desativar para preservar a auditoria.')),
       },
     );
   };
@@ -167,6 +189,6 @@ export default function AdministrationPage() {
     {notice && <div className="form-notice success" data-testid="status-admin-notice">{notice}</div>}
      {tab === 'stores' ? storesQuery.isError ? <ErrorState onRetry={() => storesQuery.refetch()} /> : storesQuery.isLoading ? <LoadingBlocks rows={2} /> : filteredStores.length ? <div className="admin-list">{filteredStores.map((store) => <div className="admin-row" key={store.id} data-testid={`row-admin-store-${store.id}`}><div className="admin-row-icon"><Building2 size={17} /></div><div className="admin-row-main"><strong>{store.name}</strong><span>{store.city} · {store.region}</span></div><div className="admin-row-assignment"><span>Gerente <b>{store.manager || 'Não definido'}</b></span><span>Supervisor <b>{store.supervisor || 'Não definido'}</b></span></div><div className="admin-row-actions"><button className="icon-button" onClick={() => setStoreForm(store)} aria-label={`Editar ${store.name}`} data-testid={`button-edit-store-${store.id}`}><Pencil size={14} /></button><button className="icon-button" onClick={() => removeStore(store)} aria-label={`Excluir ${store.name}`} data-testid={`button-delete-store-${store.id}`}><Trash2 size={14} /></button></div></div>)}</div> : <div className="card"><SearchEmpty title="Nenhuma loja encontrada" /></div> : membersQuery.isError ? <ErrorState onRetry={() => membersQuery.refetch()} /> : membersQuery.isLoading ? <LoadingBlocks rows={2} /> : filteredMembers.length ? <div className="admin-list">{filteredMembers.map((member) => <div className={`admin-row ${member.active ? '' : 'inactive'}`} key={member.id} data-testid={`row-admin-member-${member.id}`}><div className="admin-row-icon"><UserRound size={17} /></div><div className="admin-row-main"><strong>{member.name}</strong><span>{member.email}{member.phone ? ` · ${member.phone}` : ''}</span></div><div className="admin-row-assignment"><span className={`role-badge role-${member.role}`}>{member.role === 'admin' ? 'Administração' : member.role === 'manager' ? 'Gerente' : 'Supervisor'}</span><span>{member.role === 'manager' ? storeName(member.storeId) : 'Rede'}</span></div><div className="admin-row-actions"><><button className="icon-button" onClick={() => setMemberForm(member)} aria-label={`Editar ${member.name}`} data-testid={`button-edit-member-${member.id}`}><Pencil size={14} /></button>{member.active ? <button className="icon-button" onClick={() => removeMember(member)} aria-label={`Desativar ${member.name}`} title="Desativar acesso" data-testid={`button-deactivate-member-${member.id}`}><ShieldOff size={14} /></button> : <button className="icon-button" onClick={() => activateMember(member)} aria-label={`Ativar ${member.name}`} title="Ativar acesso" data-testid={`button-activate-member-${member.id}`}><ShieldCheck size={14} /></button>}<button className="icon-button" onClick={() => removeMemberPermanently(member)} aria-label={`Excluir definitivamente ${member.name}`} title="Excluir definitivamente" data-testid={`button-delete-member-${member.id}`}><Trash2 size={14} /></button></></div></div>)}</div> : <div className="card"><SearchEmpty title="Nenhum colaborador encontrado" /></div>}
     {storeForm && <StoreForm initial={storeForm === 'new' ? undefined : storeForm} onClose={() => setStoreForm(null)} stores={stores} members={members} />}
-    {memberForm && <MemberForm initial={memberForm === 'new' ? undefined : memberForm} onClose={() => setMemberForm(null)} stores={stores} />}
+    {memberForm && <MemberForm initial={memberForm === 'new' ? undefined : memberForm} onClose={() => setMemberForm(null)} stores={stores} members={members} />}
   </div>;
 }
