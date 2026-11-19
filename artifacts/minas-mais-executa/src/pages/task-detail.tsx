@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getGetTaskQueryKey, getListStoresQueryKey, getListTaskSummariesQueryKey, getListTasksQueryKey, useAddTaskComment, useAddTaskEvidence, useCompleteTask, useDeleteTask, useDeleteTaskEvidence, useGetMe, useGetTask, useListStores, useRequestUploadUrl, useReviewTask, useUpdateTask } from '@workspace/api-client-react';
 import type { Evidence, Task, TaskModelAttachment } from '@workspace/api-client-react';
 import { useParams, Link, useLocation } from 'wouter';
-import { EmptyState, ErrorState, EvidenceIcon, formatDate, formatDateTime, LoadingBlocks, PriorityPill, StatusPill } from '@/components/ui-kit';
+import { EmptyState, ErrorState, EvidenceIcon, formatDate, formatDateTime, LoadingBlocks, PriorityPill, StatusPill, TaskEvidenceExportButton } from '@/components/ui-kit';
 import { TaskDeadline } from '@/components/task-deadline';
 
 function TaskEditModal({ task, onClose, onSave, saving }: {
@@ -217,7 +217,6 @@ export default function TaskDetailPage() {
   const [selectedImage, setSelectedImage] = useState<ImageViewerSelection | null>(null);
   const [sharingEvidenceId, setSharingEvidenceId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState(false);
-  const [downloadingArchive, setDownloadingArchive] = useState(false);
   const [, navigate] = useLocation();
   const task = taskQuery.data;
   const evidence = task?.evidence ?? [];
@@ -401,51 +400,8 @@ export default function TaskDetailPage() {
       },
     });
   };
-  const downloadEvidenceArchive = async () => {
-    if (!task || !canEditTask || downloadingArchive) return;
-    setDownloadingArchive(true);
-    try {
-      const response = await fetch(`/api/tasks/${encodeURIComponent(task.id)}/evidence/archive`);
-      if (!response.ok) {
-        const error = await response.json().catch(() => null) as { error?: string } | null;
-        setNotice(error?.error ?? 'Não foi possível reunir as fotos das lojas.');
-        return;
-      }
-      const blob = await response.blob();
-      const archiveUrl = URL.createObjectURL(blob);
-      const archiveName = `${task.title.replace(/[^a-zA-Z0-9_-]+/g, '_')}-evidencias.zip`;
-      const archiveFile = new File([blob], archiveName, { type: 'application/zip' });
-      const canShareArchive = typeof navigator.share === 'function'
-        && typeof navigator.canShare === 'function'
-        && navigator.canShare({ files: [archiveFile] });
-      if (canShareArchive) {
-        await navigator.share({
-          title: `Evidências: ${task.title}`,
-          text: 'Fotos das lojas organizadas por unidade.',
-          files: [archiveFile],
-        });
-        URL.revokeObjectURL(archiveUrl);
-        setNotice('Arquivo preparado para compartilhar.');
-        return;
-      }
-      const anchor = document.createElement('a');
-      anchor.href = archiveUrl;
-      anchor.download = archiveName;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(archiveUrl);
-      setNotice('Arquivo com as fotos das lojas baixado.');
-    } catch (error) {
-      // Cancelar a folha de compartilhamento não é um erro de envio.
-      if (error instanceof DOMException && error.name === 'AbortError') return;
-      setNotice('Não foi possível reunir as fotos das lojas.');
-    } finally {
-      setDownloadingArchive(false);
-    }
-  };
    return <div className="content">
-     <div className="task-detail-topbar"><Link href={returnToStoreList ? '/tasks?restoreStores=1' : '/tasks'} className="section-link" data-testid={returnToStoreList ? 'link-back-stores' : 'link-back-tasks'}><ArrowLeft size={13} /> {returnToStoreList ? 'Voltar para lojas' : 'Voltar para tarefas'}</Link>{canEditTask && task && <div className="task-owner-actions"><button className="button button-ghost" onClick={() => setEditingTask(true)} data-testid="button-edit-task"><Pencil size={15} /> Editar tarefa</button><button className="button button-ghost" onClick={downloadEvidenceArchive} disabled={downloadingArchive} data-testid="button-download-task-evidence"><Download size={15} /> {downloadingArchive ? 'Preparando fotos...' : 'Extrair fotos por filial'}</button><button className="button button-danger" onClick={removeTask} disabled={deleteTask.isPending} data-testid="button-delete-task"><Trash2 size={15} /> {deleteTask.isPending ? 'Excluindo...' : 'Excluir tarefa'}</button></div>}</div>
+     <div className="task-detail-topbar"><Link href={returnToStoreList ? '/tasks?restoreStores=1' : '/tasks'} className="section-link" data-testid={returnToStoreList ? 'link-back-stores' : 'link-back-tasks'}><ArrowLeft size={13} /> {returnToStoreList ? 'Voltar para lojas' : 'Voltar para tarefas'}</Link>{canEditTask && task && <div className="task-owner-actions"><button className="button button-ghost" onClick={() => setEditingTask(true)} data-testid="button-edit-task"><Pencil size={15} /> Editar tarefa</button><TaskEvidenceExportButton taskId={task.id} taskTitle={task.title} /><button className="button button-danger" onClick={removeTask} disabled={deleteTask.isPending} data-testid="button-delete-task"><Trash2 size={15} /> {deleteTask.isPending ? 'Excluindo...' : 'Excluir tarefa'}</button></div>}</div>
      {taskQuery.isError ? <ErrorState onRetry={() => taskQuery.refetch()} /> : taskQuery.isLoading ? <LoadingBlocks rows={2} /> : !task ? <EmptyState title="Tarefa não encontrada" copy="Ela pode não estar disponível para o seu acesso." /> : <div className="detail-layout">
        <div>
            <section className="detail-hero"><div className="eyebrow">Execução · {task.category}</div><h1 className="detail-title">{task.title}</h1><div className="detail-meta"><span>{task.storeName}</span><span>•</span><span>{task.assignee}</span><span>•</span><span>Criada por {task.createdByName}</span><span>•</span><span>Em {formatDate(task.createdAt)}</span><span>•</span><span>Executar em {formatDate(task.dueDate)} às {task.dueTime}</span></div>{task.status === 'pending_review' && <div className="task-status-banner task-status-banner-pending_review"><strong>Aguardando conferência do supervisor</strong><span>O gerente concluiu a execução. A tarefa será encerrada após a aprovação.</span></div>}{task.status === 'rejected' && <div className="task-status-banner task-status-banner-rejected"><strong>Tarefa reprovada pelo supervisor</strong><span>Revise a orientação abaixo e inicie uma nova execução.</span></div>}</section>

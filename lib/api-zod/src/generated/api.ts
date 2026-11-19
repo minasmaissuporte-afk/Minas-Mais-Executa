@@ -464,13 +464,13 @@ export const DeleteTaskResponse = zod.void()
 
 
 /**
- * @summary Download photo evidence for the task and its store copies
+ * @summary Download a PDF presentation of photo evidence for the task and its store copies
  */
-export const DownloadTaskEvidenceArchiveParams = zod.object({
+export const DownloadTaskEvidencePdfParams = zod.object({
   "id": zod.coerce.string()
 })
 
-export const DownloadTaskEvidenceArchiveResponse = zod.unknown()
+export const DownloadTaskEvidencePdfResponse = zod.unknown()
 
 
 /**

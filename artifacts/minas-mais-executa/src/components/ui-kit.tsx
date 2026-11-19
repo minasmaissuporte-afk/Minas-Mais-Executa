@@ -57,53 +57,53 @@ export function TaskEvidenceExportButton({ taskId, taskTitle }: { taskId: string
     setBusy(true);
     setNotice('');
     try {
-      const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/evidence/archive`);
+      const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/evidence/pdf`);
       if (!response.ok) {
         const error = await response.json().catch(() => null) as { error?: string } | null;
-        throw new Error(error?.error ?? 'Não foi possível reunir as fotos desta tarefa.');
+        throw new Error(error?.error ?? 'Não foi possível gerar o PDF desta tarefa.');
       }
       const blob = await response.blob();
-      const archiveName = `${taskTitle.replace(/[^a-zA-Z0-9_-]+/g, '_')}-fotos-por-filial.zip`;
-      const archiveUrl = URL.createObjectURL(blob);
-      const archiveFile = new File([blob], archiveName, { type: 'application/zip' });
-      const canShareArchive = typeof navigator.share === 'function'
+      const pdfName = `${taskTitle.replace(/[^a-zA-Z0-9_-]+/g, '_')}-evidencias.pdf`;
+      const pdfUrl = URL.createObjectURL(blob);
+      const pdfFile = new File([blob], pdfName, { type: 'application/pdf' });
+      const canSharePdf = typeof navigator.share === 'function'
         && typeof navigator.canShare === 'function'
-        && navigator.canShare({ files: [archiveFile] });
-      if (canShareArchive) {
+        && navigator.canShare({ files: [pdfFile] });
+      if (canSharePdf) {
         try {
           await navigator.share({
-            title: `Fotos por filial: ${taskTitle}`,
-            text: 'Fotos de comprovação organizadas pelo nome de cada filial.',
-            files: [archiveFile],
+            title: `Evidências: ${taskTitle}`,
+            text: 'PDF da tarefa com as fotos identificadas por filial.',
+            files: [pdfFile],
           });
-          setNotice('Arquivo pronto para compartilhar.');
+          setNotice('PDF pronto para compartilhar.');
         } catch (error) {
           if (error instanceof DOMException && error.name === 'AbortError') return;
           throw error;
         } finally {
-          URL.revokeObjectURL(archiveUrl);
+          URL.revokeObjectURL(pdfUrl);
         }
         return;
       }
       const anchor = document.createElement('a');
-      anchor.href = archiveUrl;
-      anchor.download = archiveName;
+      anchor.href = pdfUrl;
+      anchor.download = pdfName;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
-      URL.revokeObjectURL(archiveUrl);
-      setNotice('Arquivo baixado.');
+      URL.revokeObjectURL(pdfUrl);
+      setNotice('PDF baixado.');
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Não foi possível reunir as fotos desta tarefa.');
+      setNotice(error instanceof Error ? error.message : 'Não foi possível gerar o PDF desta tarefa.');
     } finally {
       setBusy(false);
     }
   };
 
   return <span className="task-export-control">
-    <button type="button" className="button button-ghost task-export-button" onClick={exportPhotos} disabled={busy} aria-label={`Extrair fotos por filial da tarefa ${taskTitle}`} data-testid={`button-export-task-photos-${taskId}`}>
+    <button type="button" className="button button-ghost task-export-button" onClick={exportPhotos} disabled={busy} aria-label={`Gerar PDF com as fotos da tarefa ${taskTitle}`} data-testid={`button-export-task-photos-${taskId}`}>
       {busy ? <Download size={14} /> : <Share2 size={14} />}
-      {busy ? 'Preparando...' : 'Extrair fotos por filial'}
+      {busy ? 'Gerando PDF...' : 'Gerar PDF com fotos'}
     </button>
     {notice && <span className="task-export-notice" role="status">{notice}</span>}
   </span>;

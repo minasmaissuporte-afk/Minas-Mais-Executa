@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
-import { ZipArchive } from "archiver";
+import PDFDocument from "pdfkit";
+import sharp from "sharp";
 import { and, desc, eq, gte, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import {
   AddTaskEvidenceBody,
@@ -1439,7 +1440,7 @@ router.delete("/tasks", async (req, res) => {
   res.status(204).send();
 });
 
-router.get("/tasks/:id/evidence/archive", async (req, res): Promise<void> => {
+router.get("/tasks/:id/evidence/pdf", async (req, res): Promise<void> => {
   await seedPromise;
   const params = GetTaskParams.safeParse(req.params);
   if (!params.success) {
@@ -1485,36 +1486,69 @@ router.get("/tasks/:id/evidence/archive", async (req, res): Promise<void> => {
     return;
   }
   const taskById = new Map(visibleTasks.map((item) => [item.id, item]));
-  const archiveEntries = await Promise.all(photoRows.map(async (photo) => ({
-    photo,
-    file: await objectStorageService.getObjectEntityFile(photo.objectPath!),
-  })));
   const safeName = (value: string) => value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80) || "arquivo";
   res.status(200);
-  res.setHeader("Content-Type", "application/zip");
-  res.setHeader("Content-Disposition", `attachment; filename="${safeName(task.title)}-evidencias.zip"`);
-  const archive = new ZipArchive({ zlib: { level: 5 } });
-  archive.on("warning", (error: Error) => req.log.warn({ err: error }, "Warning creating task evidence archive"));
-  archive.on("error", (error: Error) => {
-    req.log.error({ err: error }, "Failed creating task evidence archive");
-    if (!res.headersSent) res.status(500).json({ error: "Não foi possível criar o arquivo de evidências." });
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${safeName(task.title)}-evidencias.pdf"`);
+  res.setHeader("Cache-Control", "private, no-store");
+
+  const pdf = new PDFDocument({ size: "A4", margin: 44, autoFirstPage: false });
+  pdf.on("error", (error: Error) => {
+    req.log.error({ err: error, taskId: task.id }, "Failed generating task evidence PDF");
+    if (!res.headersSent) res.status(500).json({ error: "Não foi possível gerar o PDF de evidências." });
     else res.destroy(error);
   });
-  archive.pipe(res);
-  for (const { photo, file } of archiveEntries) {
-    const related = taskById.get(photo.taskId);
-    if (!related || !photo.objectPath) continue;
-    const safePhotoName = safeName(photo.fileName);
-    const extensionIndex = safePhotoName.lastIndexOf(".");
-    const hasExtension = extensionIndex > 0;
-    const photoBaseName = hasExtension ? safePhotoName.slice(0, extensionIndex) : safePhotoName;
-    const photoExtension = hasExtension ? safePhotoName.slice(extensionIndex) : "";
-    archive.append(file.createReadStream(), {
-      name: `${safeName(related.storeName)}-${photoBaseName}-${photo.id.slice(-10)}${photoExtension}`,
-    });
+  pdf.pipe(res);
+  pdf.addPage();
+  pdf.font("Helvetica-Bold").fontSize(11).fillColor("#c62828").text("MINAS MAIS EXECUTA");
+  pdf.moveDown(1.8);
+  pdf.fontSize(25).fillColor("#242424").text("Evidências da tarefa");
+  pdf.moveDown(0.7);
+  pdf.fontSize(17).text(task.title, { lineGap: 4 });
+  pdf.moveDown(1);
+  pdf.font("Helvetica").fontSize(12).fillColor("#555555")
+    .text(`${photoRows.length} ${photoRows.length === 1 ? "foto" : "fotos"} · ${new Set(visibleTasks.map((item) => item.storeId)).size} ${new Set(visibleTasks.map((item) => item.storeId)).size === 1 ? "filial" : "filiais"}`);
+  pdf.moveDown(0.5);
+  pdf.fontSize(10).text("Cada página identifica a filial responsável pela execução e apresenta uma foto de comprovação.");
+
+  try {
+    for (const photo of photoRows) {
+      const related = taskById.get(photo.taskId);
+      if (!related || !photo.objectPath) continue;
+      const file = await objectStorageService.getObjectEntityFile(photo.objectPath);
+      const chunks: Buffer[] = [];
+      for await (const chunk of file.createReadStream()) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      const image = await sharp(Buffer.concat(chunks))
+        .rotate()
+        .flatten({ background: "#ffffff" })
+        .jpeg({ quality: 88 })
+        .toBuffer();
+
+      pdf.addPage();
+      pdf.font("Helvetica").fontSize(9).fillColor("#777777").text("EVIDÊNCIA FOTOGRÁFICA");
+      pdf.moveDown(0.35);
+      pdf.font("Helvetica-Bold").fontSize(20).fillColor("#242424").text(related.storeName);
+      pdf.moveDown(0.25);
+      pdf.font("Helvetica").fontSize(10).fillColor("#555555").text(photo.fileName);
+      const imageTop = pdf.y + 15;
+      const imageWidth = pdf.page.width - pdf.page.margins.left - pdf.page.margins.right;
+      const imageHeight = pdf.page.height - pdf.page.margins.bottom - imageTop;
+      pdf.image(image, pdf.page.margins.left, imageTop, {
+        fit: [imageWidth, imageHeight],
+        align: "center",
+        valign: "center",
+      });
+    }
+    pdf.end();
+  } catch (error) {
+    req.log.error({ err: error, taskId: task.id }, "Failed reading evidence for task PDF");
+    pdf.destroy();
+    if (!res.headersSent) res.status(500).json({ error: "Não foi possível montar todas as fotos no PDF." });
+    else res.destroy(error instanceof Error ? error : undefined);
   }
-  await archive.finalize();
 });
 
 router.post("/tasks/:id/evidence", async (req, res) => {

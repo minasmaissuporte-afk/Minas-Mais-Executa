@@ -287,23 +287,23 @@ paths:
           description: Task and its evidence permanently deleted
         "403":
           description: The user can delete only a task they created
-  /tasks/{id}/evidence/archive:
+  /tasks/{id}/evidence/pdf:
     get:
-      operationId: downloadTaskEvidenceArchive
+      operationId: downloadTaskEvidencePdf
       tags: [tasks]
-      summary: Download photo evidence for the task and its store copies
+      summary: Download a PDF presentation of photo evidence for the task and its store copies
       parameters:
         - $ref: "#/components/parameters/TaskId"
       responses:
         "200":
-          description: ZIP archive containing evidence photos named by store
+          description: PDF containing one page per evidence photo, identified by store
           content:
-            application/zip:
+            application/pdf:
               schema:
                 type: string
                 format: binary
         "403":
-          description: Only the task creator can download this archive
+          description: Only the task creator can download this PDF
         "404":
           description: Task or photos not found
   /tasks/{id}/evidence:

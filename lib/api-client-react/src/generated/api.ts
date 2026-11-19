@@ -1217,20 +1217,20 @@ export const useDeleteTask = <TError = ErrorType<void>,
       return useMutation(getDeleteTaskMutationOptions(options));
     }
 
-export const getDownloadTaskEvidenceArchiveUrl = (id: string,) => {
+export const getDownloadTaskEvidencePdfUrl = (id: string,) => {
 
 
 
 
-  return `/api/tasks/${id}/evidence/archive`
+  return `/api/tasks/${id}/evidence/pdf`
 }
 
 /**
- * @summary Download photo evidence for the task and its store copies
+ * @summary Download a PDF presentation of photo evidence for the task and its store copies
  */
-export const downloadTaskEvidenceArchive = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+export const downloadTaskEvidencePdf = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
 
-  return customFetch<Blob>(getDownloadTaskEvidenceArchiveUrl(id),
+  return customFetch<Blob>(getDownloadTaskEvidencePdfUrl(id),
   {
     ...options,
     method: 'GET'
@@ -1243,45 +1243,45 @@ export const downloadTaskEvidenceArchive = async (id: string, options?: Paramete
 
 
 
-export const getDownloadTaskEvidenceArchiveQueryKey = (id: string,) => {
+export const getDownloadTaskEvidencePdfQueryKey = (id: string,) => {
     return [
-    `/api/tasks/${id}/evidence/archive`
+    `/api/tasks/${id}/evidence/pdf`
     ] as const;
     }
 
 
-export const getDownloadTaskEvidenceArchiveQueryOptions = <TData = Awaited<ReturnType<typeof downloadTaskEvidenceArchive>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadTaskEvidenceArchive>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getDownloadTaskEvidencePdfQueryOptions = <TData = Awaited<ReturnType<typeof downloadTaskEvidencePdf>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadTaskEvidencePdf>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getDownloadTaskEvidenceArchiveQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getDownloadTaskEvidencePdfQueryKey(id);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadTaskEvidenceArchive>>> = ({ signal }) => downloadTaskEvidenceArchive(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadTaskEvidencePdf>>> = ({ signal }) => downloadTaskEvidencePdf(id, { signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadTaskEvidenceArchive>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadTaskEvidencePdf>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type DownloadTaskEvidenceArchiveQueryResult = NonNullable<Awaited<ReturnType<typeof downloadTaskEvidenceArchive>>>
-export type DownloadTaskEvidenceArchiveQueryError = ErrorType<void>
+export type DownloadTaskEvidencePdfQueryResult = NonNullable<Awaited<ReturnType<typeof downloadTaskEvidencePdf>>>
+export type DownloadTaskEvidencePdfQueryError = ErrorType<void>
 
 
 /**
- * @summary Download photo evidence for the task and its store copies
+ * @summary Download a PDF presentation of photo evidence for the task and its store copies
  */
 
-export function useDownloadTaskEvidenceArchive<TData = Awaited<ReturnType<typeof downloadTaskEvidenceArchive>>, TError = ErrorType<void>>(
- id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadTaskEvidenceArchive>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useDownloadTaskEvidencePdf<TData = Awaited<ReturnType<typeof downloadTaskEvidencePdf>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadTaskEvidencePdf>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getDownloadTaskEvidenceArchiveQueryOptions(id,options)
+  const queryOptions = getDownloadTaskEvidencePdfQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
