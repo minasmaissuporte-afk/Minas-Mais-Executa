@@ -302,10 +302,10 @@ paths:
               schema:
                 type: string
                 format: binary
-        "403":
-          description: Only the task creator can download this PDF
         "404":
-          description: Task or photos not found
+          description: Task is outside the user's authorized stores or no photos were found
+        "500":
+          description: A photo could not be loaded or converted; no incomplete PDF is returned
   /tasks/{id}/evidence:
     post:
       operationId: addTaskEvidence

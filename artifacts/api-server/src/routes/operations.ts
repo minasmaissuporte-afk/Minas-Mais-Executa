@@ -1447,13 +1447,8 @@ router.get("/tasks/:id/evidence/pdf", async (req, res): Promise<void> => {
     return;
   }
   const task = await getTaskWithEvidence(params.data.id);
-  const origin = task ? await getTaskOrigin(task.id) : null;
   if (!task || !(await canAccessTask(req, task))) {
     res.status(404).json({ error: "Tarefa não encontrada." });
-    return;
-  }
-  if (origin?.createdByMemberId !== actor(req).id) {
-    res.status(403).json({ error: "Somente quem criou esta tarefa pode reunir as evidências." });
     return;
   }
   const relatedTasks = task.batchGroupId
@@ -1461,11 +1456,7 @@ router.get("/tasks/:id/evidence/pdf", async (req, res): Promise<void> => {
     : [task];
   const visibleTasks = [];
   for (const related of relatedTasks) {
-    const relatedOrigin = await getTaskOrigin(related.id);
-    if (
-      relatedOrigin?.createdByMemberId === actor(req).id
-      && await canAccessTask(req, related)
-    ) visibleTasks.push(related);
+    if (await canAccessTask(req, related)) visibleTasks.push(related);
   }
   const taskIds = visibleTasks.map((item) => item.id);
   const photos = taskIds.length
@@ -1487,37 +1478,52 @@ router.get("/tasks/:id/evidence/pdf", async (req, res): Promise<void> => {
   const taskById = new Map(visibleTasks.map((item) => [item.id, item]));
   const safeName = (value: string) => value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80) || "arquivo";
-  res.status(200);
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `attachment; filename="${safeName(task.title)}-evidencias.pdf"`);
-  res.setHeader("Cache-Control", "private, no-store");
-
   const presentation = createEvidencePdf(task.title, photoRows.length);
   const pdf = presentation.document;
+  const pdfChunks: Buffer[] = [];
+  pdf.on("data", (chunk: Buffer) => pdfChunks.push(chunk));
+  let streamError: Error | undefined;
+  const finished = new Promise<void>((resolve) => {
+    pdf.once("end", resolve);
+    pdf.once("error", (error: Error) => { streamError = error; resolve(); });
+  });
   pdf.on("error", (error: Error) => {
     req.log.error({ err: error, taskId: task.id }, "Failed generating task evidence PDF");
-    if (!res.headersSent) res.status(500).json({ error: "Não foi possível gerar o PDF de evidências." });
-    else res.destroy(error);
   });
-  pdf.pipe(res);
 
+  let failedStoreName = "";
   try {
+    let rendered = 0;
     for (const photo of photoRows) {
       const related = taskById.get(photo.taskId);
-      if (!related || !photo.objectPath) continue;
+      if (!related || !photo.objectPath) throw new Error("Evidence is missing its task or image path");
+      failedStoreName = related.storeName;
       const file = await objectStorageService.getObjectEntityFile(photo.objectPath);
       const chunks: Buffer[] = [];
       for await (const chunk of file.createReadStream()) {
         chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
       }
       await presentation.addPhoto(related.storeName, Buffer.concat(chunks));
+      rendered += 1;
     }
+    if (rendered !== photoRows.length) throw new Error("Not all evidence images were rendered");
     pdf.end();
+    await finished;
+    if (streamError) throw streamError;
+    const output = Buffer.concat(pdfChunks);
+    if (!output.subarray(0, 5).equals(Buffer.from("%PDF-")) || !output.subarray(-1024).includes(Buffer.from("%%EOF"))) {
+      throw new Error("Incomplete PDF output");
+    }
+    req.log.info({ taskId: task.id, photos: rendered, bytes: output.length }, "Task evidence PDF completed");
+    res.status(200)
+      .set("Content-Type", "application/pdf")
+      .set("Content-Disposition", `attachment; filename="${safeName(task.title)}-evidencias.pdf"`)
+      .set("Cache-Control", "private, no-store")
+      .send(output);
   } catch (error) {
     req.log.error({ err: error, taskId: task.id }, "Failed reading evidence for task PDF");
     pdf.destroy();
-    if (!res.headersSent) res.status(500).json({ error: "Não foi possível montar todas as fotos no PDF." });
-    else res.destroy(error instanceof Error ? error : undefined);
+    res.status(500).json({ error: `Não foi possível ler todas as fotos${failedStoreName ? ` da filial ${failedStoreName}` : ""}. Verifique as fotos desta loja. Nenhum PDF incompleto foi enviado.` });
   }
 });
 

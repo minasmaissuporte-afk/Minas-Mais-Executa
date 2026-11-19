@@ -32,6 +32,7 @@ async function buildAll() {
       // PDFKit resolves #standard-fonts through its own package.json imports.
       // Bundling moves createRequire out of that package and breaks font lookup.
       "pdfkit",
+      "heic-convert",
       "sharp",
       "better-sqlite3",
       "sqlite3",

@@ -100,6 +100,11 @@ export function TaskEvidenceExportButton({ taskId, taskTitle }: { taskId: string
       if (!blob.size || blob.type.split(';')[0] !== 'application/pdf') {
         throw new Error('O servidor não retornou um PDF válido. Tente gerar novamente.');
       }
+      const header = await blob.slice(0, 5).text();
+      const trailer = await blob.slice(-1024).text();
+      if (header !== '%PDF-' || !trailer.includes('%%EOF')) {
+        throw new Error('O PDF recebido está incompleto. Gere novamente antes de compartilhar.');
+      }
       const pdfName = `${taskTitle.replace(/[^a-zA-Z0-9_-]+/g, '_')}-evidencias.pdf`;
       const pdfFile = new File([blob], pdfName, { type: 'application/pdf' });
       setPreparedPdf(pdfFile);
@@ -159,7 +164,7 @@ export function StatusPill({ status }: { status: string }) {
 export function PriorityPill({ priority }: { priority: string }) {
   return <span className={`priority priority-${priority}`} data-testid={`priority-pill-${priority}`}>{priorityLabel(priority)}</span>;
 }
-export function TaskRow({ task, onDelete, selected = false, onToggleSelect, onOpenTask, showStatus = false, canExportEvidence = false }: { task: TaskListItem; onDelete?: (task: TaskListItem) => void; selected?: boolean; onToggleSelect?: (taskId: string) => void; onOpenTask?: () => void; showStatus?: boolean; canExportEvidence?: boolean }) {
+export function TaskRow({ task, onDelete, selected = false, onToggleSelect, onOpenTask, showStatus = false, canExportEvidence = true }: { task: TaskListItem; onDelete?: (task: TaskListItem) => void; selected?: boolean; onToggleSelect?: (taskId: string) => void; onOpenTask?: () => void; showStatus?: boolean; canExportEvidence?: boolean }) {
   const detailHref = task.batchGroupId ? `/tasks/${task.id}?returnTo=stores` : `/tasks/${task.id}`;
   return <div className={`task-row task-row-result result-${task.status === 'completed' ? 'completed' : 'open'} task-status-${task.status}`} data-testid={`row-task-${task.id}`}>
     {onToggleSelect && <input type="checkbox" className="task-select-checkbox" checked={selected} onChange={() => onToggleSelect(task.id)} onClick={(event) => event.stopPropagation()} aria-label={`Selecionar ${task.title} da ${task.storeName}`} data-testid={`checkbox-select-task-${task.id}`} />}
@@ -219,7 +224,7 @@ export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string
       </span>
         {showProgress ? <StatusPill status={groupStatus} /> : groupStatus === 'pending_review' ? <span className="status-chip status-pending_review task-row-status-chip">Conferência</span> : groupStatus === 'rejected' ? <span className="status-chip status-rejected task-row-status-chip">Reprovada</span> : null}<PriorityPill priority={first.priority} /><span className="task-time">{first.dueTime}</span><ChevronDown className="task-group-chevron" size={15} />
     </summary>
-        <div className="task-group-items">{tasks.map((task) => <TaskRow key={task.id} task={task} onDelete={canManageTask?.(task) ?? true ? onDelete : undefined} selected={selectedTaskIds.has(task.id)} onToggleSelect={canManageTask?.(task) ?? true ? onToggleSelect : undefined} onOpenTask={onOpenTask} showStatus={showTaskStatus} canExportEvidence={canManageTask?.(task) ?? false} />)}</div>
+        <div className="task-group-items">{tasks.map((task) => <TaskRow key={task.id} task={task} onDelete={canManageTask?.(task) ?? true ? onDelete : undefined} selected={selectedTaskIds.has(task.id)} onToggleSelect={canManageTask?.(task) ?? true ? onToggleSelect : undefined} onOpenTask={onOpenTask} showStatus={showTaskStatus} />)}</div>
   </details>;
 }
 export function ActivityItem({ activity }: { activity: Activity }) {

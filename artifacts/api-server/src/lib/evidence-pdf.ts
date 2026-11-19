@@ -1,5 +1,27 @@
 import PDFDocument from "pdfkit";
 import sharp from "sharp";
+import convertHeic from "heic-convert";
+
+export async function normalizeEvidencePhoto(source: Buffer) {
+  // iPhone HEIC/HEVC is not supported by the default sharp binary.
+  // Decode with the portable libheif implementation before resizing.
+  const brands = source.subarray(0, 64).toString("latin1");
+  let input = brands.includes("ftyp") && /heic|heix|hevc|hevx|mif1|msf1/.test(brands)
+    ? Buffer.from(await convertHeic({ buffer: source, format: "JPEG", quality: 0.9 }))
+    : source;
+  // Some older uploads contain the complete JPEG scan but omit its end marker.
+  // Repair the marker; the decoder still rejects unrecoverable scan data.
+  if (input[0] === 0xff && input[1] === 0xd8
+    && !(input[input.length - 2] === 0xff && input[input.length - 1] === 0xd9)) {
+    input = Buffer.concat([input, Buffer.from([0xff, 0xd9])]);
+  }
+  return sharp(input, { failOn: "error" })
+    .rotate()
+    .resize({ width: 1200, height: 1200, fit: "inside", withoutEnlargement: true })
+    .flatten({ background: "#ffffff" })
+    .jpeg({ quality: 78, mozjpeg: true })
+    .toBuffer();
+}
 
 /** Four fitted photos per A4 page; labels have fixed space and cannot overlap images. */
 export function createEvidencePdf(title: string, totalPhotos: number) {
@@ -9,12 +31,7 @@ export function createEvidencePdf(title: string, totalPhotos: number) {
   return {
     document,
     async addPhoto(storeName: string, source: Buffer) {
-      const image = await sharp(source)
-        .rotate()
-        .resize({ width: 1200, height: 1200, fit: "inside", withoutEnlargement: true })
-        .flatten({ background: "#ffffff" })
-        .jpeg({ quality: 78, mozjpeg: true })
-        .toBuffer();
+      const image = await normalizeEvidencePhoto(source);
       const slot = count % 4;
       if (slot === 0) {
         document.addPage();
