@@ -4,3 +4,4 @@
 - [Vínculos antigos de gerentes](legacy-manager-links.md) — a loja pode ser a fonte confiável quando o cadastro antigo do colaborador não tem `storeId` sincronizado.
 - [Datas locais das tarefas](business-date-timezone.md) — datas sem hora usam America/Sao_Paulo; calcule “hoje” localmente para evitar filas vazias perto da meia-noite UTC.
 - [Dependências externas do bundle da API](api-bundle-external-dependencies.md) — imports externalizados pelo esbuild podem exigir dependência direta para resolver no runtime.
+- [Compartilhamento de PDFs no celular](mobile-pdf-sharing.md) — geração demorada pode expirar a ativação do toque; reter o arquivo para compartilhar sem regenerar.

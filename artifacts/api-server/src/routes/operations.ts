@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
-import PDFDocument from "pdfkit";
-import sharp from "sharp";
+import { createEvidencePdf } from "../lib/evidence-pdf";
 import { and, desc, eq, gte, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import {
   AddTaskEvidenceBody,
@@ -1493,24 +1492,14 @@ router.get("/tasks/:id/evidence/pdf", async (req, res): Promise<void> => {
   res.setHeader("Content-Disposition", `attachment; filename="${safeName(task.title)}-evidencias.pdf"`);
   res.setHeader("Cache-Control", "private, no-store");
 
-  const pdf = new PDFDocument({ size: "A4", margin: 44, autoFirstPage: false });
+  const presentation = createEvidencePdf(task.title, photoRows.length);
+  const pdf = presentation.document;
   pdf.on("error", (error: Error) => {
     req.log.error({ err: error, taskId: task.id }, "Failed generating task evidence PDF");
     if (!res.headersSent) res.status(500).json({ error: "Não foi possível gerar o PDF de evidências." });
     else res.destroy(error);
   });
   pdf.pipe(res);
-  pdf.addPage();
-  pdf.font("Helvetica-Bold").fontSize(11).fillColor("#c62828").text("MINAS MAIS EXECUTA");
-  pdf.moveDown(1.8);
-  pdf.fontSize(25).fillColor("#242424").text("Evidências da tarefa");
-  pdf.moveDown(0.7);
-  pdf.fontSize(17).text(task.title, { lineGap: 4 });
-  pdf.moveDown(1);
-  pdf.font("Helvetica").fontSize(12).fillColor("#555555")
-    .text(`${photoRows.length} ${photoRows.length === 1 ? "foto" : "fotos"} · ${new Set(visibleTasks.map((item) => item.storeId)).size} ${new Set(visibleTasks.map((item) => item.storeId)).size === 1 ? "filial" : "filiais"}`);
-  pdf.moveDown(0.5);
-  pdf.fontSize(10).text("Cada página identifica a filial responsável pela execução e apresenta uma foto de comprovação.");
 
   try {
     for (const photo of photoRows) {
@@ -1521,26 +1510,7 @@ router.get("/tasks/:id/evidence/pdf", async (req, res): Promise<void> => {
       for await (const chunk of file.createReadStream()) {
         chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
       }
-      const image = await sharp(Buffer.concat(chunks))
-        .rotate()
-        .flatten({ background: "#ffffff" })
-        .jpeg({ quality: 88 })
-        .toBuffer();
-
-      pdf.addPage();
-      pdf.font("Helvetica").fontSize(9).fillColor("#777777").text("EVIDÊNCIA FOTOGRÁFICA");
-      pdf.moveDown(0.35);
-      pdf.font("Helvetica-Bold").fontSize(20).fillColor("#242424").text(related.storeName);
-      pdf.moveDown(0.25);
-      pdf.font("Helvetica").fontSize(10).fillColor("#555555").text(photo.fileName);
-      const imageTop = pdf.y + 15;
-      const imageWidth = pdf.page.width - pdf.page.margins.left - pdf.page.margins.right;
-      const imageHeight = pdf.page.height - pdf.page.margins.bottom - imageTop;
-      pdf.image(image, pdf.page.margins.left, imageTop, {
-        fit: [imageWidth, imageHeight],
-        align: "center",
-        valign: "center",
-      });
+      await presentation.addPhoto(related.storeName, Buffer.concat(chunks));
     }
     pdf.end();
   } catch (error) {

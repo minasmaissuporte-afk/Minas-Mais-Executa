@@ -49,13 +49,47 @@ type TaskListItem = Task | TaskSummary;
 export function TaskEvidenceExportButton({ taskId, taskTitle }: { taskId: string; taskTitle: string }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [preparedPdf, setPreparedPdf] = useState<File | null>(null);
+  const [sharing, setSharing] = useState(false);
 
+  const downloadPdf = (file: File) => {
+    const url = URL.createObjectURL(file);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = file.name;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    // Let mobile browsers finish consuming the URL before revoking it.
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
+  // Called directly by the retry button: no fetch/await before navigator.share,
+  // so mobile browsers receive a fresh user activation.
+  const sharePdf = async (file: File) => {
+    if (!navigator.share || !navigator.canShare?.({ files: [file] })) {
+      setNotice('Este navegador não compartilha arquivos. Use Baixar PDF e anexe o documento no WhatsApp.');
+      return;
+    }
+    setSharing(true);
+    try {
+      await navigator.share({ files: [file], title: `Evidências: ${taskTitle}` });
+      setNotice('PDF entregue ao compartilhamento do aparelho.');
+    } catch (error) {
+      const name = error instanceof Error ? error.name : '';
+      setNotice(name === 'AbortError'
+        ? 'Compartilhamento cancelado. O PDF continua pronto para compartilhar ou baixar.'
+        : 'O aparelho bloqueou a abertura automática. Toque em Compartilhar PDF para escolher o WhatsApp ou baixe o arquivo.');
+    } finally {
+      setSharing(false);
+    }
+  };
   const exportPhotos = async (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
     if (busy) return;
     setBusy(true);
     setNotice('');
+    setPreparedPdf(null);
     try {
       const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/evidence/pdf`);
       if (!response.ok) {
@@ -63,36 +97,21 @@ export function TaskEvidenceExportButton({ taskId, taskTitle }: { taskId: string
         throw new Error(error?.error ?? 'Não foi possível gerar o PDF desta tarefa.');
       }
       const blob = await response.blob();
+      if (!blob.size || blob.type.split(';')[0] !== 'application/pdf') {
+        throw new Error('O servidor não retornou um PDF válido. Tente gerar novamente.');
+      }
       const pdfName = `${taskTitle.replace(/[^a-zA-Z0-9_-]+/g, '_')}-evidencias.pdf`;
-      const pdfUrl = URL.createObjectURL(blob);
       const pdfFile = new File([blob], pdfName, { type: 'application/pdf' });
+      setPreparedPdf(pdfFile);
       const canSharePdf = typeof navigator.share === 'function'
         && typeof navigator.canShare === 'function'
         && navigator.canShare({ files: [pdfFile] });
       if (canSharePdf) {
-        try {
-          await navigator.share({
-            title: `Evidências: ${taskTitle}`,
-            text: 'PDF da tarefa com as fotos identificadas por filial.',
-            files: [pdfFile],
-          });
-          setNotice('PDF pronto para compartilhar.');
-        } catch (error) {
-          if (error instanceof DOMException && error.name === 'AbortError') return;
-          throw error;
-        } finally {
-          URL.revokeObjectURL(pdfUrl);
-        }
+        await sharePdf(pdfFile);
         return;
       }
-      const anchor = document.createElement('a');
-      anchor.href = pdfUrl;
-      anchor.download = pdfName;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(pdfUrl);
-      setNotice('PDF baixado.');
+      downloadPdf(pdfFile);
+      setNotice('PDF gerado e download solicitado. Você pode anexá-lo no WhatsApp.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Não foi possível gerar o PDF desta tarefa.');
     } finally {
@@ -101,10 +120,14 @@ export function TaskEvidenceExportButton({ taskId, taskTitle }: { taskId: string
   };
 
   return <span className="task-export-control">
-    <button type="button" className="button button-ghost task-export-button" onClick={exportPhotos} disabled={busy} aria-label={`Gerar PDF com as fotos da tarefa ${taskTitle}`} data-testid={`button-export-task-photos-${taskId}`}>
+    <button type="button" className="button button-ghost task-export-button" onClick={exportPhotos} disabled={busy || sharing} aria-label={`Gerar PDF com as fotos da tarefa ${taskTitle}`} data-testid={`button-export-task-photos-${taskId}`}>
       {busy ? <Download size={14} /> : <Share2 size={14} />}
       {busy ? 'Gerando PDF...' : 'Gerar PDF com fotos'}
     </button>
+    {preparedPdf && <span className="evidence-actions">
+      <button type="button" className="section-link" disabled={busy || sharing} onClick={(event) => { event.preventDefault(); event.stopPropagation(); void sharePdf(preparedPdf); }} data-testid={`button-share-task-pdf-${taskId}`}>{sharing ? 'Compartilhando...' : 'Compartilhar PDF'}</button>
+      <button type="button" className="section-link" onClick={(event) => { event.preventDefault(); event.stopPropagation(); downloadPdf(preparedPdf); }} data-testid={`button-save-task-pdf-${taskId}`}>Baixar PDF</button>
+    </span>}
     {notice && <span className="task-export-notice" role="status">{notice}</span>}
   </span>;
 }

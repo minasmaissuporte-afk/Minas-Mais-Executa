@@ -296,7 +296,7 @@ paths:
         - $ref: "#/components/parameters/TaskId"
       responses:
         "200":
-          description: PDF containing one page per evidence photo, identified by store
+          description: PDF containing up to four resized evidence photos per page, each identified by store
           content:
             application/pdf:
               schema:
