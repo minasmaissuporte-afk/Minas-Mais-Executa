@@ -24,11 +24,22 @@ export function AppShell({ children, member }: { children: ReactNode; member: Cu
   const [unreadTasks, setUnreadTasks] = useState(0);
   const [pushStatus, setPushStatus] = useState<PushStatus>('checking');
   const [activatePush, setActivatePush] = useState<() => void>(() => () => undefined);
+  const [pausePush, setPausePush] = useState<() => void>(() => () => undefined);
   const onUnreadChange = useCallback((count: number) => setUnreadTasks((current) => current + count), []);
-  const onPushStatusChange = useCallback((status: PushStatus, activate: () => void) => {
+  const onPushStatusChange = useCallback((status: PushStatus, activate: () => void, pause: () => void) => {
     setPushStatus(status);
     setActivatePush(() => activate);
+    setPausePush(() => pause);
   }, []);
+  const notificationLabel = member.role === 'admin'
+    ? 'Notificações'
+    : pushStatus === 'registered'
+      ? 'Pausar notificações neste aparelho'
+      : pushStatus === 'paused'
+        ? 'Reativar notificações neste aparelho'
+        : pushStatus === 'blocked'
+          ? 'Notificações bloqueadas'
+          : 'Ativar notificações';
   const userName = member.name;
   const segment = location.split('/')[1];
   const pageName = location === '/' ? 'Visão geral' : segment === 'tasks' ? 'Tarefas' : segment === 'stores' ? 'Lojas' : segment === 'cadastros' ? 'Cadastros' : segment === 'account' ? 'Minha conta' : 'Relatórios';
@@ -47,7 +58,7 @@ export function AppShell({ children, member }: { children: ReactNode; member: Cu
        <div className="sidebar-footer"><Link href="/account" className="user-row user-row-link" data-testid="link-sidebar-account"><span className="avatar">{initials(userName)}</span><span><span className="user-name">{userName}</span><span className="user-role">{roleLabel(member.role)}</span></span></Link></div>
     </aside>
     <main className="main-area">
-       <header className="topbar"><div className="breadcrumb">Minas Mais <span>/</span> <strong>{pageName}</strong></div><div className="top-actions"><button className={`icon-button notification-button ${member.role !== 'admin' ? `push-${pushStatus}` : ''}`} aria-label={member.role !== 'admin' ? pushStatus === 'registered' ? 'Notificações ativadas' : pushStatus === 'blocked' ? 'Notificações bloqueadas' : 'Ativar notificações' : 'Notificações'} title={member.role !== 'admin' ? pushStatus === 'registered' ? 'Notificações ativadas neste aparelho' : pushStatus === 'blocked' ? 'Permita notificações nas configurações do navegador' : 'Toque para ativar notificações' : 'Notificações'} onClick={() => { setUnreadTasks(0); if (member.role !== 'admin' && pushStatus !== 'registered') activatePush(); }} data-testid="button-notifications"><Bell size={16} />{unreadTasks > 0 && <span className="notification-badge">{unreadTasks > 9 ? '9+' : unreadTasks}</span>}{member.role !== 'admin' && <span className="push-status-dot" aria-hidden="true" />}</button><button className="icon-button" aria-label="Sair" data-testid="button-logout" onClick={() => signOut({ redirectUrl: basePath || '/' })}><LogOut size={16} /></button></div></header>
+        <header className="topbar"><div className="breadcrumb">Minas Mais <span>/</span> <strong>{pageName}</strong></div><div className="top-actions"><button className={`icon-button notification-button ${member.role !== 'admin' ? `push-${pushStatus}` : ''}`} aria-label={notificationLabel} title={notificationLabel} onClick={() => { setUnreadTasks(0); if (member.role !== 'admin') pushStatus === 'registered' ? pausePush() : activatePush(); }} data-testid="button-notifications"><Bell size={16} />{unreadTasks > 0 && <span className="notification-badge">{unreadTasks > 9 ? '9+' : unreadTasks}</span>}{member.role !== 'admin' && <span className="push-status-dot" aria-hidden="true" />}</button><button className="icon-button" aria-label="Sair" data-testid="button-logout" onClick={() => signOut({ redirectUrl: basePath || '/' })}><LogOut size={16} /></button></div></header>
       {children}
     </main>
     {member.role !== 'admin' && <TaskAlert member={member} onUnreadChange={onUnreadChange} onPushStatusChange={onPushStatusChange} />}

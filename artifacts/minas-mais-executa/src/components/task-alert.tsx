@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getGetPushPublicKeyQueryKey, getListTaskNotificationsQueryKey, getPushPublicKey, savePushSubscription, useGetPushPublicKey, useListTaskNotifications } from '@workspace/api-client-react';
+import { getGetPushPublicKeyQueryKey, getListTaskNotificationsQueryKey, getPushPublicKey, savePushSubscription, useDeletePushSubscription, useGetPushPublicKey, useListTaskNotifications } from '@workspace/api-client-react';
 import type { CurrentMember } from '@workspace/api-client-react';
 
-export type PushStatus = 'checking' | 'registered' | 'permission-required' | 'blocked' | 'unsupported' | 'error';
+export type PushStatus = 'checking' | 'registered' | 'paused' | 'permission-required' | 'blocked' | 'unsupported' | 'error';
 const pushEnabled = import.meta.env.PROD || (typeof window !== 'undefined' && window.isSecureContext);
 
-export function TaskAlert({ member, onUnreadChange, onPushStatusChange }: { member: CurrentMember; onUnreadChange: (count: number) => void; onPushStatusChange: (status: PushStatus, activate: () => void) => void }) {
+export function TaskAlert({ member, onUnreadChange, onPushStatusChange }: { member: CurrentMember; onUnreadChange: (count: number) => void; onPushStatusChange: (status: PushStatus, activate: () => void, pause: () => void) => void }) {
   const tasksQuery = useListTaskNotifications({
     query: { queryKey: getListTaskNotificationsQueryKey(), refetchInterval: 30000 },
   });
@@ -15,6 +15,8 @@ export function TaskAlert({ member, onUnreadChange, onPushStatusChange }: { memb
   const [pushStatus, setPushStatus] = useState<PushStatus>('checking');
   const [pushError, setPushError] = useState('');
   const [activatingPush, setActivatingPush] = useState(false);
+  const { mutateAsync: removePushSubscription } = useDeletePushSubscription();
+  const preferenceKey = `minas-mais-push-paused-${member.id}`;
 
   useEffect(() => {
     if (!pushEnabled) {
@@ -37,6 +39,12 @@ export function TaskAlert({ member, onUnreadChange, onPushStatusChange }: { memb
       };
     }
     if (!publicKeyQuery.data?.publicKey) return;
+    if (window.localStorage.getItem(preferenceKey) === 'true') {
+      setPushStatus('paused');
+      return () => {
+        cancelled = true;
+      };
+    }
     if (Notification.permission === 'denied') {
       setPushStatus('blocked');
       return () => {
@@ -63,7 +71,7 @@ export function TaskAlert({ member, onUnreadChange, onPushStatusChange }: { memb
     return () => {
       cancelled = true;
     };
-  }, [publicKeyQuery.data?.publicKey, publicKeyQuery.isError]);
+  }, [preferenceKey, publicKeyQuery.data?.publicKey, publicKeyQuery.isError]);
 
   const enablePush = useCallback(async () => {
     if (!publicKeyQuery.data?.publicKey || activatingPush) return;
@@ -81,6 +89,7 @@ export function TaskAlert({ member, onUnreadChange, onPushStatusChange }: { memb
         return;
       }
       await registerPushSubscription(publicKeyQuery.data.publicKey);
+      window.localStorage.removeItem(preferenceKey);
       setPushStatus('registered');
     } catch (error) {
       console.error('Não foi possível ativar as notificações push.', error);
@@ -89,11 +98,29 @@ export function TaskAlert({ member, onUnreadChange, onPushStatusChange }: { memb
     } finally {
       setActivatingPush(false);
     }
-  }, [activatingPush, publicKeyQuery.data?.publicKey]);
+  }, [activatingPush, preferenceKey, publicKeyQuery.data?.publicKey]);
+
+  const pausePush = useCallback(async () => {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        const endpoint = subscription.endpoint;
+        await removePushSubscription({ data: { endpoint } });
+        await subscription.unsubscribe();
+      }
+      window.localStorage.setItem(preferenceKey, 'true');
+      setPushStatus('paused');
+    } catch (error) {
+      console.error('Não foi possível pausar as notificações push.', error);
+      setPushError('Não foi possível pausar as notificações neste aparelho. Tente novamente.');
+      setPushStatus('error');
+    }
+  }, [preferenceKey, removePushSubscription]);
 
   useEffect(() => {
-    onPushStatusChange(pushStatus, () => { void enablePush(); });
-  }, [enablePush, onPushStatusChange, pushStatus]);
+    onPushStatusChange(pushStatus, () => { void enablePush(); }, () => { void pausePush(); });
+  }, [enablePush, onPushStatusChange, pausePush, pushStatus]);
 
   useEffect(() => {
     if (!tasksQuery.data) return;
@@ -140,11 +167,11 @@ export function TaskAlert({ member, onUnreadChange, onPushStatusChange }: { memb
   return (
     <div className="push-notification-notice" role="status">
       <div>
-        <strong>Ative as notificações</strong>
-        <p>{pushError || 'Receba um aviso neste aparelho quando uma nova tarefa for atribuída a você.'}</p>
+        <strong>{pushStatus === 'paused' ? 'Notificações pausadas neste aparelho' : 'Ative as notificações'}</strong>
+        <p>{pushError || (pushStatus === 'paused' ? 'Você pode reativar os avisos quando quiser.' : 'Receba um aviso neste aparelho quando uma nova tarefa for atribuída a você.')}</p>
       </div>
       <button className="button button-primary" type="button" onClick={() => void enablePush()} disabled={activatingPush || !publicKeyQuery.data?.publicKey}>
-        {activatingPush ? 'Ativando...' : pushStatus === 'error' ? 'Tentar novamente' : 'Ativar'}
+        {activatingPush ? 'Ativando...' : pushStatus === 'paused' ? 'Reativar' : pushStatus === 'error' ? 'Tentar novamente' : 'Ativar'}
       </button>
     </div>
   );

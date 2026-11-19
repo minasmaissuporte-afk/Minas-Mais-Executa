@@ -104,6 +104,19 @@ paths:
       responses:
         "204":
           description: Subscription saved
+    delete:
+      operationId: deletePushSubscription
+      tags: [notifications]
+      summary: Remove the authenticated user's Web Push subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushSubscriptionDeleteInput"
+      responses:
+        "204":
+          description: Subscription removed
   /tasks:
     get:
       operationId: listTasks
@@ -1256,6 +1269,13 @@ components:
               type: string
             auth:
               type: string
+    PushSubscriptionDeleteInput:
+      type: object
+      required: [endpoint]
+      properties:
+        endpoint:
+          type: string
+          format: uri
     DashboardSummary:
       type: object
       required: [role, storeName, tasksToday, completed, pending, overdue, execution, storesCount, campaignsActive, actionPlans, storeFulfillment]

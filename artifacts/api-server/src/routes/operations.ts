@@ -12,6 +12,7 @@ import {
   CreateBulkTasksBody,
   CreateRecurringTasksBody,
   CreateTaskBody,
+  DeletePushSubscriptionBody,
   GetTaskParams,
   CreateStoreBody,
   UpdateStoreBody,
@@ -568,6 +569,21 @@ router.post("/notifications/subscription", async (req, res) => {
         updatedAt,
       },
     });
+  res.status(204).send();
+});
+
+router.delete("/notifications/subscription", async (req, res): Promise<void> => {
+  const parsed = DeletePushSubscriptionBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Subscription de push inválida." });
+    return;
+  }
+  await db
+    .delete(pushSubscriptionsTable)
+    .where(and(
+      eq(pushSubscriptionsTable.memberId, actor(req).id),
+      eq(pushSubscriptionsTable.endpoint, parsed.data.endpoint),
+    ));
   res.status(204).send();
 });
 

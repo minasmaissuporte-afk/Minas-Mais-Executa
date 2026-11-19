@@ -87,6 +87,16 @@ export const SavePushSubscriptionResponse = zod.void()
 
 
 /**
+ * @summary Remove the authenticated user's Web Push subscription
+ */
+export const DeletePushSubscriptionBody = zod.object({
+  "endpoint": zod.string().url()
+})
+
+export const DeletePushSubscriptionResponse = zod.void()
+
+
+/**
  * @summary List operational tasks
  */
 export const ListTasksQueryParams = zod.object({
@@ -238,7 +248,7 @@ export const CreateTaskResponse = zod.object({
 
 
 /**
- * @summary Permanently delete the visible operational tasks
+ * @summary Permanently delete tasks created by the authenticated user
  */
 
 

@@ -29,6 +29,7 @@ export * from './listTasksParams';
 export * from './listTaskSummariesParams';
 export * from './listTeamMembersParams';
 export * from './listTeamMembersRole';
+export * from './pushSubscriptionDeleteInput';
 export * from './pushSubscriptionInput';
 export * from './pushSubscriptionInputKeys';
 export * from './rankingEntry';

@@ -33,6 +33,7 @@ import type {
   ListTaskSummariesParams,
   ListTasksParams,
   ListTeamMembersParams,
+  PushSubscriptionDeleteInput,
   PushSubscriptionInput,
   RankingEntry,
   RecurringTaskInput,
@@ -538,6 +539,77 @@ export const useSavePushSubscription = <TError = ErrorType<unknown>,
       return useMutation(getSavePushSubscriptionMutationOptions(options));
     }
 
+export const getDeletePushSubscriptionUrl = () => {
+
+
+
+
+  return `/api/notifications/subscription`
+}
+
+/**
+ * @summary Remove the authenticated user's Web Push subscription
+ */
+export const deletePushSubscription = async (pushSubscriptionDeleteInput: PushSubscriptionDeleteInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeletePushSubscriptionUrl(),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pushSubscriptionDeleteInput)
+  }
+);}
+
+
+
+
+
+export const getDeletePushSubscriptionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePushSubscription>>, TError,{data: BodyType<PushSubscriptionDeleteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deletePushSubscription>>, TError,{data: BodyType<PushSubscriptionDeleteInput>}, TContext> => {
+
+const mutationKey = ['deletePushSubscription'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePushSubscription>>, {data: BodyType<PushSubscriptionDeleteInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  deletePushSubscription(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeletePushSubscriptionMutationResult = NonNullable<Awaited<ReturnType<typeof deletePushSubscription>>>
+    export type DeletePushSubscriptionMutationBody = BodyType<PushSubscriptionDeleteInput>
+    export type DeletePushSubscriptionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Remove the authenticated user's Web Push subscription
+ */
+export const useDeletePushSubscription = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePushSubscription>>, TError,{data: BodyType<PushSubscriptionDeleteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deletePushSubscription>>,
+        TError,
+        {data: BodyType<PushSubscriptionDeleteInput>},
+        TContext
+      > => {
+      return useMutation(getDeletePushSubscriptionMutationOptions(options));
+    }
+
 export const getListTasksUrl = (params?: ListTasksParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -702,7 +774,7 @@ export const getDeleteAllTasksUrl = () => {
 }
 
 /**
- * @summary Permanently delete the visible operational tasks
+ * @summary Permanently delete tasks created by the authenticated user
  */
 export const deleteAllTasks = async (bulkDeleteTasksInput: BulkDeleteTasksInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
 
@@ -751,7 +823,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type DeleteAllTasksMutationError = ErrorType<void>
 
     /**
- * @summary Permanently delete the visible operational tasks
+ * @summary Permanently delete tasks created by the authenticated user
  */
 export const useDeleteAllTasks = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAllTasks>>, TError,{data: BodyType<BulkDeleteTasksInput>}, TContext>, request?: SecondParameter<typeof customFetch>}

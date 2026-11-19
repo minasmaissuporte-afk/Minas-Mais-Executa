@@ -609,6 +609,10 @@ export interface PushSubscriptionInput {
   keys: PushSubscriptionInputKeys;
 }
 
+export interface PushSubscriptionDeleteInput {
+  endpoint: string;
+}
+
 export type DashboardSummaryRole = typeof DashboardSummaryRole[keyof typeof DashboardSummaryRole];
 
 
