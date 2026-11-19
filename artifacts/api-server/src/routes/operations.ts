@@ -1505,8 +1505,13 @@ router.get("/tasks/:id/evidence/archive", async (req, res): Promise<void> => {
   for (const { photo, file } of archiveEntries) {
     const related = taskById.get(photo.taskId);
     if (!related || !photo.objectPath) continue;
+    const safePhotoName = safeName(photo.fileName);
+    const extensionIndex = safePhotoName.lastIndexOf(".");
+    const hasExtension = extensionIndex > 0;
+    const photoBaseName = hasExtension ? safePhotoName.slice(0, extensionIndex) : safePhotoName;
+    const photoExtension = hasExtension ? safePhotoName.slice(extensionIndex) : "";
     archive.append(file.createReadStream(), {
-      name: `${safeName(related.storeName)}/${safeName(photo.fileName)}-${photo.id.slice(-10)}`,
+      name: `${safeName(related.storeName)}-${photoBaseName}-${photo.id.slice(-10)}${photoExtension}`,
     });
   }
   await archive.finalize();

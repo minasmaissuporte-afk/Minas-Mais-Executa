@@ -1,5 +1,6 @@
-import { ArrowDownRight, ArrowUpRight, Camera, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, FileVideo, Search, Store, Trash2 } from 'lucide-react';
-import type { ComponentType, ReactNode } from 'react';
+import { ArrowDownRight, ArrowUpRight, Camera, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, Download, FileVideo, Search, Share2, Store, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import type { ComponentType, MouseEvent, ReactNode } from 'react';
 import type { Activity, Task, TaskSummary } from '@workspace/api-client-react';
 import { Link } from 'wouter';
 
@@ -45,6 +46,68 @@ export function formatDurationMinutes(minutes: number) {
   return `${remainingMinutes}min`;
 }
 type TaskListItem = Task | TaskSummary;
+export function TaskEvidenceExportButton({ taskId, taskTitle }: { taskId: string; taskTitle: string }) {
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
+
+  const exportPhotos = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (busy) return;
+    setBusy(true);
+    setNotice('');
+    try {
+      const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/evidence/archive`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(error?.error ?? 'Não foi possível reunir as fotos desta tarefa.');
+      }
+      const blob = await response.blob();
+      const archiveName = `${taskTitle.replace(/[^a-zA-Z0-9_-]+/g, '_')}-fotos-por-filial.zip`;
+      const archiveUrl = URL.createObjectURL(blob);
+      const archiveFile = new File([blob], archiveName, { type: 'application/zip' });
+      const canShareArchive = typeof navigator.share === 'function'
+        && typeof navigator.canShare === 'function'
+        && navigator.canShare({ files: [archiveFile] });
+      if (canShareArchive) {
+        try {
+          await navigator.share({
+            title: `Fotos por filial: ${taskTitle}`,
+            text: 'Fotos de comprovação organizadas pelo nome de cada filial.',
+            files: [archiveFile],
+          });
+          setNotice('Arquivo pronto para compartilhar.');
+        } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') return;
+          throw error;
+        } finally {
+          URL.revokeObjectURL(archiveUrl);
+        }
+        return;
+      }
+      const anchor = document.createElement('a');
+      anchor.href = archiveUrl;
+      anchor.download = archiveName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(archiveUrl);
+      setNotice('Arquivo baixado.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Não foi possível reunir as fotos desta tarefa.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return <span className="task-export-control">
+    <button type="button" className="button button-ghost task-export-button" onClick={exportPhotos} disabled={busy} aria-label={`Extrair fotos por filial da tarefa ${taskTitle}`} data-testid={`button-export-task-photos-${taskId}`}>
+      {busy ? <Download size={14} /> : <Share2 size={14} />}
+      {busy ? 'Preparando...' : 'Extrair fotos por filial'}
+    </button>
+    {notice && <span className="task-export-notice" role="status">{notice}</span>}
+  </span>;
+}
 export function initials(name: string) {
   return name.split(' ').slice(0, 2).map((part) => part[0]).join('').toUpperCase();
 }
@@ -73,7 +136,7 @@ export function StatusPill({ status }: { status: string }) {
 export function PriorityPill({ priority }: { priority: string }) {
   return <span className={`priority priority-${priority}`} data-testid={`priority-pill-${priority}`}>{priorityLabel(priority)}</span>;
 }
-export function TaskRow({ task, onDelete, selected = false, onToggleSelect, onOpenTask, showStatus = false }: { task: TaskListItem; onDelete?: (task: TaskListItem) => void; selected?: boolean; onToggleSelect?: (taskId: string) => void; onOpenTask?: () => void; showStatus?: boolean }) {
+export function TaskRow({ task, onDelete, selected = false, onToggleSelect, onOpenTask, showStatus = false, canExportEvidence = false }: { task: TaskListItem; onDelete?: (task: TaskListItem) => void; selected?: boolean; onToggleSelect?: (taskId: string) => void; onOpenTask?: () => void; showStatus?: boolean; canExportEvidence?: boolean }) {
   const detailHref = task.batchGroupId ? `/tasks/${task.id}?returnTo=stores` : `/tasks/${task.id}`;
   return <div className={`task-row task-row-result result-${task.status === 'completed' ? 'completed' : 'open'} task-status-${task.status}`} data-testid={`row-task-${task.id}`}>
     {onToggleSelect && <input type="checkbox" className="task-select-checkbox" checked={selected} onChange={() => onToggleSelect(task.id)} onClick={(event) => event.stopPropagation()} aria-label={`Selecionar ${task.title} da ${task.storeName}`} data-testid={`checkbox-select-task-${task.id}`} />}
@@ -91,7 +154,7 @@ export function TaskRow({ task, onDelete, selected = false, onToggleSelect, onOp
         : task.status === 'rejected'
           ? <span className="status-chip status-rejected task-row-status-chip">Reprovada</span>
           : null}
-    <PriorityPill priority={task.priority} /><span className="task-time">{task.dueTime}</span>{onDelete && <button className="icon-button task-delete-button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onDelete(task); }} aria-label={`Excluir ${task.title}`} data-testid={`button-delete-task-${task.id}`}><Trash2 size={14} /></button>}<ChevronRight size={15} color="hsl(var(--muted-foreground))" />
+    <PriorityPill priority={task.priority} /><span className="task-time">{task.dueTime}</span>{canExportEvidence && <TaskEvidenceExportButton taskId={task.id} taskTitle={task.title} />}{onDelete && <button className="icon-button task-delete-button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onDelete(task); }} aria-label={`Excluir ${task.title}`} data-testid={`button-delete-task-${task.id}`}><Trash2 size={14} /></button>}<ChevronRight size={15} color="hsl(var(--muted-foreground))" />
   </div>;
 }
 export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string>(), onToggleSelect, onToggleGroupSelect, canManageTask, expanded = false, onExpandedChange, onOpenTask, showProgress = false, showTaskStatus = false, executionQueue = false, groupId }: { tasks: TaskListItem[]; onDelete?: (task: TaskListItem) => void; selectedTaskIds?: Set<string>; onToggleSelect?: (taskId: string) => void; onToggleGroupSelect?: (taskIds: string[]) => void; canManageTask?: (task: TaskListItem) => boolean; expanded?: boolean; onExpandedChange?: (expanded: boolean) => void; onOpenTask?: () => void; showProgress?: boolean; showTaskStatus?: boolean; executionQueue?: boolean; groupId?: string }) {
@@ -133,7 +196,7 @@ export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string
       </span>
         {showProgress ? <StatusPill status={groupStatus} /> : groupStatus === 'pending_review' ? <span className="status-chip status-pending_review task-row-status-chip">Conferência</span> : groupStatus === 'rejected' ? <span className="status-chip status-rejected task-row-status-chip">Reprovada</span> : null}<PriorityPill priority={first.priority} /><span className="task-time">{first.dueTime}</span><ChevronDown className="task-group-chevron" size={15} />
     </summary>
-        <div className="task-group-items">{tasks.map((task) => <TaskRow key={task.id} task={task} onDelete={canManageTask?.(task) ?? true ? onDelete : undefined} selected={selectedTaskIds.has(task.id)} onToggleSelect={canManageTask?.(task) ?? true ? onToggleSelect : undefined} onOpenTask={onOpenTask} showStatus={showTaskStatus} />)}</div>
+        <div className="task-group-items">{tasks.map((task) => <TaskRow key={task.id} task={task} onDelete={canManageTask?.(task) ?? true ? onDelete : undefined} selected={selectedTaskIds.has(task.id)} onToggleSelect={canManageTask?.(task) ?? true ? onToggleSelect : undefined} onOpenTask={onOpenTask} showStatus={showTaskStatus} canExportEvidence={canManageTask?.(task) ?? false} />)}</div>
   </details>;
 }
 export function ActivityItem({ activity }: { activity: Activity }) {
