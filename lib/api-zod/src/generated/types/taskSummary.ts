@@ -30,4 +30,6 @@ export interface TaskSummary {
   status: TaskSummaryStatus;
   createdByRole: TaskSummaryCreatedByRole;
   createdByName: string;
+  /** @nullable */
+  createdByMemberId: string | null;
 }

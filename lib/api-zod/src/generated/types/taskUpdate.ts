@@ -5,6 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { TaskModelAttachment } from './taskModelAttachment';
+import type { TaskUpdateEvidenceTypesItem } from './taskUpdateEvidenceTypesItem';
 import type { TaskUpdatePriority } from './taskUpdatePriority';
 import type { TaskUpdateStatus } from './taskUpdateStatus';
 
@@ -12,4 +14,17 @@ export interface TaskUpdate {
   status?: TaskUpdateStatus;
   priority?: TaskUpdatePriority;
   notes?: string;
+  /** @minLength 1 */
+  title?: string;
+  description?: string;
+  category?: string;
+  dueDate?: Date;
+  dueTime?: string;
+  evidenceRequired?: boolean;
+  evidenceTypes?: TaskUpdateEvidenceTypesItem[];
+  /** @nullable */
+  modelObjectPath?: string | null;
+  /** @maxItems 20 */
+  modelAttachments?: TaskModelAttachment[];
+  instructions?: string;
 }

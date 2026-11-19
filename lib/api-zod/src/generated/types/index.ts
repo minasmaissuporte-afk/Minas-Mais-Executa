@@ -65,6 +65,7 @@ export * from './taskSummaryCreatedByRole';
 export * from './taskSummaryPriority';
 export * from './taskSummaryStatus';
 export * from './taskUpdate';
+export * from './taskUpdateEvidenceTypesItem';
 export * from './taskUpdatePriority';
 export * from './taskUpdateStatus';
 export * from './teamMember';

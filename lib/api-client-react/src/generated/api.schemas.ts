@@ -289,6 +289,8 @@ export interface Task {
   comments: TaskComment[];
   createdByRole: TaskCreatedByRole;
   createdByName?: string;
+  /** @nullable */
+  createdByMemberId: string | null;
   instructions: string;
   /** @nullable */
   completedAt?: string | null;
@@ -354,6 +356,8 @@ export interface TaskSummary {
   status: TaskSummaryStatus;
   createdByRole: TaskSummaryCreatedByRole;
   createdByName: string;
+  /** @nullable */
+  createdByMemberId: string | null;
 }
 
 export interface TaskNotification {
@@ -551,10 +555,31 @@ export const TaskUpdatePriority = {
   high: 'high',
 } as const;
 
+export type TaskUpdateEvidenceTypesItem = typeof TaskUpdateEvidenceTypesItem[keyof typeof TaskUpdateEvidenceTypesItem];
+
+
+export const TaskUpdateEvidenceTypesItem = {
+  photo: 'photo',
+  video: 'video',
+} as const;
+
 export interface TaskUpdate {
   status?: TaskUpdateStatus;
   priority?: TaskUpdatePriority;
   notes?: string;
+  /** @minLength 1 */
+  title?: string;
+  description?: string;
+  category?: string;
+  dueDate?: string;
+  dueTime?: string;
+  evidenceRequired?: boolean;
+  evidenceTypes?: TaskUpdateEvidenceTypesItem[];
+  /** @nullable */
+  modelObjectPath?: string | null;
+  /** @maxItems 20 */
+  modelAttachments?: TaskModelAttachment[];
+  instructions?: string;
 }
 
 export type ActivityTone = typeof ActivityTone[keyof typeof ActivityTone];

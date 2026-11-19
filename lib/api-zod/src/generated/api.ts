@@ -144,6 +144,7 @@ export const ListTasksResponseItem = zod.object({
 })),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
   "createdByName": zod.string().optional(),
+  "createdByMemberId": zod.string().nullable(),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -229,6 +230,7 @@ export const CreateTaskResponse = zod.object({
 })),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
   "createdByName": zod.string().optional(),
+  "createdByMemberId": zod.string().nullable(),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -276,7 +278,8 @@ export const ListTaskSummariesResponseItem = zod.object({
   "createdAt": zod.coerce.date(),
   "status": zod.enum(['pending', 'in_progress', 'pending_review', 'rejected', 'completed', 'overdue']),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
-  "createdByName": zod.string()
+  "createdByName": zod.string(),
+  "createdByMemberId": zod.string().nullable()
 })
 export const ListTaskSummariesResponse = zod.array(ListTaskSummariesResponseItem)
 
@@ -347,6 +350,7 @@ export const GetTaskResponse = zod.object({
 })),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
   "createdByName": zod.string().optional(),
+  "createdByMemberId": zod.string().nullable(),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -360,10 +364,29 @@ export const UpdateTaskParams = zod.object({
   "id": zod.coerce.string()
 })
 
+
+export const updateTaskBodyModelAttachmentsMax = 20;
+
+
+
 export const UpdateTaskBody = zod.object({
   "status": zod.enum(['pending', 'in_progress', 'pending_review', 'rejected', 'completed', 'overdue']).optional(),
   "priority": zod.enum(['low', 'medium', 'high']).optional(),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "title": zod.string().min(1).optional(),
+  "description": zod.string().optional(),
+  "category": zod.string().optional(),
+  "dueDate": zod.coerce.date().optional(),
+  "dueTime": zod.string().optional(),
+  "evidenceRequired": zod.boolean().optional(),
+  "evidenceTypes": zod.array(zod.enum(['photo', 'video'])).optional(),
+  "modelObjectPath": zod.string().nullish(),
+  "modelAttachments": zod.array(zod.object({
+  "objectPath": zod.string(),
+  "fileName": zod.string(),
+  "type": zod.enum(['photo', 'video'])
+})).max(updateTaskBodyModelAttachmentsMax).optional(),
+  "instructions": zod.string().optional()
 })
 
 export const UpdateTaskResponse = zod.object({
@@ -413,6 +436,7 @@ export const UpdateTaskResponse = zod.object({
 })),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
   "createdByName": zod.string().optional(),
+  "createdByMemberId": zod.string().nullable(),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -427,6 +451,16 @@ export const DeleteTaskParams = zod.object({
 })
 
 export const DeleteTaskResponse = zod.void()
+
+
+/**
+ * @summary Download photo evidence for the task and its store copies
+ */
+export const DownloadTaskEvidenceArchiveParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DownloadTaskEvidenceArchiveResponse = zod.unknown()
 
 
 /**
@@ -526,6 +560,7 @@ export const CompleteTaskResponse = zod.object({
 })),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
   "createdByName": zod.string().optional(),
+  "createdByMemberId": zod.string().nullable(),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -591,6 +626,7 @@ export const ReviewTaskResponse = zod.object({
 })),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
   "createdByName": zod.string().optional(),
+  "createdByMemberId": zod.string().nullable(),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -700,6 +736,7 @@ export const CreateBulkTasksResponseItem = zod.object({
 })),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
   "createdByName": zod.string().optional(),
+  "createdByMemberId": zod.string().nullable(),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()
@@ -794,6 +831,7 @@ export const CreateRecurringTasksResponseItem = zod.object({
 })),
   "createdByRole": zod.enum(['manager', 'supervisor', 'admin']),
   "createdByName": zod.string().optional(),
+  "createdByMemberId": zod.string().nullable(),
   "instructions": zod.string(),
   "completedAt": zod.string().nullish(),
   "completedBy": zod.string().nullish()

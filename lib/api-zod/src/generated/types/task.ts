@@ -42,6 +42,8 @@ export interface Task {
   comments: TaskComment[];
   createdByRole: TaskCreatedByRole;
   createdByName?: string;
+  /** @nullable */
+  createdByMemberId: string | null;
   instructions: string;
   /** @nullable */
   completedAt?: string | null;

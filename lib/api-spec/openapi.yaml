@@ -163,7 +163,7 @@ paths:
     delete:
       operationId: deleteAllTasks
       tags: [tasks]
-      summary: Permanently delete the visible operational tasks
+      summary: Permanently delete tasks created by the authenticated user
       requestBody:
         required: true
         content:
@@ -174,7 +174,7 @@ paths:
         "204":
           description: Selected tasks and their evidence permanently deleted
         "403":
-          description: Only the general administrator can delete tasks
+          description: The user can delete only tasks they created
   /tasks/summary:
     get:
       operationId: listTaskSummaries
@@ -273,7 +273,26 @@ paths:
         "204":
           description: Task and its evidence permanently deleted
         "403":
-          description: Only the general administrator can delete tasks
+          description: The user can delete only a task they created
+  /tasks/{id}/evidence/archive:
+    get:
+      operationId: downloadTaskEvidenceArchive
+      tags: [tasks]
+      summary: Download photo evidence for the task and its store copies
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: ZIP archive containing evidence photos named by store
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "403":
+          description: Only the task creator can download this archive
+        "404":
+          description: Task or photos not found
   /tasks/{id}/evidence:
     post:
       operationId: addTaskEvidence
@@ -857,7 +876,7 @@ components:
           type: string
     Task:
       type: object
-      required: [id, title, description, storeId, storeName, assignee, category, priority, dueDate, dueTime, createdAt, status, evidenceRequired, evidence, comments, instructions, createdByRole]
+      required: [id, title, description, storeId, storeName, assignee, category, priority, dueDate, dueTime, createdAt, status, evidenceRequired, evidence, comments, instructions, createdByRole, createdByMemberId]
       properties:
         id:
           type: string
@@ -924,6 +943,8 @@ components:
           enum: [manager, supervisor, admin]
         createdByName:
           type: string
+        createdByMemberId:
+          type: ["string", "null"]
         instructions:
           type: string
         completedAt:
@@ -932,7 +953,7 @@ components:
           type: ["string", "null"]
     TaskSummary:
       type: object
-      required: [id, title, storeId, storeName, assignee, assigneeMemberIds, assigneeRole, category, priority, dueDate, dueTime, createdAt, status, batchGroupId, createdByRole, createdByName]
+      required: [id, title, storeId, storeName, assignee, assigneeMemberIds, assigneeRole, category, priority, dueDate, dueTime, createdAt, status, batchGroupId, createdByRole, createdByName, createdByMemberId]
       properties:
         id:
           type: string
@@ -976,6 +997,8 @@ components:
           enum: [manager, supervisor, admin]
         createdByName:
           type: string
+        createdByMemberId:
+          type: ["string", "null"]
     TaskNotification:
       type: object
       required: [id, createdAt, assigneeMemberIds]
@@ -1173,6 +1196,34 @@ components:
           type: string
           enum: [low, medium, high]
         notes:
+          type: string
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        category:
+          type: string
+        dueDate:
+          type: string
+          format: date
+        dueTime:
+          type: string
+        evidenceRequired:
+          type: boolean
+        evidenceTypes:
+          type: array
+          items:
+            type: string
+            enum: [photo, video]
+        modelObjectPath:
+          type: ["string", "null"]
+        modelAttachments:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/TaskModelAttachment"
+        instructions:
           type: string
     Activity:
       type: object

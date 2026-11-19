@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { ZipArchive } from "archiver";
 import { and, desc, eq, gte, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import {
   AddTaskEvidenceBody,
@@ -642,6 +643,7 @@ async function getTaskWithEvidence(id: string) {
     })),
     createdByRole: origin?.createdByRole ?? "admin",
     createdByName: creator?.name ?? "Administração",
+    createdByMemberId: origin?.createdByMemberId ?? null,
     completedAt: task.completedAt?.toISOString() ?? null,
     completedBy: task.completedBy ?? null,
   };
@@ -814,6 +816,7 @@ router.get("/tasks/summary", async (req, res) => {
       status: tasksTable.status,
       createdByRole: taskOriginsTable.createdByRole,
       createdByName: teamMembersTable.name,
+      createdByMemberId: taskOriginsTable.createdByMemberId,
     })
     .from(tasksTable)
     .leftJoin(taskOriginsTable, eq(taskOriginsTable.taskId, tasksTable.id))
@@ -825,6 +828,7 @@ router.get("/tasks/summary", async (req, res) => {
     assigneeMemberIds: row.assigneeMemberIds ?? [],
     createdByRole: row.createdByRole ?? "admin",
     createdByName: row.createdByName ?? "Administração",
+    createdByMemberId: row.createdByMemberId ?? null,
     createdAt: row.createdAt.toISOString(),
   })));
 });
@@ -1324,10 +1328,21 @@ router.patch("/tasks/:id", async (req, res) => {
     return;
   }
   const statusOnlyUpdate = Object.keys(body.data).length === 1 && "status" in body.data;
+  const contentUpdate = Object.keys(body.data).some((key) => key !== "status" && key !== "notes");
+  const origin = await getTaskOrigin(task.id);
+  const creatorContentUpdate = contentUpdate && origin?.createdByMemberId === actor(req).id;
+  if (contentUpdate && body.data.status) {
+    res.status(400).json({ error: "Salve as alterações da tarefa separadamente da mudança de status." });
+    return;
+  }
+  if (contentUpdate && origin?.createdByMemberId !== actor(req).id) {
+    res.status(403).json({ error: "Somente quem criou esta tarefa pode editar suas instruções e modelos." });
+    return;
+  }
   const supervisorCanManageStatus = actor(req).role === "supervisor" && statusOnlyUpdate && body.data.status === "pending"
     ? await canReviewTask(req, task)
     : false;
-  if (actor(req).role !== "admin" && !supervisorCanManageStatus && (!canExecuteTask(req, task) || !statusOnlyUpdate || !body.data.status || !["pending", "in_progress", "rejected"].includes(body.data.status))) {
+  if (actor(req).role !== "admin" && !creatorContentUpdate && !supervisorCanManageStatus && (!canExecuteTask(req, task) || !statusOnlyUpdate || !body.data.status || !["pending", "in_progress", "rejected"].includes(body.data.status))) {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
   }
@@ -1335,9 +1350,27 @@ router.patch("/tasks/:id", async (req, res) => {
     res.status(400).json({ error: "Esta tarefa já está pendente." });
     return;
   }
-  const updateData = body.data.status === "pending"
-    ? { ...body.data, completedAt: null, completedBy: null }
-    : body.data;
+  const modelAttachments = body.data.modelAttachments
+    ? modelAttachmentsForInput(body.data)
+    : undefined;
+  if (modelAttachments?.some((attachment) => !isNormalizedPrivateObjectPath(attachment.objectPath))) {
+    res.status(400).json({ error: "Caminho do modelo visual inválido." });
+    return;
+  }
+  const { dueDate, ...updateFields } = body.data;
+  const updateData = {
+    ...updateFields,
+    ...(dueDate ? {
+      dueDate: typeof dueDate === "string"
+        ? dueDate
+        : dueDate.toISOString().slice(0, 10),
+    } : {}),
+    ...(modelAttachments ? {
+      modelAttachments,
+      modelObjectPath: body.data.modelObjectPath ?? modelAttachments[0]?.objectPath ?? null,
+    } : {}),
+    ...(body.data.status === "pending" ? { completedAt: null, completedBy: null } : {}),
+  };
   await db
     .update(tasksTable)
     .set(updateData)
@@ -1352,18 +1385,19 @@ router.patch("/tasks/:id", async (req, res) => {
 
 router.delete("/tasks/:id", async (req, res) => {
   await seedPromise;
-  if (!requireAdmin(req, res)) return;
   const params = GetTaskParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: "Identificador inválido." });
     return;
   }
-  const [task] = await db
-    .select({ id: tasksTable.id, modelObjectPath: tasksTable.modelObjectPath })
-    .from(tasksTable)
-    .where(eq(tasksTable.id, params.data.id));
+  const task = await getTaskWithEvidence(params.data.id);
   if (!task) {
     res.status(404).json({ error: "Tarefa não encontrada." });
+    return;
+  }
+  const origin = await getTaskOrigin(params.data.id);
+  if (origin?.createdByMemberId !== actor(req).id) {
+    res.status(403).json({ error: "Somente quem criou esta tarefa pode excluí-la." });
     return;
   }
   await deleteTaskData([params.data.id]);
@@ -1372,14 +1406,94 @@ router.delete("/tasks/:id", async (req, res) => {
 
 router.delete("/tasks", async (req, res) => {
   await seedPromise;
-  if (!requireAdmin(req, res)) return;
   const body = DeleteAllTasksBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: "Selecione pelo menos uma tarefa para excluir." });
     return;
   }
+  const origins = await db
+    .select({ taskId: taskOriginsTable.taskId, createdByMemberId: taskOriginsTable.createdByMemberId })
+    .from(taskOriginsTable)
+    .where(inArray(taskOriginsTable.taskId, body.data.taskIds));
+  if (origins.length !== body.data.taskIds.length || origins.some((origin) => origin.createdByMemberId !== actor(req).id)) {
+    res.status(403).json({ error: "Só é possível excluir tarefas criadas por você." });
+    return;
+  }
   await deleteTaskData(body.data.taskIds);
   res.status(204).send();
+});
+
+router.get("/tasks/:id/evidence/archive", async (req, res): Promise<void> => {
+  await seedPromise;
+  const params = GetTaskParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "Identificador inválido." });
+    return;
+  }
+  const task = await getTaskWithEvidence(params.data.id);
+  const origin = task ? await getTaskOrigin(task.id) : null;
+  if (!task || !(await canAccessTask(req, task))) {
+    res.status(404).json({ error: "Tarefa não encontrada." });
+    return;
+  }
+  if (origin?.createdByMemberId !== actor(req).id) {
+    res.status(403).json({ error: "Somente quem criou esta tarefa pode reunir as evidências." });
+    return;
+  }
+  const relatedTasks = task.batchGroupId
+    ? await db.select().from(tasksTable).where(eq(tasksTable.batchGroupId, task.batchGroupId))
+    : [task];
+  const visibleTasks = [];
+  for (const related of relatedTasks) {
+    const relatedOrigin = await getTaskOrigin(related.id);
+    if (
+      relatedOrigin?.createdByMemberId === actor(req).id
+      && await canAccessTask(req, related)
+    ) visibleTasks.push(related);
+  }
+  const taskIds = visibleTasks.map((item) => item.id);
+  const photos = taskIds.length
+    ? await db.select({
+      id: evidencesTable.id,
+      taskId: evidencesTable.taskId,
+      fileName: evidencesTable.fileName,
+      objectPath: evidencesTable.objectPath,
+    }).from(evidencesTable).where(and(
+      inArray(evidencesTable.taskId, taskIds),
+      eq(evidencesTable.type, "photo"),
+    ))
+    : [];
+  const photoRows = photos.filter((photo) => photo.objectPath && isNormalizedPrivateObjectPath(photo.objectPath));
+  if (!photoRows.length) {
+    res.status(404).json({ error: "Ainda não há fotos anexadas às lojas desta tarefa." });
+    return;
+  }
+  const taskById = new Map(visibleTasks.map((item) => [item.id, item]));
+  const archiveEntries = await Promise.all(photoRows.map(async (photo) => ({
+    photo,
+    file: await objectStorageService.getObjectEntityFile(photo.objectPath!),
+  })));
+  const safeName = (value: string) => value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80) || "arquivo";
+  res.status(200);
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader("Content-Disposition", `attachment; filename="${safeName(task.title)}-evidencias.zip"`);
+  const archive = new ZipArchive({ zlib: { level: 5 } });
+  archive.on("warning", (error: Error) => req.log.warn({ err: error }, "Warning creating task evidence archive"));
+  archive.on("error", (error: Error) => {
+    req.log.error({ err: error }, "Failed creating task evidence archive");
+    if (!res.headersSent) res.status(500).json({ error: "Não foi possível criar o arquivo de evidências." });
+    else res.destroy(error);
+  });
+  archive.pipe(res);
+  for (const { photo, file } of archiveEntries) {
+    const related = taskById.get(photo.taskId);
+    if (!related || !photo.objectPath) continue;
+    archive.append(file.createReadStream(), {
+      name: `${safeName(related.storeName)}/${safeName(photo.fileName)}-${photo.id.slice(-10)}`,
+    });
+  }
+  await archive.finalize();
 });
 
 router.post("/tasks/:id/evidence", async (req, res) => {

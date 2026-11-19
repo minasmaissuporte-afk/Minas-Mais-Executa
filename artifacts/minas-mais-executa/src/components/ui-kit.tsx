@@ -94,7 +94,7 @@ export function TaskRow({ task, onDelete, selected = false, onToggleSelect, onOp
     <PriorityPill priority={task.priority} /><span className="task-time">{task.dueTime}</span>{onDelete && <button className="icon-button task-delete-button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onDelete(task); }} aria-label={`Excluir ${task.title}`} data-testid={`button-delete-task-${task.id}`}><Trash2 size={14} /></button>}<ChevronRight size={15} color="hsl(var(--muted-foreground))" />
   </div>;
 }
-export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string>(), onToggleSelect, onToggleGroupSelect, expanded = false, onExpandedChange, onOpenTask, showProgress = false, showTaskStatus = false, executionQueue = false, groupId }: { tasks: TaskListItem[]; onDelete?: (task: TaskListItem) => void; selectedTaskIds?: Set<string>; onToggleSelect?: (taskId: string) => void; onToggleGroupSelect?: (taskIds: string[]) => void; expanded?: boolean; onExpandedChange?: (expanded: boolean) => void; onOpenTask?: () => void; showProgress?: boolean; showTaskStatus?: boolean; executionQueue?: boolean; groupId?: string }) {
+export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string>(), onToggleSelect, onToggleGroupSelect, canManageTask, expanded = false, onExpandedChange, onOpenTask, showProgress = false, showTaskStatus = false, executionQueue = false, groupId }: { tasks: TaskListItem[]; onDelete?: (task: TaskListItem) => void; selectedTaskIds?: Set<string>; onToggleSelect?: (taskId: string) => void; onToggleGroupSelect?: (taskIds: string[]) => void; canManageTask?: (task: TaskListItem) => boolean; expanded?: boolean; onExpandedChange?: (expanded: boolean) => void; onOpenTask?: () => void; showProgress?: boolean; showTaskStatus?: boolean; executionQueue?: boolean; groupId?: string }) {
   const first = tasks[0];
   if (!first) return null;
   const storeTasks = new Map<string, TaskListItem[]>();
@@ -122,7 +122,7 @@ export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string
   const resultStatus = tasks.every((task) => task.status === 'completed') ? 'completed' : 'open';
   return <details className="task-group" open={expanded} onToggle={(event) => onExpandedChange?.(event.currentTarget.open)} data-testid={`group-task-${groupId ?? first.batchGroupId ?? first.id}`}>
      <summary className={`task-row task-row-result result-${resultStatus} task-group-summary task-status-${groupStatus}`}>
-       {onToggleGroupSelect && <input type="checkbox" className="task-select-checkbox" checked={tasks.length > 0 && tasks.every((task) => selectedTaskIds.has(task.id))} onChange={() => onToggleGroupSelect(tasks.map((task) => task.id))} onClick={(event) => event.stopPropagation()} aria-label={`Selecionar conjunto ${first.title}`} data-testid={`checkbox-select-task-group-${groupId ?? first.batchGroupId ?? first.id}`} />}
+       {onToggleGroupSelect && tasks.every((task) => canManageTask?.(task) ?? true) && <input type="checkbox" className="task-select-checkbox" checked={tasks.length > 0 && tasks.every((task) => selectedTaskIds.has(task.id))} onChange={() => onToggleGroupSelect(tasks.map((task) => task.id))} onClick={(event) => event.stopPropagation()} aria-label={`Selecionar conjunto ${first.title}`} data-testid={`checkbox-select-task-group-${groupId ?? first.batchGroupId ?? first.id}`} />}
        <span className={`task-status-dot dot-${groupStatus}`} aria-hidden="true" />
       <span className="task-main">
         <span className="task-title">{first.title}</span>
@@ -133,7 +133,7 @@ export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string
       </span>
         {showProgress ? <StatusPill status={groupStatus} /> : groupStatus === 'pending_review' ? <span className="status-chip status-pending_review task-row-status-chip">Conferência</span> : groupStatus === 'rejected' ? <span className="status-chip status-rejected task-row-status-chip">Reprovada</span> : null}<PriorityPill priority={first.priority} /><span className="task-time">{first.dueTime}</span><ChevronDown className="task-group-chevron" size={15} />
     </summary>
-       <div className="task-group-items">{tasks.map((task) => <TaskRow key={task.id} task={task} onDelete={onDelete} selected={selectedTaskIds.has(task.id)} onToggleSelect={onToggleSelect} onOpenTask={onOpenTask} showStatus={showTaskStatus} />)}</div>
+        <div className="task-group-items">{tasks.map((task) => <TaskRow key={task.id} task={task} onDelete={canManageTask?.(task) ?? true ? onDelete : undefined} selected={selectedTaskIds.has(task.id)} onToggleSelect={canManageTask?.(task) ?? true ? onToggleSelect : undefined} onOpenTask={onOpenTask} showStatus={showTaskStatus} />)}</div>
   </details>;
 }
 export function ActivityItem({ activity }: { activity: Activity }) {

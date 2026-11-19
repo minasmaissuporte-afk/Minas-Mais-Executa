@@ -1,12 +1,94 @@
-import { ArrowLeft, CheckCircle2, CircleAlert, Download, MessageSquare, Paperclip, Share2, Trash2, UploadCloud } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, CircleAlert, Download, MessageSquare, Paperclip, Pencil, Share2, Trash2, UploadCloud, X } from 'lucide-react';
 import type { ChangeEvent, TouchEvent as ReactTouchEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getGetTaskQueryKey, getListStoresQueryKey, getListTaskSummariesQueryKey, getListTasksQueryKey, useAddTaskComment, useAddTaskEvidence, useCompleteTask, useDeleteTask, useDeleteTaskEvidence, useGetMe, useGetTask, useListStores, useRequestUploadUrl, useReviewTask, useUpdateTask } from '@workspace/api-client-react';
-import type { Evidence, TaskModelAttachment } from '@workspace/api-client-react';
+import type { Evidence, Task, TaskModelAttachment } from '@workspace/api-client-react';
 import { useParams, Link, useLocation } from 'wouter';
 import { EmptyState, ErrorState, EvidenceIcon, formatDate, formatDateTime, LoadingBlocks, PriorityPill, StatusPill } from '@/components/ui-kit';
 import { TaskDeadline } from '@/components/task-deadline';
+
+function TaskEditModal({ task, onClose, onSave, saving }: {
+  task: Task;
+  onClose: () => void;
+  onSave: (data: Record<string, unknown>) => void;
+  saving: boolean;
+}) {
+  const requestUpload = useRequestUploadUrl();
+  const [notice, setNotice] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [draft, setDraft] = useState({
+    title: task.title,
+    description: task.description,
+    category: task.category,
+    priority: task.priority,
+    dueDate: task.dueDate,
+    dueTime: task.dueTime,
+    evidenceRequired: task.evidenceRequired,
+    evidenceTypes: task.evidenceTypes ?? [],
+    instructions: task.instructions,
+    modelAttachments: task.modelAttachments?.length
+      ? task.modelAttachments
+      : task.modelObjectPath ? [{ objectPath: task.modelObjectPath, fileName: 'Modelo da tarefa', type: 'photo' as const }] : [],
+  });
+  const update = (key: keyof typeof draft, value: unknown) => setDraft((current) => ({ ...current, [key]: value }));
+  const uploadModels = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setUploading(true);
+    setNotice('');
+    try {
+      const additions: TaskModelAttachment[] = [];
+      for (const file of Array.from(files)) {
+        const upload = await requestUpload.mutateAsync({ data: { name: file.name, size: file.size, contentType: file.type || 'application/octet-stream' } });
+        const response = await fetch(upload.uploadURL, { method: 'PUT', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file });
+        if (!response.ok) throw new Error('Upload failed');
+        additions.push({ objectPath: upload.objectPath, fileName: file.name, type: file.type.startsWith('video/') ? 'video' : 'photo' });
+      }
+      update('modelAttachments', [...draft.modelAttachments, ...additions]);
+    } catch {
+      setNotice('Não foi possível enviar todos os modelos. Tente novamente.');
+    } finally {
+      setUploading(false);
+    }
+  };
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!draft.title.trim()) {
+      setNotice('Informe o nome da tarefa.');
+      return;
+    }
+    const { modelAttachments, ...fields } = draft;
+    onSave({
+      ...fields,
+      modelAttachments,
+      modelObjectPath: modelAttachments[0]?.objectPath ?? null,
+    });
+  };
+  const toggleEvidenceType = (type: 'photo' | 'video') => {
+    const current = draft.evidenceTypes;
+    update('evidenceTypes', current.includes(type) ? current.filter((item) => item !== type) : [...current, type]);
+  };
+  return <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="task-edit-title">
+    <div className="modal">
+      <div className="modal-head"><div><div className="eyebrow">Somente quem criou esta tarefa</div><h2 className="modal-title" id="task-edit-title">Editar tarefa</h2></div><button type="button" className="icon-button" onClick={onClose} aria-label="Fechar edição"><X size={16} /></button></div>
+      <form onSubmit={submit}>
+        <div className="form-grid">
+          <div className="field full"><label htmlFor="edit-task-title">Nome da tarefa</label><input id="edit-task-title" className="input" value={draft.title} onChange={(event) => update('title', event.target.value)} required /></div>
+          <div className="field full"><label htmlFor="edit-task-description">O que precisa ser feito</label><textarea id="edit-task-description" className="textarea" value={draft.description} onChange={(event) => update('description', event.target.value)} /></div>
+          <div className="field"><label htmlFor="edit-task-category">Categoria</label><input id="edit-task-category" className="input" value={draft.category} onChange={(event) => update('category', event.target.value)} /></div>
+          <div className="field"><label htmlFor="edit-task-priority">Prioridade</label><select id="edit-task-priority" className="select" value={draft.priority} onChange={(event) => update('priority', event.target.value)}><option value="low">Baixa</option><option value="medium">Média</option><option value="high">Alta</option></select></div>
+          <div className="field"><label htmlFor="edit-task-date">Data</label><input id="edit-task-date" type="date" className="input" value={draft.dueDate.slice(0, 10)} onChange={(event) => update('dueDate', event.target.value)} /></div>
+          <div className="field"><label htmlFor="edit-task-time">Horário</label><input id="edit-task-time" type="time" className="input" value={draft.dueTime} onChange={(event) => update('dueTime', event.target.value)} /></div>
+          <div className="field full"><label htmlFor="edit-task-instructions">Instruções de comprovação</label><textarea id="edit-task-instructions" className="textarea" value={draft.instructions} onChange={(event) => update('instructions', event.target.value)} /></div>
+          <div className="field full"><span className="field-hint">Modelos de evidência (não são fotos de execução)</span><div className="evidence-list">{draft.modelAttachments.map((attachment) => <div className="evidence-item" key={attachment.objectPath}><span className="evidence-file">{attachment.type === 'video' ? 'Vídeo' : 'Foto'} · {attachment.fileName}</span><button type="button" className="section-link evidence-delete" onClick={() => update('modelAttachments', draft.modelAttachments.filter((item) => item.objectPath !== attachment.objectPath))} aria-label={`Remover ${attachment.fileName}`}><Trash2 size={13} /> Remover</button></div>)}</div><label className="capture-button" htmlFor="edit-task-models" style={{ marginTop: 8, minHeight: 48 }}><UploadCloud size={16} /> {uploading ? 'Enviando modelos...' : 'Acrescentar modelo de evidência'}<input id="edit-task-models" type="file" accept="image/*,video/*" multiple className="hidden-file" disabled={uploading || saving} onChange={(event) => { void uploadModels(event.target.files); event.currentTarget.value = ''; }} /></label></div>
+          <div className="field full"><label className="bulk-select-all"><input type="checkbox" checked={draft.evidenceRequired} onChange={(event) => update('evidenceRequired', event.target.checked)} /><span>Exigir evidência para concluir</span></label><div className="bulk-select-all"><label><input type="checkbox" checked={draft.evidenceTypes.includes('photo')} onChange={() => toggleEvidenceType('photo')} /> Fotos</label><label><input type="checkbox" checked={draft.evidenceTypes.includes('video')} onChange={() => toggleEvidenceType('video')} /> Vídeos</label></div></div>
+        </div>
+        {notice && <div className="form-notice error" role="alert">{notice}</div>}
+        <div className="form-actions"><button type="button" className="button button-ghost" onClick={onClose}>Cancelar</button><button type="submit" className="button button-primary" disabled={saving || uploading}>{saving ? 'Salvando...' : 'Salvar alterações'}</button></div>
+      </form>
+    </div>
+  </div>;
+}
 
 type ImageViewerSelection = {
   objectPath: string;
@@ -134,6 +216,8 @@ export default function TaskDetailPage() {
   const [newComment, setNewComment] = useState('');
   const [selectedImage, setSelectedImage] = useState<ImageViewerSelection | null>(null);
   const [sharingEvidenceId, setSharingEvidenceId] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState(false);
+  const [downloadingArchive, setDownloadingArchive] = useState(false);
   const [, navigate] = useLocation();
   const task = taskQuery.data;
   const evidence = task?.evidence ?? [];
@@ -166,6 +250,7 @@ export default function TaskDetailPage() {
     client.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
   };
   const canExecute = !!task && task.status !== 'pending_review' && task.status !== 'completed' && (me.data?.role === 'admin' || task.assigneeMemberId === me.data?.id || task.assigneeMemberIds?.includes(me.data?.id ?? '') === true);
+  const canEditTask = !!task && !!me.data?.id && task.createdByMemberId === me.data.id;
   const canReview = !!task && me.data?.role === 'supervisor' && task.status === 'pending_review';
   const canManageStatus = !!task && (me.data?.role === 'admin' || me.data?.role === 'supervisor');
   const canReturnToPending = canManageStatus && task.status !== 'pending';
@@ -304,8 +389,63 @@ export default function TaskDetailPage() {
       onError: () => setNotice('Não foi possível excluir a tarefa.'),
     });
   };
+  const saveTask = (data: Record<string, unknown>) => {
+    if (!task || !canEditTask) return;
+    updateTask.mutate({ id: task.id, data }, {
+      onSuccess: () => { setEditingTask(false); invalidateTask(); setNotice('Tarefa atualizada.'); },
+      onError: (error) => {
+        const message = error && typeof error === 'object' && 'data' in error && error.data && typeof error.data === 'object' && 'error' in error.data
+          ? String(error.data.error)
+          : 'Não foi possível atualizar a tarefa.';
+        setNotice(message);
+      },
+    });
+  };
+  const downloadEvidenceArchive = async () => {
+    if (!task || !canEditTask || downloadingArchive) return;
+    setDownloadingArchive(true);
+    try {
+      const response = await fetch(`/api/tasks/${encodeURIComponent(task.id)}/evidence/archive`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => null) as { error?: string } | null;
+        setNotice(error?.error ?? 'Não foi possível reunir as fotos das lojas.');
+        return;
+      }
+      const blob = await response.blob();
+      const archiveUrl = URL.createObjectURL(blob);
+      const archiveName = `${task.title.replace(/[^a-zA-Z0-9_-]+/g, '_')}-evidencias.zip`;
+      const archiveFile = new File([blob], archiveName, { type: 'application/zip' });
+      const canShareArchive = typeof navigator.share === 'function'
+        && typeof navigator.canShare === 'function'
+        && navigator.canShare({ files: [archiveFile] });
+      if (canShareArchive) {
+        await navigator.share({
+          title: `Evidências: ${task.title}`,
+          text: 'Fotos das lojas organizadas por unidade.',
+          files: [archiveFile],
+        });
+        URL.revokeObjectURL(archiveUrl);
+        setNotice('Arquivo preparado para compartilhar.');
+        return;
+      }
+      const anchor = document.createElement('a');
+      anchor.href = archiveUrl;
+      anchor.download = archiveName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(archiveUrl);
+      setNotice('Arquivo com as fotos das lojas baixado.');
+    } catch (error) {
+      // Cancelar a folha de compartilhamento não é um erro de envio.
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      setNotice('Não foi possível reunir as fotos das lojas.');
+    } finally {
+      setDownloadingArchive(false);
+    }
+  };
    return <div className="content">
-     <div className="task-detail-topbar"><Link href={returnToStoreList ? '/tasks?restoreStores=1' : '/tasks'} className="section-link" data-testid={returnToStoreList ? 'link-back-stores' : 'link-back-tasks'}><ArrowLeft size={13} /> {returnToStoreList ? 'Voltar para lojas' : 'Voltar para tarefas'}</Link>{me.data?.role === 'admin' && task && <button className="button button-danger" onClick={removeTask} disabled={deleteTask.isPending}><Trash2 size={15} /> {deleteTask.isPending ? 'Excluindo...' : 'Excluir tarefa'}</button>}</div>
+     <div className="task-detail-topbar"><Link href={returnToStoreList ? '/tasks?restoreStores=1' : '/tasks'} className="section-link" data-testid={returnToStoreList ? 'link-back-stores' : 'link-back-tasks'}><ArrowLeft size={13} /> {returnToStoreList ? 'Voltar para lojas' : 'Voltar para tarefas'}</Link>{canEditTask && task && <div className="task-owner-actions"><button className="button button-ghost" onClick={() => setEditingTask(true)} data-testid="button-edit-task"><Pencil size={15} /> Editar tarefa</button><button className="button button-ghost" onClick={downloadEvidenceArchive} disabled={downloadingArchive} data-testid="button-download-task-evidence"><Share2 size={15} /> {downloadingArchive ? 'Reunindo fotos...' : 'Enviar fotos das lojas'}</button><button className="button button-danger" onClick={removeTask} disabled={deleteTask.isPending} data-testid="button-delete-task"><Trash2 size={15} /> {deleteTask.isPending ? 'Excluindo...' : 'Excluir tarefa'}</button></div>}</div>
      {taskQuery.isError ? <ErrorState onRetry={() => taskQuery.refetch()} /> : taskQuery.isLoading ? <LoadingBlocks rows={2} /> : !task ? <EmptyState title="Tarefa não encontrada" copy="Ela pode não estar disponível para o seu acesso." /> : <div className="detail-layout">
        <div>
            <section className="detail-hero"><div className="eyebrow">Execução · {task.category}</div><h1 className="detail-title">{task.title}</h1><div className="detail-meta"><span>{task.storeName}</span><span>•</span><span>{task.assignee}</span><span>•</span><span>Criada por {task.createdByName}</span><span>•</span><span>Em {formatDate(task.createdAt)}</span><span>•</span><span>Executar em {formatDate(task.dueDate)} às {task.dueTime}</span></div>{task.status === 'pending_review' && <div className="task-status-banner task-status-banner-pending_review"><strong>Aguardando conferência do supervisor</strong><span>O gerente concluiu a execução. A tarefa será encerrada após a aprovação.</span></div>}{task.status === 'rejected' && <div className="task-status-banner task-status-banner-rejected"><strong>Tarefa reprovada pelo supervisor</strong><span>Revise a orientação abaixo e inicie uma nova execução.</span></div>}</section>
@@ -324,5 +464,6 @@ export default function TaskDetailPage() {
        </aside>
       </div>}
         {selectedImage?.objectPath && <div className="evidence-viewer-backdrop" role="dialog" aria-modal="true" aria-label={`Visualização de ${selectedImage.fileName}`} onClick={closeImageViewer}><div className="evidence-viewer" onClick={(event) => event.stopPropagation()}><div className="evidence-viewer-head"><div><div className="eyebrow">Visualização</div><div className="evidence-viewer-title">{selectedImage.fileName}</div></div><button type="button" className="button button-danger evidence-viewer-back-button" onClick={closeImageViewer} data-testid="button-back-image-viewer"><ArrowLeft size={14} /> Voltar</button></div><div className="evidence-viewer-image-scroll">{selectedImage.type === 'photo' ? <PinchZoomPhoto src={`/api/storage${selectedImage.objectPath}`} alt={selectedImage.alt} /> : <video className="evidence-viewer-image" controls playsInline autoPlay={false} src={`/api/storage${selectedImage.objectPath}`}>Seu navegador não oferece suporte a vídeo.</video>}</div></div></div>}
+        {editingTask && task && canEditTask && <TaskEditModal task={task} onClose={() => setEditingTask(false)} onSave={saveTask} saving={updateTask.isPending} />}
    </div>;
 }

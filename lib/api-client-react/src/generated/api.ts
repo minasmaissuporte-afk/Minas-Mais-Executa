@@ -1145,6 +1145,83 @@ export const useDeleteTask = <TError = ErrorType<void>,
       return useMutation(getDeleteTaskMutationOptions(options));
     }
 
+export const getDownloadTaskEvidenceArchiveUrl = (id: string,) => {
+
+
+
+
+  return `/api/tasks/${id}/evidence/archive`
+}
+
+/**
+ * @summary Download photo evidence for the task and its store copies
+ */
+export const downloadTaskEvidenceArchive = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getDownloadTaskEvidenceArchiveUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadTaskEvidenceArchiveQueryKey = (id: string,) => {
+    return [
+    `/api/tasks/${id}/evidence/archive`
+    ] as const;
+    }
+
+
+export const getDownloadTaskEvidenceArchiveQueryOptions = <TData = Awaited<ReturnType<typeof downloadTaskEvidenceArchive>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadTaskEvidenceArchive>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadTaskEvidenceArchiveQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadTaskEvidenceArchive>>> = ({ signal }) => downloadTaskEvidenceArchive(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadTaskEvidenceArchive>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadTaskEvidenceArchiveQueryResult = NonNullable<Awaited<ReturnType<typeof downloadTaskEvidenceArchive>>>
+export type DownloadTaskEvidenceArchiveQueryError = ErrorType<void>
+
+
+/**
+ * @summary Download photo evidence for the task and its store copies
+ */
+
+export function useDownloadTaskEvidenceArchive<TData = Awaited<ReturnType<typeof downloadTaskEvidenceArchive>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadTaskEvidenceArchive>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadTaskEvidenceArchiveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getAddTaskEvidenceUrl = (id: string,) => {
 
 
