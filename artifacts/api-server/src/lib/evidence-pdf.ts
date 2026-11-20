@@ -70,16 +70,15 @@ export function createEvidencePdf(title: string, totalPhotos: number) {
       const x = 28 + (slot % 2) * (width + gap);
       const y = contentTop + Math.floor(slot / 2) * (height + gap);
       const photoNumber = String(count + 1).padStart(2, "0");
-      document.save().lineWidth(0.6).fillColor("#000000").strokeColor("#454545")
+      document.save().lineWidth(0.6).fillColor("#ffffff").strokeColor("#d6dde5")
         .roundedRect(x, y, width, height, 8).fillAndStroke().restore();
-      document.save().lineWidth(0.7).fillColor("#000000").strokeColor("#df3037")
-        .roundedRect(x + 12, y + 12, 26, 22, 5).fillAndStroke().restore();
-      document.font("Helvetica-Bold").fontSize(9).fillColor("#ff8589")
+      document.save().roundedRect(x + 12, y + 12, 26, 22, 5).fill("#e9eff5").restore();
+      document.font("Helvetica-Bold").fontSize(9).fillColor("#284867")
         .text(photoNumber, x + 12, y + 19, { width: 26, height: 12, align: "center" });
       const labelSize = storeName.length > 48 ? 10 : 12;
-      document.font("Helvetica-Bold").fontSize(labelSize).fillColor("#ffffff")
+      document.font("Helvetica-Bold").fontSize(labelSize).fillColor("#18232f")
         .text(storeName, x + 48, y + 13, { width: width - 60, height: 40, ellipsis: true });
-      document.save().roundedRect(x + 10, y + 64, width - 20, height - 90, 4).fill("#000000").restore();
+      document.save().roundedRect(x + 10, y + 64, width - 20, height - 90, 4).fill("#f3f5f7").restore();
       document.image(image, x + 14, y + 68, {
         fit: [width - 28, height - 98],
         align: "center",

@@ -68,7 +68,7 @@ const raster = join(testDir, `page-${total}`);
 execFileSync("pdftoppm", ["-f", String(pages), "-l", String(pages), "-singlefile", "-scale-to", "1000", "-png", filePath, raster]);
 const { data, info } = await sharp(`${raster}.png`).removeAlpha().raw().toBuffer({ resolveWithObject: true });
 // Inspect actual rendered backgrounds, not only the PDF drawing commands.
-for (const [x, y] of [[8, 8], [8, 100], [8, 400], [297, 400], [40, 260], [8, 830]]) {
+for (const [x, y] of [[8, 8], [8, 100], [8, 400], [297, 400], [8, 830]]) {
   const column = Math.floor(x * info.width / 595.28);
   const row = Math.floor(y * info.height / 841.89);
   const offset = (row * info.width + column) * info.channels;
@@ -77,6 +77,20 @@ for (const [x, y] of [[8, 8], [8, 100], [8, 400], [297, 400], [40, 260], [8, 830
     `Page, header, card and footer backgrounds must stay black at ${x},${y}`,
   );
 }
+const cardX = Math.floor(40 * info.width / 595.28);
+const cardY = Math.floor(260 * info.height / 841.89);
+const cardOffset = (cardY * info.width + cardX) * info.channels;
+assert.ok(
+  data[cardOffset] > 235 && data[cardOffset + 1] > 235 && data[cardOffset + 2] > 235,
+  "Photo card interior must be white against the black page",
+);
+const imageFrameX = Math.floor(40 * info.width / 595.28);
+const imageFrameY = Math.floor(280 * info.height / 841.89);
+const imageFrameOffset = (imageFrameY * info.width + imageFrameX) * info.channels;
+assert.ok(
+  data[imageFrameOffset] > 225 && data[imageFrameOffset + 1] > 225 && data[imageFrameOffset + 2] > 225,
+  "Photo area frame must be light against the black page",
+);
 let redPixels = 0;
 for (let pixel = 0; pixel < data.length; pixel += info.channels) {
   if (data[pixel] > 150 && data[pixel + 1] < 100 && data[pixel + 2] < 100) redPixels += 1;
