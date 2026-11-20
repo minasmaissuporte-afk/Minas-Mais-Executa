@@ -178,7 +178,7 @@ export function TaskRow({ task, onDelete, selected = false, onToggleSelect, onOp
     {onToggleSelect && <input type="checkbox" className="task-select-checkbox" checked={selected} onChange={() => onToggleSelect(task.id)} onClick={(event) => event.stopPropagation()} aria-label={`Selecionar ${task.title} da ${task.storeName}`} data-testid={`checkbox-select-task-${task.id}`} />}
     <span className={`task-status-dot dot-${task.status}`} aria-hidden="true" />
     <Link href={detailHref} className="task-main" onClick={onOpenTask} data-testid={`link-task-${task.id}`}>
-      <div className="task-title">{task.title}</div><div className="task-sub">{task.category} · {task.storeName} · {task.assigneeRole === 'supervisor' ? 'Supervisor: ' : ''}{task.assignee}</div>
+      <div className="task-title">{task.title}</div><div className="task-sub">{task.category} · <mark className="task-person-highlight">{task.storeName}</mark> · {task.assigneeRole === 'supervisor' ? 'Supervisor: ' : ''}<mark className="task-person-highlight">{task.assignee}</mark></div>
       <div className="task-dates">Criada em {formatFullDate(task.createdAt)} por {task.createdByName} · Executar em {formatFullDate(task.dueDate)} às {task.dueTime}</div>
       {task.status === 'pending_review' && <div className="task-row-status-note task-row-status-note-review">Aguardando conferência do supervisor</div>}
       {task.status === 'rejected' && <div className="task-row-status-note task-row-status-note-rejected">Reprovada pelo supervisor · veja a orientação</div>}
@@ -225,7 +225,7 @@ export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string
        {onToggleGroupSelect && tasks.every((task) => canManageTask?.(task) ?? true) && <input type="checkbox" className="task-select-checkbox" checked={tasks.length > 0 && tasks.every((task) => selectedTaskIds.has(task.id))} onChange={() => onToggleGroupSelect(tasks.map((task) => task.id))} onClick={(event) => event.stopPropagation()} aria-label={`Selecionar conjunto ${first.title}`} data-testid={`checkbox-select-task-group-${groupId ?? first.batchGroupId ?? first.id}`} />}
        <span className={`task-status-dot dot-${groupStatus}`} aria-hidden="true" />
       <span className="task-main">
-        <mark className="task-title">{first.title}</mark>
+        <span className="task-title">{first.title}</span>
         <span className="task-sub"><Store size={13} /> {showProgress
           ? `${completedCount}/${storeCount} lojas concluídas · ${storeCount - completedCount} ainda precisam concluir · clique para abrir as lojas`
          : `Todas as lojas · ${storeCount} unidades · Clique para acompanhar`}</span>

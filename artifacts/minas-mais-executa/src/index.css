@@ -251,8 +251,12 @@ html,body,#root{max-width:100%}body{overflow-x:hidden}
 .task-row-result.result-completed{border-color:#419565}
 .task-row-result.result-open{border-color:#d87873}
 .task-group-card{border:2px solid;border-radius:10px;overflow:hidden}
-.task-group-card,.task-group-card *{font-weight:700}
-.task-group-summary .task-title{display:inline;font-size:17px;font-weight:800;line-height:1.5;white-space:normal;overflow:visible;overflow-wrap:anywhere;text-overflow:clip;color:#292518;background:#ffec9e;padding:1px 4px;border-radius:3px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.task-group-card,.task-group-card *,.task-row,.task-row *{font-weight:700}
+.task-row .task-title{font-size:17px;font-weight:800;line-height:1.5;white-space:normal;overflow:visible;overflow-wrap:anywhere;text-overflow:clip;background:transparent;padding:0;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px}
+.task-group-summary .task-title{display:inline}
+.task-person-highlight{font-weight:800;color:#292518;background:#ffec9e;padding:1px 4px;border-radius:3px;box-decoration-break:clone;-webkit-box-decoration-break:clone;overflow-wrap:anywhere}
+.detail-hero{font-weight:700}
+.detail-title{text-decoration:underline;text-underline-offset:5px;text-decoration-thickness:2px}
 .task-group-card>.task-group>summary{border:0;border-radius:0}
 .task-group-actions{display:flex;justify-content:flex-end;padding:0 12px 8px;background:transparent}
 .task-row>.task-export-control{flex-basis:100%;order:2;padding-top:2px}
