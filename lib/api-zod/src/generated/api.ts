@@ -470,6 +470,12 @@ export const DownloadTaskEvidencePdfParams = zod.object({
   "id": zod.coerce.string()
 })
 
+export const downloadTaskEvidencePdfQueryScopeDefault = `task`;
+
+export const DownloadTaskEvidencePdfQueryParams = zod.object({
+  "scope": zod.enum(['task', 'store']).default(downloadTaskEvidencePdfQueryScopeDefault).describe('Export all authorized store copies or only this completed store task')
+})
+
 export const DownloadTaskEvidencePdfResponse = zod.unknown()
 
 

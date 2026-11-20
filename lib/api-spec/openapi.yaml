@@ -294,6 +294,13 @@ paths:
       summary: Download a PDF presentation of photo evidence for the task and its store copies
       parameters:
         - $ref: "#/components/parameters/TaskId"
+        - name: scope
+          in: query
+          description: Export all authorized store copies or only this completed store task
+          schema:
+            type: string
+            enum: [task, store]
+            default: task
       responses:
         "200":
           description: PDF containing up to four resized evidence photos per page, each identified by store
@@ -304,6 +311,10 @@ paths:
                 format: binary
         "404":
           description: Task is outside the user's authorized stores or no photos were found
+        "400":
+          description: Invalid PDF scope
+        "409":
+          description: Store-only PDF is available after the store task is completed
         "500":
           description: A photo could not be loaded or converted; no incomplete PDF is returned
   /tasks/{id}/evidence:

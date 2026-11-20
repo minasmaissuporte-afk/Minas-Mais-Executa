@@ -14,6 +14,7 @@ import {
   CreateTaskBody,
   DeletePushSubscriptionBody,
   GetTaskParams,
+  DownloadTaskEvidencePdfQueryParams,
   CreateStoreBody,
   UpdateStoreBody,
   UpdateStoreParams,
@@ -1446,12 +1447,22 @@ router.get("/tasks/:id/evidence/pdf", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Identificador inválido." });
     return;
   }
+  const query = DownloadTaskEvidencePdfQueryParams.safeParse(req.query);
+  if (!query.success) {
+    res.status(400).json({ error: "Opção de PDF inválida." });
+    return;
+  }
+  const storeOnly = query.data.scope === "store";
   const task = await getTaskWithEvidence(params.data.id);
   if (!task || !(await canAccessTask(req, task))) {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
   }
-  const relatedTasks = task.batchGroupId
+  if (storeOnly && task.status !== "completed") {
+    res.status(409).json({ error: "Conclua a tarefa desta loja para gerar o PDF separado." });
+    return;
+  }
+  const relatedTasks = !storeOnly && task.batchGroupId
     ? await db.select().from(tasksTable).where(eq(tasksTable.batchGroupId, task.batchGroupId))
     : [task];
   const visibleTasks = [];
@@ -1478,7 +1489,8 @@ router.get("/tasks/:id/evidence/pdf", async (req, res): Promise<void> => {
   const taskById = new Map(visibleTasks.map((item) => [item.id, item]));
   const safeName = (value: string) => value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80) || "arquivo";
-  const presentation = createEvidencePdf(task.title, photoRows.length);
+  const pdfTitle = storeOnly ? `${task.title} · ${task.storeName}` : task.title;
+  const presentation = createEvidencePdf(pdfTitle, photoRows.length);
   const pdf = presentation.document;
   const pdfChunks: Buffer[] = [];
   pdf.on("data", (chunk: Buffer) => pdfChunks.push(chunk));
@@ -1517,7 +1529,7 @@ router.get("/tasks/:id/evidence/pdf", async (req, res): Promise<void> => {
     req.log.info({ taskId: task.id, photos: rendered, bytes: output.length }, "Task evidence PDF completed");
     res.status(200)
       .set("Content-Type", "application/pdf")
-      .set("Content-Disposition", `attachment; filename="${safeName(task.title)}-evidencias.pdf"`)
+      .set("Content-Disposition", `attachment; filename="${safeName(task.title)}-${storeOnly ? safeName(task.storeName) : "todas-as-lojas"}-evidencias.pdf"`)
       .set("Cache-Control", "private, no-store")
       .send(output);
   } catch (error) {

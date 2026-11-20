@@ -722,6 +722,21 @@ dateFrom?: string;
 dateTo?: string;
 };
 
+export type DownloadTaskEvidencePdfParams = {
+/**
+ * Export all authorized store copies or only this completed store task
+ */
+scope?: DownloadTaskEvidencePdfScope;
+};
+
+export type DownloadTaskEvidencePdfScope = typeof DownloadTaskEvidencePdfScope[keyof typeof DownloadTaskEvidencePdfScope];
+
+
+export const DownloadTaskEvidencePdfScope = {
+  task: 'task',
+  store: 'store',
+} as const;
+
 export type ListTeamMembersParams = {
 role?: ListTeamMembersRole;
 };

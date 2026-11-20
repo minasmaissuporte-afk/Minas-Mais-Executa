@@ -15,6 +15,12 @@ A opção de exportar PDF deve aparecer em todas as tarefas acessíveis à conta
 
 **How to apply:** Separar autorização de leitura/exportação de autorização de alteração. Manter o isolamento por lojas, inclusive nas cópias de uma tarefa em grupo.
 
+Dentro de uma loja, exportar apenas as fotos daquela execução e habilitar o PDF individual quando ela estiver concluída. Na tarefa agrupada, exportar todas as lojas autorizadas, sem exigir abrir cada loja.
+
+**Why:** O usuário solicitou explicitamente essa separação entre PDF da loja e PDF da tarefa inteira; pediu também nomes das lojas em destaque no documento.
+
+**How to apply:** Não inferir o escopo apenas pelo identificador da execução. A intenção de exportar uma loja ou o grupo precisa acompanhar a solicitação; manter a validação de conclusão também no servidor.
+
 Não iniciar a resposta HTTP do PDF antes de terminar a leitura e conversão de todas as fotos.
 
 **Why:** Fotos HEIC/HEVC e JPEGs truncados interromperam o fluxo depois de um HTTP 200, resultando em download vazio/incompleto. Contar páginas e objetos de imagem não detectou esse problema.

@@ -46,11 +46,15 @@ export function formatDurationMinutes(minutes: number) {
   return `${remainingMinutes}min`;
 }
 type TaskListItem = Task | TaskSummary;
-export function TaskEvidenceExportButton({ taskId, taskTitle }: { taskId: string; taskTitle: string }) {
+export function TaskEvidenceExportButton({ taskId, taskTitle, scope = 'task', taskStatus, storeName }: { taskId: string; taskTitle: string; scope?: 'task' | 'store'; taskStatus?: string; storeName?: string }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [preparedPdf, setPreparedPdf] = useState<File | null>(null);
   const [sharing, setSharing] = useState(false);
+  const storeOnly = scope === 'store';
+  const awaitingCompletion = storeOnly && taskStatus !== 'completed';
+  const label = storeOnly ? 'Gerar PDF da loja' : 'Gerar PDF de todas as lojas';
+  const documentTitle = storeOnly && storeName ? `${taskTitle} - ${storeName}` : `${taskTitle} - todas as lojas`;
 
   const downloadPdf = (file: File) => {
     const url = URL.createObjectURL(file);
@@ -86,12 +90,12 @@ export function TaskEvidenceExportButton({ taskId, taskTitle }: { taskId: string
   const exportPhotos = async (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    if (busy) return;
+    if (busy || awaitingCompletion) return;
     setBusy(true);
     setNotice('');
     setPreparedPdf(null);
     try {
-      const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/evidence/pdf`);
+      const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/evidence/pdf?scope=${scope}`);
       if (!response.ok) {
         const error = await response.json().catch(() => null) as { error?: string } | null;
         throw new Error(error?.error ?? 'Não foi possível gerar o PDF desta tarefa.');
@@ -105,7 +109,7 @@ export function TaskEvidenceExportButton({ taskId, taskTitle }: { taskId: string
       if (header !== '%PDF-' || !trailer.includes('%%EOF')) {
         throw new Error('O PDF recebido está incompleto. Gere novamente antes de compartilhar.');
       }
-      const pdfName = `${taskTitle.replace(/[^a-zA-Z0-9_-]+/g, '_')}-evidencias.pdf`;
+      const pdfName = `${documentTitle.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9_-]+/g, '_')}-evidencias.pdf`;
       const pdfFile = new File([blob], pdfName, { type: 'application/pdf' });
       setPreparedPdf(pdfFile);
       const canSharePdf = typeof navigator.share === 'function'
@@ -125,10 +129,11 @@ export function TaskEvidenceExportButton({ taskId, taskTitle }: { taskId: string
   };
 
   return <span className="task-export-control">
-    <button type="button" className="button button-ghost task-export-button" onClick={exportPhotos} disabled={busy || sharing} aria-label={`Gerar PDF com as fotos da tarefa ${taskTitle}`} data-testid={`button-export-task-photos-${taskId}`}>
+    <button type="button" className="button task-export-button" onClick={exportPhotos} disabled={busy || sharing || awaitingCompletion} title={awaitingCompletion ? 'Disponível quando a tarefa desta loja estiver concluída' : label} aria-label={`${label}: ${documentTitle}`} data-testid={`button-export-task-photos-${taskId}`}>
       {busy ? <Download size={14} /> : <Share2 size={14} />}
-      {busy ? 'Gerando PDF...' : 'Gerar PDF com fotos'}
+      {busy ? 'Gerando PDF...' : label}
     </button>
+    {awaitingCompletion && <span className="task-export-notice">Disponível ao concluir a loja.</span>}
     {preparedPdf && <span className="evidence-actions">
       <button type="button" className="section-link" disabled={busy || sharing} onClick={(event) => { event.preventDefault(); event.stopPropagation(); void sharePdf(preparedPdf); }} data-testid={`button-share-task-pdf-${taskId}`}>{sharing ? 'Compartilhando...' : 'Compartilhar PDF'}</button>
       <button type="button" className="section-link" onClick={(event) => { event.preventDefault(); event.stopPropagation(); downloadPdf(preparedPdf); }} data-testid={`button-save-task-pdf-${taskId}`}>Baixar PDF</button>
@@ -182,7 +187,7 @@ export function TaskRow({ task, onDelete, selected = false, onToggleSelect, onOp
         : task.status === 'rejected'
           ? <span className="status-chip status-rejected task-row-status-chip">Reprovada</span>
           : null}
-    <PriorityPill priority={task.priority} /><span className="task-time">{task.dueTime}</span>{canExportEvidence && <TaskEvidenceExportButton taskId={task.id} taskTitle={task.title} />}{onDelete && <button className="icon-button task-delete-button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onDelete(task); }} aria-label={`Excluir ${task.title}`} data-testid={`button-delete-task-${task.id}`}><Trash2 size={14} /></button>}<ChevronRight size={15} color="hsl(var(--muted-foreground))" />
+    <PriorityPill priority={task.priority} /><span className="task-time">{task.dueTime}</span>{canExportEvidence && <TaskEvidenceExportButton taskId={task.id} taskTitle={task.title} scope="store" taskStatus={task.status} storeName={task.storeName} />}{onDelete && <button className="icon-button task-delete-button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onDelete(task); }} aria-label={`Excluir ${task.title}`} data-testid={`button-delete-task-${task.id}`}><Trash2 size={14} /></button>}<ChevronRight size={15} color="hsl(var(--muted-foreground))" />
   </div>;
 }
 export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string>(), onToggleSelect, onToggleGroupSelect, canManageTask, expanded = false, onExpandedChange, onOpenTask, showProgress = false, showTaskStatus = false, executionQueue = false, groupId }: { tasks: TaskListItem[]; onDelete?: (task: TaskListItem) => void; selectedTaskIds?: Set<string>; onToggleSelect?: (taskId: string) => void; onToggleGroupSelect?: (taskIds: string[]) => void; canManageTask?: (task: TaskListItem) => boolean; expanded?: boolean; onExpandedChange?: (expanded: boolean) => void; onOpenTask?: () => void; showProgress?: boolean; showTaskStatus?: boolean; executionQueue?: boolean; groupId?: string }) {

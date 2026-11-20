@@ -18,6 +18,8 @@ export * from './currentMemberRole';
 export * from './dashboardSummary';
 export * from './dashboardSummaryRole';
 export * from './dashboardSummaryStoreFulfillmentItem';
+export * from './downloadTaskEvidencePdfParams';
+export * from './downloadTaskEvidencePdfScope';
 export * from './evidence';
 export * from './evidenceInput';
 export * from './evidenceInputType';

@@ -19,7 +19,7 @@ const tasks = [
 const tasksTable = {};
 const evidencesTable = {};
 
-async function request({ allowedStores, corrupt = false }) {
+async function request({ allowedStores, corrupt = false, scope = "task", status = "completed" }) {
   let handler;
   let selectedTaskIds = [];
   const downloaded = [];
@@ -36,7 +36,11 @@ async function request({ allowedStores, corrupt = false }) {
     router: { get: (_path, callback) => { handler = callback; } },
     seedPromise: Promise.resolve(),
     GetTaskParams: { safeParse: (params) => ({ success: true, data: params }) },
-    getTaskWithEvidence: async () => tasks[0],
+    getTaskWithEvidence: async () => ({ ...tasks[0], status }),
+    DownloadTaskEvidencePdfQueryParams: {
+      safeParse: (query) => ["task", "store"].includes(query.scope)
+        ? { success: true, data: query } : { success: false },
+    },
     canAccessTask: async (_req, task) => allowedStores.includes(task.storeId),
     db, tasksTable, evidencesTable,
     eq: () => ({}), and: () => ({}),
@@ -64,7 +68,7 @@ async function request({ allowedStores, corrupt = false }) {
     send(value) { this.body = value; return this; },
   };
   const log = { info() {}, error() {} };
-  await handler({ params: { id: "a" }, log }, response);
+  await handler({ params: { id: "a" }, query: { scope }, log }, response);
   return { response, downloaded };
 }
 const all = await request({ allowedStores: ["store-a", "store-b"] });
@@ -84,3 +88,17 @@ assert.equal(broken.response.headers["Content-Type"], undefined, "Do not return 
 assert.ok(broken.response.body.error.includes("Norte"));
 assert.equal(Buffer.isBuffer(broken.response.body), false, "No partial PDF can be returned");
 console.log("PDF route passed: accessible tasks export, stores isolated, corrupt image returns JSON error without partial PDF.");
+const oneStore = await request({ allowedStores: ["store-a", "store-b"], scope: "store" });
+assert.equal(oneStore.response.code, 200);
+assert.deepEqual(oneStore.downloaded, ["/objects/a"], "A store PDF must not fetch sibling stores even for admins");
+assert.ok(oneStore.response.headers["Content-Disposition"].includes("Centro"));
+for (const status of ["pending", "in_progress", "pending_review", "rejected"]) {
+  const incomplete = await request({ allowedStores: ["store-a"], scope: "store", status });
+  assert.equal(incomplete.response.code, 409, status);
+  assert.equal(incomplete.downloaded.length, 0);
+}
+const batchPending = await request({ allowedStores: ["store-a", "store-b"], status: "pending" });
+assert.equal(batchPending.response.code, 200, "Batch export remains available without completing every store");
+const invalidScope = await request({ allowedStores: ["store-a"], scope: "everything" });
+assert.equal(invalidScope.response.code, 400);
+console.log("PDF scope passed: store only, filename identified, completion required only for individual export, invalid scope rejected.");

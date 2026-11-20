@@ -48,10 +48,12 @@ export function createEvidencePdf(title: string, totalPhotos: number) {
       const x = 32 + (slot % 2) * (width + gap);
       const y = 112 + Math.floor(slot / 2) * (height + gap);
       document.save().lineWidth(0.5).strokeColor("#dddddd").rect(x, y, width, height).stroke().restore();
-      document.font("Helvetica-Bold").fontSize(11).fillColor("#242424")
-        .text(storeName, x + 8, y + 8, { width: width - 16, height: 32, ellipsis: true });
-      document.image(image, x + 8, y + 46, {
-        fit: [width - 16, height - 54],
+      document.save().rect(x, y, width, 58).fill("#153e65").restore();
+      const labelSize = storeName.length > 48 ? 11 : 14;
+      document.font("Helvetica-Bold").fontSize(labelSize).fillColor("#ffffff")
+        .text(storeName, x + 10, y + 9, { width: width - 20, height: 42, ellipsis: true });
+      document.image(image, x + 8, y + 66, {
+        fit: [width - 16, height - 74],
         align: "center",
         valign: "center",
       });
