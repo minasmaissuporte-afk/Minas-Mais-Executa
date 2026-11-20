@@ -7,7 +7,13 @@ Não tratar falha de compartilhamento como falha da geração do PDF. Reter o ar
 
 **Why:** A geração e o download de muitas fotos podem expirar a ativação transitória do toque. O navegador pode recusar `navigator.share` com `NotAllowedError`, mesmo quando suporta arquivos PDF. Reduzir o documento não garante que o menu abra automaticamente.
 
-**How to apply:** Tentar o compartilhamento automático após gerar, mas oferecer uma ação direta sobre o arquivo pronto, chamando o Web Share sem esperar nova requisição. Não prometer abertura forçada do WhatsApp nem entrega real a partir de testes com APIs simuladas.
+**How to apply:** Após gerar, mostrar ações explícitas de compartilhar e baixar o arquivo pronto, chamando o Web Share apenas pelo toque direto e sem esperar nova requisição. Não prometer abertura forçada do WhatsApp nem entrega real a partir de testes com APIs simuladas.
+
+Não tentar compartilhar automaticamente após gerar o PDF nem exibir mensagens de bloqueio do aparelho. Manter as ações de PDF dentro da caixa da tarefa, agrupada ou individual.
+
+**Why:** O usuário pediu ações diretas de compartilhar ou baixar, sem mensagens de bloqueio do aparelho, e o botão dentro da caixa da tarefa.
+
+**How to apply:** Preservar o arquivo após cancelamento ou recusa, oferecendo download com orientação neutra; não confundir falhas de compartilhamento com falhas reais de geração.
 
 A opção de exportar PDF deve aparecer em todas as tarefas acessíveis à conta, independentemente da autoria. A restrição de autoria para editar e excluir continua separada.
 

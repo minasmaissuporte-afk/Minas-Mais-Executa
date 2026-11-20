@@ -51,6 +51,7 @@ export function TaskEvidenceExportButton({ taskId, taskTitle, scope = 'task', ta
   const [notice, setNotice] = useState('');
   const [preparedPdf, setPreparedPdf] = useState<File | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [canSharePreparedPdf, setCanSharePreparedPdf] = useState(false);
   const storeOnly = scope === 'store';
   const awaitingCompletion = storeOnly && taskStatus !== 'completed';
   const label = storeOnly ? 'Gerar PDF da loja' : 'Gerar PDF de todas as lojas';
@@ -67,22 +68,22 @@ export function TaskEvidenceExportButton({ taskId, taskTitle, scope = 'task', ta
     // Let mobile browsers finish consuming the URL before revoking it.
     window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
-  // Called directly by the retry button: no fetch/await before navigator.share,
+  // Called directly by the share button: no fetch/await before navigator.share,
   // so mobile browsers receive a fresh user activation.
   const sharePdf = async (file: File) => {
-    if (!navigator.share || !navigator.canShare?.({ files: [file] })) {
-      setNotice('Este navegador não compartilha arquivos. Use Baixar PDF e anexe o documento no WhatsApp.');
-      return;
-    }
     setSharing(true);
     try {
+      if (!navigator.share || !navigator.canShare?.({ files: [file] })) {
+        setNotice('PDF pronto. Use Baixar PDF para salvar e enviar o documento.');
+        return;
+      }
       await navigator.share({ files: [file], title: `Evidências: ${taskTitle}` });
       setNotice('PDF entregue ao compartilhamento do aparelho.');
     } catch (error) {
       const name = error instanceof Error ? error.name : '';
       setNotice(name === 'AbortError'
-        ? 'Compartilhamento cancelado. O PDF continua pronto para compartilhar ou baixar.'
-        : 'O aparelho bloqueou a abertura automática. Toque em Compartilhar PDF para escolher o WhatsApp ou baixe o arquivo.');
+        ? 'PDF pronto para compartilhar ou baixar.'
+        : 'PDF pronto. Use Baixar PDF para salvar e enviar o documento.');
     } finally {
       setSharing(false);
     }
@@ -94,6 +95,7 @@ export function TaskEvidenceExportButton({ taskId, taskTitle, scope = 'task', ta
     setBusy(true);
     setNotice('');
     setPreparedPdf(null);
+    setCanSharePreparedPdf(false);
     try {
       const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/evidence/pdf?scope=${scope}`);
       if (!response.ok) {
@@ -112,15 +114,16 @@ export function TaskEvidenceExportButton({ taskId, taskTitle, scope = 'task', ta
       const pdfName = `${documentTitle.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9_-]+/g, '_')}-evidencias.pdf`;
       const pdfFile = new File([blob], pdfName, { type: 'application/pdf' });
       setPreparedPdf(pdfFile);
-      const canSharePdf = typeof navigator.share === 'function'
-        && typeof navigator.canShare === 'function'
-        && navigator.canShare({ files: [pdfFile] });
-      if (canSharePdf) {
-        await sharePdf(pdfFile);
-        return;
+      let canSharePdf = false;
+      try {
+        canSharePdf = typeof navigator.share === 'function'
+          && typeof navigator.canShare === 'function'
+          && navigator.canShare({ files: [pdfFile] });
+      } catch {
+        // Download remains available when capability detection is unavailable.
       }
-      downloadPdf(pdfFile);
-      setNotice('PDF gerado e download solicitado. Você pode anexá-lo no WhatsApp.');
+      setCanSharePreparedPdf(canSharePdf);
+      setNotice('PDF pronto. Escolha como deseja salvar ou enviar.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Não foi possível gerar o PDF desta tarefa.');
     } finally {
@@ -131,12 +134,12 @@ export function TaskEvidenceExportButton({ taskId, taskTitle, scope = 'task', ta
   return <span className="task-export-control">
     <button type="button" className="button task-export-button" onClick={exportPhotos} disabled={busy || sharing || awaitingCompletion} title={awaitingCompletion ? 'Disponível quando a tarefa desta loja estiver concluída' : label} aria-label={`${label}: ${documentTitle}`} data-testid={`button-export-task-photos-${taskId}`}>
       {busy ? <Download size={14} /> : <Share2 size={14} />}
-      {busy ? 'Gerando PDF...' : label}
+      {busy ? 'Gerando PDF...' : preparedPdf ? 'Gerar PDF novamente' : label}
     </button>
     {awaitingCompletion && <span className="task-export-notice">Disponível ao concluir a loja.</span>}
-    {preparedPdf && <span className="evidence-actions">
-      <button type="button" className="section-link" disabled={busy || sharing} onClick={(event) => { event.preventDefault(); event.stopPropagation(); void sharePdf(preparedPdf); }} data-testid={`button-share-task-pdf-${taskId}`}>{sharing ? 'Compartilhando...' : 'Compartilhar PDF'}</button>
-      <button type="button" className="section-link" onClick={(event) => { event.preventDefault(); event.stopPropagation(); downloadPdf(preparedPdf); }} data-testid={`button-save-task-pdf-${taskId}`}>Baixar PDF</button>
+    {preparedPdf && <span className="task-pdf-actions">
+      {canSharePreparedPdf && <button type="button" className="button task-pdf-share" disabled={busy || sharing} onClick={(event) => { event.preventDefault(); event.stopPropagation(); void sharePdf(preparedPdf); }} data-testid={`button-share-task-pdf-${taskId}`}><Share2 size={15} />{sharing ? 'Compartilhando...' : 'Compartilhar PDF'}</button>}
+      <button type="button" className="button task-pdf-download" disabled={busy || sharing} onClick={(event) => { event.preventDefault(); event.stopPropagation(); downloadPdf(preparedPdf); }} data-testid={`button-save-task-pdf-${taskId}`}><Download size={15} />Baixar PDF</button>
     </span>}
     {notice && <span className="task-export-notice" role="status">{notice}</span>}
   </span>;
@@ -216,7 +219,8 @@ export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string
               ? 'pending'
               : 'completed';
   const resultStatus = tasks.every((task) => task.status === 'completed') ? 'completed' : 'open';
-  return <details className="task-group" open={expanded} onToggle={(event) => onExpandedChange?.(event.currentTarget.open)} data-testid={`group-task-${groupId ?? first.batchGroupId ?? first.id}`}>
+  return <div className={`task-group-card task-row-result result-${resultStatus}`}>
+    <details className="task-group" open={expanded} onToggle={(event) => onExpandedChange?.(event.currentTarget.open)} data-testid={`group-task-${groupId ?? first.batchGroupId ?? first.id}`}>
      <summary className={`task-row task-row-result result-${resultStatus} task-group-summary task-status-${groupStatus}`}>
        {onToggleGroupSelect && tasks.every((task) => canManageTask?.(task) ?? true) && <input type="checkbox" className="task-select-checkbox" checked={tasks.length > 0 && tasks.every((task) => selectedTaskIds.has(task.id))} onChange={() => onToggleGroupSelect(tasks.map((task) => task.id))} onClick={(event) => event.stopPropagation()} aria-label={`Selecionar conjunto ${first.title}`} data-testid={`checkbox-select-task-group-${groupId ?? first.batchGroupId ?? first.id}`} />}
        <span className={`task-status-dot dot-${groupStatus}`} aria-hidden="true" />
@@ -230,7 +234,9 @@ export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string
         {showProgress ? <StatusPill status={groupStatus} /> : groupStatus === 'pending_review' ? <span className="status-chip status-pending_review task-row-status-chip">Conferência</span> : groupStatus === 'rejected' ? <span className="status-chip status-rejected task-row-status-chip">Reprovada</span> : null}<PriorityPill priority={first.priority} /><span className="task-time">{first.dueTime}</span><ChevronDown className="task-group-chevron" size={15} />
     </summary>
         <div className="task-group-items">{tasks.map((task) => <TaskRow key={task.id} task={task} onDelete={canManageTask?.(task) ?? true ? onDelete : undefined} selected={selectedTaskIds.has(task.id)} onToggleSelect={canManageTask?.(task) ?? true ? onToggleSelect : undefined} onOpenTask={onOpenTask} showStatus={showTaskStatus} />)}</div>
-  </details>;
+    </details>
+    <div className="task-group-actions"><TaskEvidenceExportButton taskId={first.id} taskTitle={first.title} /></div>
+  </div>;
 }
 export function ActivityItem({ activity }: { activity: Activity }) {
   return <div className="activity-item" data-testid={`activity-${activity.id}`}><span className={`activity-mark mark-${activity.tone}`} /><div><div className="activity-title">{activity.title}</div><div className="activity-detail">{activity.detail}</div><div className="activity-date">{formatDate(activity.createdAt)}</div></div></div>;
