@@ -1,6 +1,7 @@
 import { ArrowLeft, CheckCircle2, CircleAlert, Download, MessageSquare, Paperclip, Pencil, Share2, Trash2, UploadCloud, X } from 'lucide-react';
 import type { ChangeEvent, TouchEvent as ReactTouchEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { TaskCompletionMessage } from '@/components/task-completion-message';
 import { useQueryClient } from '@tanstack/react-query';
 import { getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getGetTaskQueryKey, getListStoresQueryKey, getListTaskSummariesQueryKey, getListTasksQueryKey, useAddTaskComment, useAddTaskEvidence, useCompleteTask, useDeleteTask, useDeleteTaskEvidence, useGetMe, useGetTask, useListStores, useRequestUploadUrl, useReviewTask, useUpdateTask } from '@workspace/api-client-react';
 import type { Evidence, Task, TaskModelAttachment } from '@workspace/api-client-react';
@@ -212,6 +213,7 @@ export default function TaskDetailPage() {
   const addComment = useAddTaskComment();
   const requestUpload = useRequestUploadUrl();
   const [notice, setNotice] = useState('');
+  const [thankedTaskId, setThankedTaskId] = useState<string | null>(null);
   const [reviewComment, setReviewComment] = useState('');
   const [newComment, setNewComment] = useState('');
   const [selectedImage, setSelectedImage] = useState<ImageViewerSelection | null>(null);
@@ -365,12 +367,25 @@ export default function TaskDetailPage() {
   };
   const complete = () => {
     if (!task) return;
-    completeTask.mutate({ id: task.id }, { onSuccess: () => { invalidateTask(); setNotice('Tarefa concluída.'); }, onError: () => setNotice('Adicione as evidências obrigatórias antes de concluir.') });
+    setThankedTaskId(null);
+    completeTask.mutate({ id: task.id }, {
+      onSuccess: () => {
+        invalidateTask();
+        setNotice('Tarefa concluída.');
+        if (me.data?.role === 'manager' || me.data?.role === 'supervisor') setThankedTaskId(task.id);
+      },
+      onError: () => setNotice('Adicione as evidências obrigatórias antes de concluir.'),
+    });
   };
   const review = (decision: 'approve' | 'reject') => {
     if (!task) return;
     reviewTask.mutate({ id: task.id, data: { decision, comment: reviewComment.trim() || undefined } }, {
-      onSuccess: () => { invalidateTask(); setReviewComment(''); setNotice(decision === 'approve' ? 'Tarefa aprovada.' : 'Tarefa reprovada e devolvida ao gerente.'); },
+      onSuccess: () => {
+        invalidateTask();
+        setReviewComment('');
+        setNotice(decision === 'approve' ? 'Tarefa aprovada.' : 'Tarefa reprovada e devolvida ao gerente.');
+        if (decision === 'approve' && me.data?.role === 'supervisor') setThankedTaskId(task.id);
+      },
       onError: () => setNotice('Não foi possível registrar a conferência.'),
     });
   };
@@ -423,5 +438,6 @@ export default function TaskDetailPage() {
       </div>}
         {selectedImage?.objectPath && <div className="evidence-viewer-backdrop" role="dialog" aria-modal="true" aria-label={`Visualização de ${selectedImage.fileName}`} onClick={closeImageViewer}><div className="evidence-viewer" onClick={(event) => event.stopPropagation()}><div className="evidence-viewer-head"><div><div className="eyebrow">Visualização</div><div className="evidence-viewer-title">{selectedImage.fileName}</div></div><button type="button" className="button button-danger evidence-viewer-back-button" onClick={closeImageViewer} data-testid="button-back-image-viewer"><ArrowLeft size={14} /> Voltar</button></div><div className="evidence-viewer-image-scroll">{selectedImage.type === 'photo' ? <PinchZoomPhoto src={`/api/storage${selectedImage.objectPath}`} alt={selectedImage.alt} /> : <video className="evidence-viewer-image" controls playsInline autoPlay={false} src={`/api/storage${selectedImage.objectPath}`}>Seu navegador não oferece suporte a vídeo.</video>}</div></div></div>}
         {editingTask && task && canEditTask && <TaskEditModal task={task} onClose={() => setEditingTask(false)} onSave={saveTask} saving={updateTask.isPending} />}
+        <TaskCompletionMessage open={!!task && thankedTaskId === task.id} onClose={() => setThankedTaskId(null)} />
    </div>;
 }
