@@ -44,3 +44,9 @@ No cabeçalho dos PDFs, usar “MINAS MAIS EXECUTA”, “Nada é tão bom que n
 **Why:** O usuário pediu essas frases no cabeçalho e confirmou expressamente a grafia “MINAS MAIS EXECUTA”.
 
 **How to apply:** Preservar a grafia e as duas frases em todas as páginas ao refinar a apresentação dos relatórios.
+
+O fundo de todo o PDF deve ser preto, mantendo o cabeçalho e as mesmas mensagens.
+
+**Why:** O usuário pediu fundo preto em todo o material, com apresentação moderna e dinâmica.
+
+**How to apply:** Manter textos e identificação das lojas com contraste claro; preservar as fotos e as quatro evidências por página.

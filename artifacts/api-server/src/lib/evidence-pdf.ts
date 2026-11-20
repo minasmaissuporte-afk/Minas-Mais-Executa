@@ -42,8 +42,8 @@ export function createEvidencePdf(title: string, totalPhotos: number) {
         const pageNumber = Math.floor(count / 4) + 1;
         const pageWidth = document.page.width;
         const pageHeight = document.page.height;
-        document.save().rect(0, 0, pageWidth, pageHeight).fill("#f3f5f7").restore();
-        document.save().rect(0, 0, pageWidth, 190).fill("#18232f")
+        document.save().rect(0, 0, pageWidth, pageHeight).fill("#000000").restore();
+        document.save().rect(0, 0, pageWidth, 190).fill("#000000")
           .rect(28, 24, 4, 30).fill("#df3037").restore();
         document.font("Helvetica-BoldOblique").fontSize(30).fillColor("#ffffff")
           .text("MINAS MAIS EXECUTA", 42, 22, { width: pageWidth - 70, height: 38, characterSpacing: 0.8 });
@@ -51,17 +51,17 @@ export function createEvidencePdf(title: string, totalPhotos: number) {
           .text("Nada é tão bom que não possa melhorar!", 28, 65, { width: pageWidth - 56, height: 20 });
         document.font("Helvetica-BoldOblique").fontSize(18).fillColor("#ff8589")
           .text("A excelência em execução!", 28, 89, { width: pageWidth - 56, height: 24 });
-        document.save().lineWidth(0.5).strokeColor("#526171")
+        document.save().lineWidth(0.5).strokeColor("#454545")
           .moveTo(28, 120).lineTo(pageWidth - 28, 120).stroke().restore();
         document.font("Helvetica-Bold").fontSize(title.length > 95 ? 12 : 14).fillColor("#ffffff")
           .text(title, 28, 131, { width: pageWidth - 56, height: 32, ellipsis: true, lineGap: 2 });
         document.font("Helvetica").fontSize(9).fillColor("#c5cfdb")
           .text(`RELATÓRIO FOTOGRÁFICO  /  ${totalPhotos} fotos`, 28, 171, { width: pageWidth - 56, height: 14 });
-        document.save().lineWidth(0.5).strokeColor("#cdd4dc")
+        document.save().lineWidth(0.5).strokeColor("#454545")
           .moveTo(28, pageHeight - 40).lineTo(pageWidth - 28, pageHeight - 40).stroke().restore();
-        document.font("Helvetica").fontSize(8).fillColor("#5d6977")
+        document.font("Helvetica").fontSize(8).fillColor("#a8b0bb")
           .text("MINAS MAIS EXECUTA · REGISTRO DE EXECUÇÃO", 28, pageHeight - 29, { width: pageWidth - 150, height: 12, lineBreak: false });
-        document.font("Helvetica-Bold").fontSize(8).fillColor("#18232f")
+        document.font("Helvetica-Bold").fontSize(8).fillColor("#ffffff")
           .text(`${String(pageNumber).padStart(2, "0")} / ${String(totalPages).padStart(2, "0")}`, pageWidth - 108, pageHeight - 29, { width: 80, height: 12, align: "right", lineBreak: false });
       }
       const gap = 16;
@@ -70,21 +70,22 @@ export function createEvidencePdf(title: string, totalPhotos: number) {
       const x = 28 + (slot % 2) * (width + gap);
       const y = contentTop + Math.floor(slot / 2) * (height + gap);
       const photoNumber = String(count + 1).padStart(2, "0");
-      document.save().lineWidth(0.6).fillColor("#ffffff").strokeColor("#d6dde5")
+      document.save().lineWidth(0.6).fillColor("#000000").strokeColor("#454545")
         .roundedRect(x, y, width, height, 8).fillAndStroke().restore();
-      document.save().roundedRect(x + 12, y + 12, 26, 22, 5).fill("#e9eff5").restore();
-      document.font("Helvetica-Bold").fontSize(9).fillColor("#284867")
+      document.save().lineWidth(0.7).fillColor("#000000").strokeColor("#df3037")
+        .roundedRect(x + 12, y + 12, 26, 22, 5).fillAndStroke().restore();
+      document.font("Helvetica-Bold").fontSize(9).fillColor("#ff8589")
         .text(photoNumber, x + 12, y + 19, { width: 26, height: 12, align: "center" });
       const labelSize = storeName.length > 48 ? 10 : 12;
-      document.font("Helvetica-Bold").fontSize(labelSize).fillColor("#18232f")
+      document.font("Helvetica-Bold").fontSize(labelSize).fillColor("#ffffff")
         .text(storeName, x + 48, y + 13, { width: width - 60, height: 40, ellipsis: true });
-      document.save().roundedRect(x + 10, y + 64, width - 20, height - 90, 4).fill("#f3f5f7").restore();
+      document.save().roundedRect(x + 10, y + 64, width - 20, height - 90, 4).fill("#000000").restore();
       document.image(image, x + 14, y + 68, {
         fit: [width - 28, height - 98],
         align: "center",
         valign: "center",
       });
-      document.font("Helvetica").fontSize(7).fillColor("#657385")
+      document.font("Helvetica").fontSize(7).fillColor("#a8b0bb")
         .text(`EVIDÊNCIA ${photoNumber}`, x + 12, y + height - 17, { width: width - 24, height: 10 });
       count += 1;
     },

@@ -67,6 +67,16 @@ for (let store = 1; store <= total; store += 1) {
 const raster = join(testDir, `page-${total}`);
 execFileSync("pdftoppm", ["-f", String(pages), "-l", String(pages), "-singlefile", "-scale-to", "1000", "-png", filePath, raster]);
 const { data, info } = await sharp(`${raster}.png`).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+// Inspect actual rendered backgrounds, not only the PDF drawing commands.
+for (const [x, y] of [[8, 8], [8, 100], [8, 400], [297, 400], [40, 260], [8, 830]]) {
+  const column = Math.floor(x * info.width / 595.28);
+  const row = Math.floor(y * info.height / 841.89);
+  const offset = (row * info.width + column) * info.channels;
+  assert.ok(
+    data[offset] < 8 && data[offset + 1] < 8 && data[offset + 2] < 8,
+    `Page, header, card and footer backgrounds must stay black at ${x},${y}`,
+  );
+}
 let redPixels = 0;
 for (let pixel = 0; pixel < data.length; pixel += info.channels) {
   if (data[pixel] > 150 && data[pixel + 1] < 100 && data[pixel + 2] < 100) redPixels += 1;
