@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowUpRight, Camera, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, Download, FileVideo, Search, Share2, Store, Trash2 } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Camera, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, Clock3, Download, FileVideo, Search, Share2, Store, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { ComponentType, MouseEvent, ReactNode } from 'react';
 import type { Activity, Task, TaskSummary } from '@workspace/api-client-react';
@@ -151,7 +151,7 @@ export function roleLabel(role: string) {
   return ({ manager: 'Gerente de loja', supervisor: 'Supervisão', admin: 'Administração' } as Record<string, string>)[role] || role;
 }
 export function statusLabel(status: string) {
-  return ({ pending: 'Pendente', in_progress: 'Em execução', pending_review: 'Aguardando conferência', rejected: 'Reprovada', completed: 'Concluída', overdue: 'Atrasada' } as Record<string, string>)[status] || status;
+  return ({ pending: 'Pendente', in_progress: 'Em execução', pending_review: 'Pendente de aprovação', rejected: 'Reprovada', completed: 'Concluída', overdue: 'Atrasada' } as Record<string, string>)[status] || status;
 }
 export function priorityLabel(priority: string) {
   return ({ high: 'Alta', medium: 'Média', low: 'Baixa' } as Record<string, string>)[priority] || priority;
@@ -180,13 +180,13 @@ export function TaskRow({ task, onDelete, selected = false, onToggleSelect, onOp
     <Link href={detailHref} className="task-main" onClick={onOpenTask} data-testid={`link-task-${task.id}`}>
       <div className="task-title">{task.title}</div><div className="task-sub">{task.category} · <mark className="task-person-highlight">{task.storeName}</mark> · {task.assigneeRole === 'supervisor' ? 'Supervisor: ' : ''}<mark className="task-person-highlight">{task.assignee}</mark></div>
       <div className="task-dates">Criada em {formatFullDate(task.createdAt)} por {task.createdByName} · Executar em {formatFullDate(task.dueDate)} às {task.dueTime}</div>
-      {task.status === 'pending_review' && <div className="task-row-status-note task-row-status-note-review">Aguardando conferência do supervisor</div>}
+      {task.status === 'pending_review' && <div className="task-row-status-note task-row-status-note-review"><Clock3 size={13} aria-hidden="true" /><span>Pendente de aprovação do supervisor</span></div>}
       {task.status === 'rejected' && <div className="task-row-status-note task-row-status-note-rejected">Reprovada pelo supervisor · veja a orientação</div>}
     </Link>
     {showStatus
       ? <StatusPill status={task.status} />
       : task.status === 'pending_review'
-        ? <span className="status-chip status-pending_review task-row-status-chip">Conferência</span>
+         ? <span className="status-chip status-pending_review task-row-status-chip">Aprovação pendente</span>
         : task.status === 'rejected'
           ? <span className="status-chip status-rejected task-row-status-chip">Reprovada</span>
           : null}
@@ -231,7 +231,7 @@ export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string
          : `Todas as lojas · ${storeCount} unidades · Clique para acompanhar`}</span>
         <span className="task-dates">Criada em {formatFullDate(first.createdAt)} · Executar em {formatFullDate(first.dueDate)} às {first.dueTime}</span>
       </span>
-        {showProgress ? <StatusPill status={groupStatus} /> : groupStatus === 'pending_review' ? <span className="status-chip status-pending_review task-row-status-chip">Conferência</span> : groupStatus === 'rejected' ? <span className="status-chip status-rejected task-row-status-chip">Reprovada</span> : null}<PriorityPill priority={first.priority} /><span className="task-time">{first.dueTime}</span><ChevronDown className="task-group-chevron" size={15} />
+         {showProgress ? <StatusPill status={groupStatus} /> : groupStatus === 'pending_review' ? <span className="status-chip status-pending_review task-row-status-chip">Pendente de aprovação</span> : groupStatus === 'rejected' ? <span className="status-chip status-rejected task-row-status-chip">Reprovada</span> : null}<PriorityPill priority={first.priority} /><span className="task-time">{first.dueTime}</span><ChevronDown className="task-group-chevron" size={15} />
     </summary>
         <div className="task-group-items">{tasks.map((task) => <TaskRow key={task.id} task={task} onDelete={canManageTask?.(task) ?? true ? onDelete : undefined} selected={selectedTaskIds.has(task.id)} onToggleSelect={canManageTask?.(task) ?? true ? onToggleSelect : undefined} onOpenTask={onOpenTask} showStatus={showTaskStatus} />)}</div>
     </details>

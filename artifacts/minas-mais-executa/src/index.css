@@ -192,7 +192,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .dot-pending_review{background:hsl(43 78% 47%)}
 .dot-rejected{background:hsl(1 73% 48%)}
 .task-row-status-note{margin-top:5px;font-size:9px;font-weight:700}
-.task-row-status-note-review{color:hsl(32 76% 27%)}
+.task-row-status-note-review{display:flex;align-items:center;gap:5px;width:fit-content;max-width:100%;padding:5px 7px;border:1px solid hsl(36 74% 58%);border-radius:6px;color:hsl(32 76% 25%);background:hsl(43 100% 91%);line-height:1.35}
+.task-row-status-note-review svg{flex:0 0 auto}
 .task-row-status-note-rejected{color:hsl(1 62% 35%)}
 .task-row-status-chip{flex:0 0 auto}
 .task-status-banner{display:flex;flex-direction:column;gap:4px;margin-top:18px;padding:12px 14px;border:1px solid;border-radius:9px;font-size:10px;line-height:1.45}
@@ -248,6 +249,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 html,body,#root{max-width:100%}body{overflow-x:hidden}
 .task-export-control{display:inline-flex;flex-direction:column;align-items:flex-end;gap:6px;max-width:100%}.task-export-button{min-height:34px;padding:0 9px;font-size:9px;white-space:nowrap}.task-export-notice{max-width:280px;color:hsl(var(--muted-foreground));font-size:11px;line-height:1.4;text-align:right}
 .task-row{flex-wrap:wrap;border-width:2px}
+.task-row.task-status-pending_review>.task-main{flex:1 1 72%;min-width:0}
 .task-row-result.result-completed{border-color:#419565}
 .task-row-result.result-open{border-color:#d87873}
 .task-group-card{border:2px solid;border-radius:10px;overflow:hidden}
