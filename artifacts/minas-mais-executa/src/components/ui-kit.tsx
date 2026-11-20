@@ -134,7 +134,7 @@ export function TaskEvidenceExportButton({ taskId, taskTitle, scope = 'task', ta
   return <span className="task-export-control">
     <button type="button" className="button task-export-button" onClick={exportPhotos} disabled={busy || sharing || awaitingCompletion} title={awaitingCompletion ? 'Disponível quando a tarefa desta loja estiver concluída' : label} aria-label={`${label}: ${documentTitle}`} data-testid={`button-export-task-photos-${taskId}`}>
       {busy ? <Download size={14} /> : <Share2 size={14} />}
-      {busy ? 'Gerando PDF...' : preparedPdf ? 'Gerar PDF novamente' : label}
+      {busy ? 'Gerando PDF...' : preparedPdf ? 'Gerar novamente' : 'Gerar PDF'}
     </button>
     {awaitingCompletion && <span className="task-export-notice">Disponível ao concluir a loja.</span>}
     {preparedPdf && <span className="task-pdf-actions">

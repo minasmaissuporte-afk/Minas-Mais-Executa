@@ -15,6 +15,12 @@ Não tentar compartilhar automaticamente após gerar o PDF nem exibir mensagens 
 
 **How to apply:** Preservar o arquivo após cancelamento ou recusa, oferecendo download com orientação neutra; não confundir falhas de compartilhamento com falhas reais de geração.
 
+Manter o botão de gerar PDF compacto no canto da caixa, sem preencher toda a largura. Ao modernizar o documento, preservar o layout de quatro fotos por página.
+
+**Why:** O usuário considerou o botão grande demais e esclareceu que queria manter o PDF como estava, mudando apenas sua apresentação visual.
+
+**How to apply:** Manter o fundo da caixa da tarefa e destacar apenas o botão; não alterar a quantidade de fotos por página como parte de um refinamento visual.
+
 A opção de exportar PDF deve aparecer em todas as tarefas acessíveis à conta, independentemente da autoria. A restrição de autoria para editar e excluir continua separada.
 
 **Why:** O usuário pediu explicitamente a opção em todas as tarefas após encontrá-la apenas em algumas.

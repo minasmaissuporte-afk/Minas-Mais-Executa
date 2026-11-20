@@ -27,6 +27,9 @@ export async function normalizeEvidencePhoto(source: Buffer) {
 export function createEvidencePdf(title: string, totalPhotos: number) {
   const document = new PDFDocument({ size: "A4", margin: 32, autoFirstPage: false });
   document.info.Title = `Evidências: ${title}`;
+  document.info.Author = "Minas Mais Executa";
+  document.info.Subject = "Relatório fotográfico de execução das lojas";
+  const totalPages = Math.ceil(totalPhotos / 4);
   let count = 0;
   return {
     document,
@@ -35,28 +38,47 @@ export function createEvidencePdf(title: string, totalPhotos: number) {
       const slot = count % 4;
       if (slot === 0) {
         document.addPage();
-        document.font("Helvetica-Bold").fontSize(9).fillColor("#c62828")
-          .text("MINAS MAIS EXECUTA · EVIDÊNCIAS", 32, 26, { width: 531, height: 15 });
-        document.font("Helvetica-Bold").fontSize(14).fillColor("#242424")
-          .text(title, 32, 45, { width: 531, height: 36, ellipsis: true });
-        document.font("Helvetica").fontSize(9).fillColor("#555555")
-          .text(`${totalPhotos} fotos · Página ${Math.floor(count / 4) + 1} de ${Math.ceil(totalPhotos / 4)}`, 32, 85, { width: 531, height: 15 });
+        const pageNumber = Math.floor(count / 4) + 1;
+        const pageWidth = document.page.width;
+        const pageHeight = document.page.height;
+        document.save().rect(0, 0, pageWidth, pageHeight).fill("#f3f5f7").restore();
+        document.save().rect(0, 0, pageWidth, 134).fill("#18232f")
+          .rect(28, 24, 4, 12).fill("#df3037").restore();
+        document.font("Helvetica-Bold").fontSize(9).fillColor("#ffffff")
+          .text("MINAS MAIS EXECUTA", 40, 26, { width: pageWidth - 68, height: 14, characterSpacing: 1.3 });
+        document.font("Helvetica-Bold").fontSize(title.length > 95 ? 15 : 19).fillColor("#ffffff")
+          .text(title, 28, 51, { width: pageWidth - 56, height: 44, ellipsis: true, lineGap: 2 });
+        document.font("Helvetica").fontSize(9).fillColor("#c5cfdb")
+          .text(`RELATÓRIO FOTOGRÁFICO  /  ${totalPhotos} fotos`, 28, 108, { width: pageWidth - 56, height: 14 });
+        document.save().lineWidth(0.5).strokeColor("#cdd4dc")
+          .moveTo(28, pageHeight - 40).lineTo(pageWidth - 28, pageHeight - 40).stroke().restore();
+        document.font("Helvetica").fontSize(8).fillColor("#5d6977")
+          .text("MINAS MAIS EXECUTA · REGISTRO DE EXECUÇÃO", 28, pageHeight - 29, { width: pageWidth - 150, height: 12, lineBreak: false });
+        document.font("Helvetica-Bold").fontSize(8).fillColor("#18232f")
+          .text(`${String(pageNumber).padStart(2, "0")} / ${String(totalPages).padStart(2, "0")}`, pageWidth - 108, pageHeight - 29, { width: 80, height: 12, align: "right", lineBreak: false });
       }
-      const gap = 14;
-      const width = (document.page.width - 64 - gap) / 2;
-      const height = (document.page.height - 144 - gap) / 2;
-      const x = 32 + (slot % 2) * (width + gap);
-      const y = 112 + Math.floor(slot / 2) * (height + gap);
-      document.save().lineWidth(0.5).strokeColor("#dddddd").rect(x, y, width, height).stroke().restore();
-      document.save().rect(x, y, width, 58).fill("#153e65").restore();
-      const labelSize = storeName.length > 48 ? 11 : 14;
-      document.font("Helvetica-Bold").fontSize(labelSize).fillColor("#ffffff")
-        .text(storeName, x + 10, y + 9, { width: width - 20, height: 42, ellipsis: true });
-      document.image(image, x + 8, y + 66, {
-        fit: [width - 16, height - 74],
+      const gap = 16;
+      const width = (document.page.width - 56 - gap) / 2;
+      const height = (document.page.height - 154 - 56 - gap) / 2;
+      const x = 28 + (slot % 2) * (width + gap);
+      const y = 154 + Math.floor(slot / 2) * (height + gap);
+      const photoNumber = String(count + 1).padStart(2, "0");
+      document.save().lineWidth(0.6).fillColor("#ffffff").strokeColor("#d6dde5")
+        .roundedRect(x, y, width, height, 8).fillAndStroke().restore();
+      document.save().roundedRect(x + 12, y + 12, 26, 22, 5).fill("#e9eff5").restore();
+      document.font("Helvetica-Bold").fontSize(9).fillColor("#284867")
+        .text(photoNumber, x + 12, y + 19, { width: 26, height: 12, align: "center" });
+      const labelSize = storeName.length > 48 ? 10 : 12;
+      document.font("Helvetica-Bold").fontSize(labelSize).fillColor("#18232f")
+        .text(storeName, x + 48, y + 13, { width: width - 60, height: 40, ellipsis: true });
+      document.save().roundedRect(x + 10, y + 64, width - 20, height - 90, 4).fill("#f3f5f7").restore();
+      document.image(image, x + 14, y + 68, {
+        fit: [width - 28, height - 98],
         align: "center",
         valign: "center",
       });
+      document.font("Helvetica").fontSize(7).fillColor("#657385")
+        .text(`EVIDÊNCIA ${photoNumber}`, x + 12, y + height - 17, { width: width - 24, height: 10 });
       count += 1;
     },
   };
