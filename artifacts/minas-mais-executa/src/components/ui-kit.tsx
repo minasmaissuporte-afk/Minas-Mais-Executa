@@ -225,7 +225,7 @@ export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string
        {onToggleGroupSelect && tasks.every((task) => canManageTask?.(task) ?? true) && <input type="checkbox" className="task-select-checkbox" checked={tasks.length > 0 && tasks.every((task) => selectedTaskIds.has(task.id))} onChange={() => onToggleGroupSelect(tasks.map((task) => task.id))} onClick={(event) => event.stopPropagation()} aria-label={`Selecionar conjunto ${first.title}`} data-testid={`checkbox-select-task-group-${groupId ?? first.batchGroupId ?? first.id}`} />}
        <span className={`task-status-dot dot-${groupStatus}`} aria-hidden="true" />
       <span className="task-main">
-        <span className="task-title">{first.title}</span>
+        <mark className="task-title">{first.title}</mark>
         <span className="task-sub"><Store size={13} /> {showProgress
           ? `${completedCount}/${storeCount} lojas concluídas · ${storeCount - completedCount} ainda precisam concluir · clique para abrir as lojas`
          : `Todas as lojas · ${storeCount} unidades · Clique para acompanhar`}</span>
