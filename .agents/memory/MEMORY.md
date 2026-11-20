@@ -6,4 +6,4 @@
 - [Dependências externas do bundle da API](api-bundle-external-dependencies.md) — imports externalizados pelo esbuild podem exigir dependência direta para resolver no runtime.
 - [Compartilhamento de PDFs no celular](mobile-pdf-sharing.md) — geração demorada pode expirar a ativação do toque; reter o arquivo para compartilhar sem regenerar.
 - [Reconhecimento após conclusão](task-completion-recognition.md) — agradecer e incentivar gerentes e supervisores a cada conclusão confirmada de tarefa.
-- [Destaques das caixas das tarefas](task-card-visual-style.md) — título grande e sublinhado, sem marca-texto; amarelo apenas nos nomes da loja e do gerente.
+- [Destaques das caixas das tarefas](task-card-visual-style.md) — título grande e sublinhado, sem marca-texto; azul claro nos nomes da loja e do gerente.

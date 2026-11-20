@@ -38,3 +38,9 @@ Não iniciar a resposta HTTP do PDF antes de terminar a leitura e conversão de 
 **Why:** Fotos HEIC/HEVC e JPEGs truncados interromperam o fluxo depois de um HTTP 200, resultando em download vazio/incompleto. Contar páginas e objetos de imagem não detectou esse problema.
 
 **How to apply:** Verificar formatos de iPhone com um decodificador HEVC real, testar também entradas inválidas e renderizar o PDF para conferir texto e pixels. Falhas irrecuperáveis devem identificar a loja sem devolver um PDF parcial.
+
+No cabeçalho dos PDFs, usar “MINAS MAIS EXECUTA”, “Nada é tão bom que não possa melhorar!” e “A excelência em execução!”, com a marca em letras grandes.
+
+**Why:** O usuário pediu essas frases no cabeçalho e confirmou expressamente a grafia “MINAS MAIS EXECUTA”.
+
+**How to apply:** Preservar a grafia e as duas frases em todas as páginas ao refinar a apresentação dos relatórios.

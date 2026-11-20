@@ -53,6 +53,13 @@ const filePath = join(testDir, `evidence-${total}.pdf`);
 await writeFile(filePath, output);
 const extracted = execFileSync("pdftotext", [filePath, "-"], { encoding: "utf8" });
 assert.ok(extracted.includes("Campanha de teste"), "Task heading must be readable");
+for (const heading of [
+  "MINAS MAIS EXECUTA",
+  "Nada é tão bom que não possa melhorar!",
+  "A excelência em execução!",
+]) {
+  assert.equal(extracted.split(/\r?\n/).filter(line => line.trim() === heading).length, pages, `Header must appear on every page: ${heading}`);
+}
 for (let store = 1; store <= total; store += 1) {
   assert.ok(extracted.includes(`Filial ${store} ·`), `Store ${store} label must be readable`);
 }
