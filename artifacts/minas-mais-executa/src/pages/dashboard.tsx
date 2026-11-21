@@ -49,7 +49,7 @@ export default function DashboardPage({ member }: { member: CurrentMember }) {
      {summary
        ? <div className="stats-grid">
           <MetricCard label={isNetwork ? 'Execução da rede' : 'Execução da loja'} value={`${summary.execution.toFixed(1)}%`} meta="+4,2 pts esta semana" tone="stat-accent" icon={Activity} />
-          <MetricCard label="Tarefas de hoje" value={summary.tasksToday} meta={`${summary.completed} finalizadas`} icon={CheckCircle2} />
+          <MetricCard label="Tarefas de hoje" value={summary.tasksToday} meta={`${summary.completed} finalizadas`} tone="stat-today" icon={CheckCircle2} />
           <MetricCard label="Em aberto" value={summary.pending} meta="Priorize as de alta" tone="stat-warn" icon={Clock3} />
           <MetricCard label="Atrasadas" value={summary.overdue} meta="Requer ação imediata" tone="stat-alert" icon={CircleAlert} />
        </div>

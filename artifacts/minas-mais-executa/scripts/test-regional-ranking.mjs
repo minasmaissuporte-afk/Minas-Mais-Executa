@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-const { currentMonthRankingRange, topRegionalRankings } = await import('../src/lib/regional-ranking.ts');
+const { currentMonthRankingRange, rankSupervisorsByPoints, topRegionalRankings } = await import('../src/lib/regional-ranking.ts');
 
 assert.deepEqual(currentMonthRankingRange('2026-11-21'), { fromDate: '2026-11-01', toDate: '2026-11-21' });
 
@@ -14,7 +14,6 @@ const entry = (supervisorName, storeName, points, tasksCompleted = 1) => ({
   averageExecutionMinutes: 0,
   trend: 'stable',
   groupName: 'G',
-  supervisorName,
 });
 
 const groups = topRegionalRankings([
@@ -34,4 +33,22 @@ assert.deepEqual(groups[0].stores.map(({ storeName }) => storeName), ['Loja Nort
 assert.deepEqual(groups[1].stores.map(({ storeName }) => storeName), ['Loja Sul 1', 'Loja Sul 2', 'Loja Sul 4']);
 assert.ok(groups.every(({ stores }) => stores.length <= 3));
 assert.ok(groups.every(({ stores }) => stores.every(({ tasksCompleted }) => tasksCompleted > 0)));
+
+const supervisorRanking = rankSupervisorsByPoints([
+  entry('Ana Paula', 'Loja Norte 1', 100),
+  entry('Ana Paula', 'Loja Norte 2', 80),
+  entry('Ana Paula', 'Loja Norte 3', 60),
+  entry(' Ana Paula ', 'Loja Norte 4', 50, 0),
+  entry('Jhonathan', 'Loja Sul 1', 240),
+  entry('Edson', 'Loja Leste 1', 180),
+  entry('Christiano', 'Loja Oeste 1', 120),
+  entry('Sem supervisor', 'Loja sem supervisor', 999),
+]);
+
+assert.deepEqual(supervisorRanking.map(({ supervisorName, points, storeCount, award }) => [supervisorName, points, storeCount, award]), [
+  ['Ana Paula', 290, 4, 'ouro'],
+  ['Jhonathan', 240, 1, 'prata'],
+  ['Edson', 180, 1, 'bronze'],
+  ['Christiano', 120, 1, 'cobre'],
+]);
 console.log('Regional execution leaderboard tests passed.');

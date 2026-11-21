@@ -27,3 +27,39 @@ export function topRegionalRankings(entries: RankingEntry[]) {
         .slice(0, 3),
     }));
 }
+
+const supervisorAwards = ['ouro', 'prata', 'bronze', 'cobre'] as const;
+
+export function rankSupervisorsByPoints(entries: RankingEntry[]) {
+  const bySupervisor = new Map<string, {
+    supervisorName: string;
+    points: number;
+    storeCount: number;
+    storesWithCompletions: number;
+  }>();
+
+  entries.forEach((entry) => {
+    const supervisorName = entry.supervisorName.trim().replace(/\s+/g, ' ');
+    if (!supervisorName || supervisorName.toLocaleLowerCase('pt-BR') === 'sem supervisor') return;
+
+    const key = supervisorName.toLocaleLowerCase('pt-BR');
+    const group = bySupervisor.get(key) ?? {
+      supervisorName,
+      points: 0,
+      storeCount: 0,
+      storesWithCompletions: 0,
+    };
+    group.points += entry.points;
+    group.storeCount += 1;
+    if (entry.tasksCompleted > 0) group.storesWithCompletions += 1;
+    bySupervisor.set(key, group);
+  });
+
+  return [...bySupervisor.values()]
+    .sort((first, second) => second.points - first.points || first.supervisorName.localeCompare(second.supervisorName, 'pt-BR'))
+    .map((supervisor, index) => ({
+      ...supervisor,
+      position: index + 1,
+      award: supervisorAwards[index] ?? null,
+    }));
+}
