@@ -554,6 +554,141 @@ html,body,#root{max-width:100%}body{overflow-x:hidden}
 }
 @media(prefers-reduced-motion:reduce){.supervisor-ranking-section{animation:none}.stores-ranking-table tbody tr,.stores-ranking-mobile-row{transition:none}}
 
+/* Live execution boards: night-blue canvas, clear metal tiers, and compact comparison. */
+.regional-ranking-section{
+  padding:18px;
+  border:1px solid #344b5b;
+  border-radius:15px;
+  color:#f2f6f8;
+  background:linear-gradient(145deg,#0d1b27 0%,#142533 58%,#10202c 100%);
+  box-shadow:0 12px 30px #06121c20;
+}
+.regional-ranking-heading{margin-bottom:15px}
+.regional-ranking-heading-icon{color:#f2d274;background:#263321}
+.regional-ranking-heading h2{color:#f4f7f8}
+.regional-ranking-heading p{color:#aab9c4}
+.regional-ranking-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,285px),1fr));gap:11px}
+.regional-ranking-card{border-color:#364c5b;background:#152735;box-shadow:inset 0 1px #ffffff09}
+.regional-ranking-card-head{border-bottom-color:#ffffff16;background:linear-gradient(115deg,#1b2d3a,#223846)}
+.regional-ranking-podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:6px;margin:0;padding:13px 9px 10px;list-style:none}
+.regional-ranking-item{
+  min-width:0;
+  min-height:106px;
+  display:flex;
+  align-items:center;
+  flex-direction:column;
+  justify-content:flex-end;
+  gap:7px;
+  padding:9px 5px;
+  border:1px solid #ffffff18;
+  border-radius:9px 9px 5px 5px;
+  text-align:center;
+  transition:transform .16s ease,opacity .16s ease;
+}
+.regional-ranking-item:hover{transform:translateY(-2px)}
+.regional-ranking-place-1{grid-column:2;grid-row:1;min-height:126px;border-color:#b89b4f;background:linear-gradient(180deg,#3b3524,#242c2c);box-shadow:inset 0 2px #e2c45d}
+.regional-ranking-place-2{grid-column:1;grid-row:1;min-height:104px;border-color:#778692;background:linear-gradient(180deg,#303b44,#202d37);box-shadow:inset 0 2px #c5cdd4}
+.regional-ranking-place-3{grid-column:3;grid-row:1;min-height:94px;border-color:#8a644b;background:linear-gradient(180deg,#3a2e28,#282b2b);box-shadow:inset 0 2px #c68d67}
+.regional-ranking-position{width:auto;height:auto;display:flex;align-items:center;gap:3px;color:#d7e1e6;background:transparent;font-size:9px}
+.regional-ranking-position svg{color:#f3d16c}
+.regional-ranking-place-1 .regional-ranking-position{color:#f5d875;background:transparent;box-shadow:none}
+.regional-ranking-place-2 .regional-ranking-position{color:#dce3e9;background:transparent;box-shadow:none}
+.regional-ranking-place-3 .regional-ranking-position{color:#e6b28f;background:transparent;box-shadow:none}
+.regional-ranking-store{width:100%;align-items:center}
+.regional-ranking-store strong{width:100%;color:#f4f7f8;font-size:9px}
+.regional-ranking-store small{color:#b4c0c8;font-size:7px;line-height:1.3}
+.regional-ranking-points{gap:2px;color:#dce7eb}
+.regional-ranking-points strong{font-size:12px}
+.regional-ranking-points small{color:#b6c4cc;font-size:7px}
+.regional-ranking-place-1 .regional-ranking-points{color:#f5d875}
+.regional-ranking-place-2 .regional-ranking-points{color:#e0e7ec}
+.regional-ranking-place-3 .regional-ranking-points{color:#e6b28f}
+.regional-ranking-subtotal{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-top:1px solid #ffffff17;color:#bdc9d1;font-size:9px}
+.regional-ranking-subtotal strong{color:#f2d274;font-family:var(--app-font-mono);font-size:12px}
+.regional-ranking-subtotal small{color:#b7c3cb;font-size:8px}
+
+.supervisor-ranking-section{margin-top:13px;padding:17px;border-color:#384d5d;background:linear-gradient(145deg,#0d1b27 0%,#142533 58%,#10202c 100%)}
+.supervisor-ranking-heading{margin-bottom:14px}
+.supervisor-ranking-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:15px}
+.supervisor-ranking-summary>div{min-width:0;display:flex;flex-direction:column;gap:5px;padding:9px 11px;border:1px solid #ffffff18;border-radius:9px;background:#ffffff08}
+.supervisor-ranking-summary>div:last-child{border-color:#4c8d81;background:#143b3a}
+.supervisor-ranking-summary small{overflow:hidden;color:#b8c5cd;font-size:8px;letter-spacing:.06em;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}
+.supervisor-ranking-summary strong{overflow:hidden;color:#f5f7f8;font-family:var(--app-font-mono);font-size:15px;font-variant-numeric:tabular-nums;text-overflow:ellipsis;white-space:nowrap}
+.supervisor-ranking-summary>div:last-child strong{color:#88dac6}
+.supervisor-ranking-podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:10px;margin:0 0 15px;padding:0;list-style:none}
+.supervisor-podium-card{
+  min-width:0;
+  min-height:136px;
+  display:flex;
+  align-items:center;
+  flex-direction:column;
+  justify-content:flex-end;
+  gap:7px;
+  padding:12px 9px;
+  border:1px solid #ffffff20;
+  border-radius:11px 11px 7px 7px;
+  background:linear-gradient(180deg,#202f39,#17242d);
+  text-align:center;
+  animation:podium-rise .28s ease-out both;
+}
+.supervisor-podium-place-1{grid-column:2;grid-row:1;min-height:164px;border-color:#b89b4f;background:linear-gradient(180deg,#44391e,#202a2e);box-shadow:inset 0 2px #e6c755}
+.supervisor-podium-place-2{grid-column:1;grid-row:1;min-height:137px;border-color:#7a8793;background:linear-gradient(180deg,#35414b,#1c2933);box-shadow:inset 0 2px #c5cdd4;animation-delay:.04s}
+.supervisor-podium-place-3{grid-column:3;grid-row:1;min-height:122px;border-color:#8a644b;background:linear-gradient(180deg,#3d3028,#202a2e);box-shadow:inset 0 2px #ca9069;animation-delay:.08s}
+.supervisor-podium-place{color:#bac7cf;font-family:var(--app-font-mono);font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.supervisor-podium-medal{display:flex;align-items:center;gap:5px;color:#f4d36e;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.supervisor-award-prata .supervisor-podium-medal{color:#dce4ea}
+.supervisor-award-bronze .supervisor-podium-medal{color:#e6b28f}
+.supervisor-podium-name{max-width:100%;overflow:hidden;color:#f5f7f8;font-size:12px;line-height:1.2;text-overflow:ellipsis}
+.supervisor-podium-points{color:#f5d875;font-family:var(--app-font-mono);font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+.supervisor-podium-points small{color:#c5d0d7;font-size:8px}
+.supervisor-award-prata .supervisor-podium-points{color:#e0e7ec}
+.supervisor-award-bronze .supervisor-podium-points{color:#e6b28f}
+.supervisor-ranking-row{grid-template-columns:34px minmax(0,1fr) auto auto}
+.supervisor-ranking-info{gap:4px}
+.supervisor-ranking-info small{max-width:100%}
+.supervisor-ranking-bar{height:6px;width:100%;overflow:hidden;border-radius:99px;background:#070e14}
+.supervisor-ranking-bar>span{display:block;height:100%;border-radius:inherit;background:#78c8b3;transform-origin:left;animation:ranking-bar-in .32s ease-out both}
+.supervisor-award-ouro .supervisor-ranking-bar>span{background:#e4c256}
+.supervisor-award-prata .supervisor-ranking-bar>span{background:#c3cdd6}
+.supervisor-award-bronze .supervisor-ranking-bar>span{background:#cb8d65}
+.supervisor-award-cobre .supervisor-ranking-bar>span{background:#bd7950}
+.supervisor-ranking-score{display:flex;align-items:flex-end;flex-direction:column;gap:4px}
+.supervisor-ranking-gap{color:#b5c2cb;font-family:var(--app-font-mono);font-size:8px;white-space:nowrap}
+.supervisor-ranking-empty{display:flex;align-items:center;flex-direction:column;gap:7px;padding:23px 14px;border:1px dashed #506170;border-radius:10px;color:#b7c4cd;text-align:center}
+.supervisor-ranking-empty svg{color:#8f9eaa}
+.supervisor-ranking-empty strong{color:#e7edf1;font-size:12px}
+.supervisor-ranking-empty span{font-size:10px;line-height:1.45}
+@keyframes podium-rise{from{opacity:.7;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ranking-bar-in{from{opacity:.55;transform:scaleX(.92)}to{opacity:1;transform:scaleX(1)}}
+@media(max-width:700px){
+  .regional-ranking-section{padding:13px 11px}
+  .regional-ranking-grid{grid-template-columns:minmax(0,1fr)}
+  .regional-ranking-podium{gap:4px;padding:10px 7px 8px}
+  .regional-ranking-item{padding:8px 3px}
+  .regional-ranking-store strong{font-size:8px}
+  .supervisor-ranking-section{padding:13px 10px}
+  .supervisor-ranking-summary{gap:5px}
+  .supervisor-ranking-summary>div{gap:4px;padding:8px 6px}
+  .supervisor-ranking-summary small{font-size:7px;letter-spacing:.02em}
+  .supervisor-ranking-summary strong{font-size:12px}
+  .supervisor-ranking-podium{gap:6px;margin-bottom:12px}
+  .supervisor-podium-card{min-height:119px;padding:10px 5px}
+  .supervisor-podium-place-1{min-height:141px}
+  .supervisor-podium-place-2{min-height:119px}
+  .supervisor-podium-place-3{min-height:107px}
+  .supervisor-podium-name{font-size:10px}
+  .supervisor-podium-points{font-size:14px}
+  .supervisor-ranking-row{grid-template-columns:27px minmax(0,1fr) auto;gap:7px;padding:9px}
+  .supervisor-ranking-score{grid-column:3;grid-row:1;align-items:flex-end}
+  .supervisor-ranking-award{grid-column:2/4;justify-self:end;margin-top:-2px}
+  .supervisor-ranking-info strong{font-size:12px}
+  .supervisor-ranking-info small{font-size:8px}
+  .supervisor-ranking-gap{font-size:7px}
+}
+@media(prefers-reduced-motion:reduce){
+  .regional-ranking-item,.supervisor-podium-card,.supervisor-ranking-bar>span{animation:none!important;transition:none!important}
+}
+
 /* Regional tables keep the operational density of the network board, with a distinct local podium. */
 .regional-stores-section{margin-top:26px}
 .regional-stores-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:0 0 13px}

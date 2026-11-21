@@ -1,4 +1,4 @@
-import { Trophy, UserRound } from 'lucide-react';
+import { Crown, Trophy, UserRound } from 'lucide-react';
 import type { RankingEntry } from '@workspace/api-client-react';
 import { EmptyState, ErrorState, LoadingBlocks } from '@/components/ui-kit';
 import { rankSupervisorsByPoints, topRegionalRankings } from '@/lib/regional-ranking';
@@ -32,7 +32,7 @@ export function RegionalExecutionLeaderboard({
       ? <ErrorState onRetry={onRetry} />
       : isLoading
         ? <LoadingBlocks rows={1} />
-        : regions.length || hasMonthlyPoints
+        : hasMonthlyPoints
           ? <>
             {regions.length > 0 && <div className="regional-ranking-grid">
               {regions.map(({ regionNumber, supervisorName, stores }) => <article className="regional-ranking-card" key={supervisorName} data-testid={`regional-ranking-${regionNumber}`}>
@@ -41,11 +41,14 @@ export function RegionalExecutionLeaderboard({
                     <span>Região</span><strong>{regionNumber}</strong>
                   </span>
                   <span className="regional-ranking-supervisor"><UserRound size={16} aria-hidden="true" /><span><small>SUPERVISOR</small><strong>{supervisorName}</strong></span></span>
-                  <span className="regional-ranking-store-count">{stores.length} {stores.length === 1 ? 'loja' : 'lojas'}</span>
+                  <span className="regional-ranking-store-count">{stores.length} destacadas</span>
                 </header>
-                <ol className="regional-ranking-list">
+                <ol className="regional-ranking-podium" aria-label={`Pódio das lojas da Região ${regionNumber}`}>
                   {stores.map((store, index) => <li className={`regional-ranking-item regional-ranking-place-${index + 1}`} key={store.storeName}>
-                    <span className="regional-ranking-position" aria-label={`${index + 1}º lugar`}>{index + 1}</span>
+                    <span className="regional-ranking-position" aria-label={`${index + 1}º lugar`}>
+                      {index === 0 && <Crown size={13} aria-hidden="true" />}
+                      <b>{index + 1}º</b>
+                    </span>
                     <span className="regional-ranking-store">
                       <strong>{store.storeName}</strong>
                       <small>{store.tasksCompleted} {store.tasksCompleted === 1 ? 'tarefa concluída' : 'tarefas concluídas'}</small>
@@ -56,6 +59,10 @@ export function RegionalExecutionLeaderboard({
                     </span>
                   </li>)}
                 </ol>
+                <footer className="regional-ranking-subtotal">
+                  <span>Total das {stores.length} destacadas</span>
+                  <strong>{stores.reduce((total, store) => total + store.points, 0).toLocaleString('pt-BR')} <small>pts</small></strong>
+                </footer>
               </article>)}
             </div>}
             {hasMonthlyPoints && <SupervisorPointsRanking entries={entries} periodLabel={monthLabel} />}
