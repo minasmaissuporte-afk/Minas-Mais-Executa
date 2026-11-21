@@ -53,6 +53,12 @@ const filePath = join(testDir, `evidence-${total}.pdf`);
 await writeFile(filePath, output);
 const extracted = execFileSync("pdftotext", [filePath, "-"], { encoding: "utf8" });
 assert.ok(extracted.includes("Campanha de teste"), "Task heading must be readable");
+const headerOrder = [
+  extracted.indexOf("MINAS MAIS EXECUTA"),
+  extracted.indexOf("A excelência em execução!"),
+  extracted.indexOf("Nada é tão bom que não possa melhorar!"),
+];
+assert.ok(headerOrder[0] >= 0 && headerOrder[0] < headerOrder[1] && headerOrder[1] < headerOrder[2], "Brand, excellence line and motto must appear in the requested order");
 for (const heading of [
   "MINAS MAIS EXECUTA",
   "Nada é tão bom que não possa melhorar!",

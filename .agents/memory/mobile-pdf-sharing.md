@@ -39,11 +39,11 @@ Não iniciar a resposta HTTP do PDF antes de terminar a leitura e conversão de 
 
 **How to apply:** Verificar formatos de iPhone com um decodificador HEVC real, testar também entradas inválidas e renderizar o PDF para conferir texto e pixels. Falhas irrecuperáveis devem identificar a loja sem devolver um PDF parcial.
 
-No cabeçalho dos PDFs, usar “MINAS MAIS EXECUTA”, “Nada é tão bom que não possa melhorar!” e “A excelência em execução!”, com a marca em letras grandes.
+No cabeçalho dos PDFs, usar nesta ordem “MINAS MAIS EXECUTA”, “A excelência em execução!” e “Nada é tão bom que não possa melhorar!”. Dar destaque visual maior à marca e usar outra cor no texto sobre excelência.
 
-**Why:** O usuário pediu essas frases no cabeçalho e confirmou expressamente a grafia “MINAS MAIS EXECUTA”.
+**Why:** O usuário pediu as três frases, confirmou expressamente a grafia “MINAS MAIS EXECUTA” e especificou a ordem e as cores de destaque.
 
-**How to apply:** Preservar a grafia e as duas frases em todas as páginas ao refinar a apresentação dos relatórios.
+**How to apply:** Preservar grafia, ordem e contraste em todas as páginas ao refinar a apresentação dos relatórios.
 
 O fundo externo de todo o PDF deve ser preto, mantendo o cabeçalho e as mesmas mensagens. Os quadros das fotos devem ser brancos, com uma moldura clara e moderna.
 

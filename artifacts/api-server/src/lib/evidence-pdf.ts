@@ -44,15 +44,16 @@ export function createEvidencePdf(title: string, totalPhotos: number) {
         const pageHeight = document.page.height;
         document.save().rect(0, 0, pageWidth, pageHeight).fill("#000000").restore();
         document.save().rect(0, 0, pageWidth, 190).fill("#000000")
-          .rect(28, 24, 4, 30).fill("#df3037").restore();
+          .roundedRect(28, 22, 4, 38, 2).fill("#df3037")
+          .roundedRect(28, 64, 3, 21, 1.5).fill("#ff8589").restore();
         document.font("Helvetica-BoldOblique").fontSize(30).fillColor("#ffffff")
           .text("MINAS MAIS EXECUTA", 42, 22, { width: pageWidth - 70, height: 38, characterSpacing: 0.8 });
-        document.font("Helvetica-Bold").fontSize(14).fillColor("#ffffff")
-          .text("Nada é tão bom que não possa melhorar!", 28, 65, { width: pageWidth - 56, height: 20 });
         document.font("Helvetica-BoldOblique").fontSize(18).fillColor("#ff8589")
-          .text("A excelência em execução!", 28, 89, { width: pageWidth - 56, height: 24 });
+          .text("A excelência em execução!", 42, 63, { width: pageWidth - 70, height: 24 });
+        document.font("Helvetica-Bold").fontSize(13).fillColor("#ffffff")
+          .text("Nada é tão bom que não possa melhorar!", 42, 88, { width: pageWidth - 70, height: 19 });
         document.save().lineWidth(0.5).strokeColor("#454545")
-          .moveTo(28, 120).lineTo(pageWidth - 28, 120).stroke().restore();
+          .moveTo(28, 118).lineTo(pageWidth - 28, 118).stroke().restore();
         document.font("Helvetica-Bold").fontSize(title.length > 95 ? 12 : 14).fillColor("#ffffff")
           .text(title, 28, 131, { width: pageWidth - 56, height: 32, ellipsis: true, lineGap: 2 });
         document.font("Helvetica").fontSize(9).fillColor("#c5cfdb")

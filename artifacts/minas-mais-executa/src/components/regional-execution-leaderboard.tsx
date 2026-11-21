@@ -76,7 +76,7 @@ export function RegionalExecutionLeaderboard({
                     <small>{storeCount} {storeCount === 1 ? 'loja' : 'lojas'} · {storesWithCompletions} com tarefas concluídas</small>
                   </span>
                   <span className="supervisor-ranking-total"><strong>{points.toLocaleString('pt-BR')}</strong><small>pts</small></span>
-                  <span className="supervisor-ranking-award">{award ?? `${position}º`}</span>
+                  <span className="supervisor-ranking-award"><Medal size={13} aria-hidden="true" />{award ?? `${position}º`}</span>
                 </li>)}
               </ol>
             </div>}
