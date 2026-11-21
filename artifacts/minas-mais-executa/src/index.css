@@ -859,3 +859,13 @@ html,body,#root{max-width:100%}body{overflow-x:hidden}
 .regional-store-mobile-row.podium-1{border-color:#c49d2e;background:linear-gradient(105deg,#49401f,#123b37 82%)}
 .regional-store-mobile-row.podium-2{border-color:#9ba7b2;background:linear-gradient(105deg,#344448,#123b37 82%)}
 .regional-store-mobile-row.podium-3{border-color:#b8774e;background:linear-gradient(105deg,#3b3226,#123b37 82%)}
+
+/* No ranking geral, o pódio metálico se destaca das demais lojas em teal uniforme. */
+.stores-ranking-table tbody tr:not(.podium-1):not(.podium-2):not(.podium-3){background:#edf7f5}
+.stores-ranking-table tbody tr:not(.podium-1):not(.podium-2):not(.podium-3) td:first-child{box-shadow:inset 3px 0 #75b8aa}
+.stores-ranking-table tbody tr:not(.podium-1):not(.podium-2):not(.podium-3) .store-rank-medal{border-color:#b8d9d2;color:#17675b;background:#dcefeb}
+.stores-ranking-table tbody tr:not(.podium-1):not(.podium-2):not(.podium-3) .score{color:#17675b}
+.stores-ranking-table tbody tr:not(.podium-1):not(.podium-2):not(.podium-3):hover{background:#e0f0ec}
+.stores-ranking-mobile-row:not(.podium-1):not(.podium-2):not(.podium-3){border-color:#b8d9d2;background:linear-gradient(115deg,#e8f5f2,#f2f9f8)}
+.stores-ranking-mobile-row:not(.podium-1):not(.podium-2):not(.podium-3) .store-rank-medal{border-color:#b8d9d2;color:#17675b;background:#dcefeb}
+.stores-ranking-mobile-row:not(.podium-1):not(.podium-2):not(.podium-3) .stores-mobile-points strong{color:#17675b}
