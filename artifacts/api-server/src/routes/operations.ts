@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { createEvidencePdf } from "../lib/evidence-pdf";
+import { saoPauloStartOfDay } from "../lib/business-date";
 import { and, desc, eq, gte, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import {
   AddTaskEvidenceBody,
@@ -2193,8 +2194,8 @@ router.get("/rankings", async (req, res) => {
     .from(storesTable)
     .where(storeFilters.length ? and(...storeFilters) : undefined);
   const storeIds = stores.map((store) => store.id);
-  const completionRangeStart = new Date(`${previousFromDate}T00:00:00.000Z`);
-  const completionRangeEnd = new Date(`${addDaysToDateInput(toDate, 1)}T00:00:00.000Z`);
+  const completionRangeStart = saoPauloStartOfDay(previousFromDate);
+  const completionRangeEnd = saoPauloStartOfDay(addDaysToDateInput(toDate, 1));
   const completionTasks = storeIds.length
     ? await db
       .select({
@@ -2226,10 +2227,10 @@ router.get("/rankings", async (req, res) => {
       ))
     : [];
 
-  const currentCompletionStartMs = Date.parse(`${fromDate}T00:00:00.000Z`);
-  const currentCompletionEndMs = Date.parse(`${addDaysToDateInput(toDate, 1)}T00:00:00.000Z`);
-  const previousCompletionStartMs = Date.parse(`${previousFromDate}T00:00:00.000Z`);
-  const previousCompletionEndMs = Date.parse(`${addDaysToDateInput(previousToDate, 1)}T00:00:00.000Z`);
+  const currentCompletionStartMs = saoPauloStartOfDay(fromDate).getTime();
+  const currentCompletionEndMs = saoPauloStartOfDay(addDaysToDateInput(toDate, 1)).getTime();
+  const previousCompletionStartMs = saoPauloStartOfDay(previousFromDate).getTime();
+  const previousCompletionEndMs = saoPauloStartOfDay(addDaysToDateInput(previousToDate, 1)).getTime();
 
   const rankedStores = stores
     .map((store) => {
@@ -2262,6 +2263,7 @@ router.get("/rankings", async (req, res) => {
       return {
         storeName: store.name,
         manager: store.manager,
+        region: store.region,
         execution: currentMetrics.execution,
         tasksCompleted: currentMetrics.tasksCompleted,
         points: currentMetrics.points,

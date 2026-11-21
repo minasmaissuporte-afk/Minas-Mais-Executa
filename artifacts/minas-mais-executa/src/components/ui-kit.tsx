@@ -241,8 +241,8 @@ export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string
 export function ActivityItem({ activity }: { activity: Activity }) {
   return <div className="activity-item" data-testid={`activity-${activity.id}`}><span className={`activity-mark mark-${activity.tone}`} /><div><div className="activity-title">{activity.title}</div><div className="activity-detail">{activity.detail}</div><div className="activity-date">{formatDate(activity.createdAt)}</div></div></div>;
 }
-export function MetricCard({ label, value, meta, tone = '' }: { label: string; value: string | number; meta: string; tone?: string }) {
-  return <div className={`card stat-card ${tone}`} data-testid={`metric-${label.toLowerCase().replace(/\s+/g, '-')}`}><span className="stat-label">{label}</span><span className="stat-value">{value}</span><span className="stat-meta">{meta}</span></div>;
+export function MetricCard({ label, value, meta, tone = '', icon: Icon }: { label: string; value: string | number; meta: string; tone?: string; icon?: ComponentType<{ size?: number }> }) {
+  return <div className={`card stat-card ${tone}`} data-testid={`metric-${label.toLowerCase().replace(/\s+/g, '-')}`}><div className="stat-card-head"><span className="stat-label">{label}</span>{Icon && <span className="stat-icon"><Icon size={17} /></span>}</div><span className="stat-value">{value}</span><span className="stat-meta">{meta}</span></div>;
 }
 export function TrendIcon({ trend }: { trend: string }) {
   if (trend === 'up') return <ArrowUpRight size={15} />;

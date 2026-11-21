@@ -11,6 +11,8 @@ export interface RankingEntry {
   position: number;
   storeName: string;
   manager: string;
+  /** Store region used to group regional rankings. */
+  region: string;
   /** Legacy execution percentage retained for compatibility; not used to rank stores. */
   execution: number;
   /** Number of tasks completed within the selected completion-date range. */

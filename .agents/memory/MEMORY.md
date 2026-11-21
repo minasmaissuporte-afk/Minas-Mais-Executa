@@ -7,3 +7,4 @@
 - [Compartilhamento de PDFs no celular](mobile-pdf-sharing.md) — geração demorada pode expirar a ativação do toque; reter o arquivo para compartilhar sem regenerar.
 - [Reconhecimento após conclusão](task-completion-recognition.md) — agradecer e incentivar gerentes e supervisores a cada conclusão confirmada de tarefa.
 - [Destaques das caixas das tarefas](task-card-visual-style.md) — título grande e sublinhado, sem marca-texto; azul claro nos nomes da loja e do gerente.
+- [Ranking regional de execução](regional-execution-ranking.md) — o painel deve mostrar as três lojas mais bem pontuadas por região no mês vigente.

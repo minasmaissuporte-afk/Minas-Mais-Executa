@@ -1,16 +1,21 @@
-import { ArrowUpRight, CheckCircle2, CircleAlert, ListChecks, Target } from 'lucide-react';
+import { Activity, ArrowUpRight, CheckCircle2, CircleAlert, Clock3, ListChecks, Target } from 'lucide-react';
 import { useMemo } from 'react';
-import { useGetActivity, useGetDashboardSummary, useListTaskSummaries, getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getListTaskSummariesQueryKey } from '@workspace/api-client-react';
+import { useGetActivity, useGetDashboardSummary, useGetRankings, useListTaskSummaries, getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getGetRankingsQueryKey, getListTaskSummariesQueryKey } from '@workspace/api-client-react';
 import type { CurrentMember } from '@workspace/api-client-react';
 import { todayInput } from '@/lib/demo-data';
+import { currentMonthRankingRange } from '@/lib/regional-ranking';
 import { ActivityItem, EmptyState, ErrorState, LoadingBlocks, MetricCard, TaskGroupRow, TaskRow } from '@/components/ui-kit';
+import { RegionalExecutionLeaderboard } from '@/components/regional-execution-leaderboard';
 import { Link } from 'wouter';
 
 export default function DashboardPage({ member }: { member: CurrentMember }) {
   const firstName = member.name.split(' ')[0] || 'Usuário';
+  const isNetwork = member.role !== 'manager';
+  const rankingRange = currentMonthRankingRange(todayInput);
   const summaryQuery = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey() } });
   const activityQuery = useGetActivity({ query: { queryKey: getGetActivityQueryKey() } });
   const tasksQuery = useListTaskSummaries({ dateTo: todayInput }, { query: { queryKey: getListTaskSummariesQueryKey({ dateTo: todayInput }), refetchInterval: 30000 } });
+  const rankingsQuery = useGetRankings(rankingRange, { query: { queryKey: getGetRankingsQueryKey(rankingRange), enabled: isNetwork } });
   const summary = summaryQuery.data;
   const taskRows = useMemo(() => {
     const dueTasks = (tasksQuery.data ?? [])
@@ -36,18 +41,20 @@ export default function DashboardPage({ member }: { member: CurrentMember }) {
     return rows.filter((row) => !row.tasks.every((task) => task.status === 'completed'));
   }, [tasksQuery.data]);
   const activities = activityQuery.data ?? [];
-  const isNetwork = member.role !== 'manager';
+  const monthLabel = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+    .format(new Date(`${rankingRange.fromDate}T12:00:00.000Z`));
   return <div className="content">
     <div className="page-head"><div><div className="eyebrow">{isNetwork ? 'Pulso da rede' : 'Acompanhamento de hoje'}</div><h1 className="page-title">{isNetwork ? 'A operação, sem ruído.' : `Bom dia, ${firstName}.`}</h1><p className="page-intro">{isNetwork ? <>Acompanhe a execução das <strong>{summary?.storesCount ?? 0} lojas</strong> e encontre o próximo ponto de atenção.</> : <>Sua loja está em ritmo de execução. <strong>{summary?.pending ?? 0} tarefas</strong> pedem atenção antes do fim do dia.</>}</p></div><Link className="button button-primary" href="/tasks" data-testid="link-open-tasks"><ListChecks size={15} /> Abrir tarefas</Link></div>
      {summaryQuery.isError && <ErrorState onRetry={() => summaryQuery.refetch()} />}
      {summary
        ? <div className="stats-grid">
-         <MetricCard label={isNetwork ? 'Execução da rede' : 'Execução da loja'} value={`${summary.execution.toFixed(1)}%`} meta="+4,2 pts esta semana" tone="stat-accent" />
-         <MetricCard label="Tarefas de hoje" value={summary.tasksToday} meta={`${summary.completed} finalizadas`} />
-         <MetricCard label="Em aberto" value={summary.pending} meta="Priorize as de alta" tone="stat-warn" />
-         <MetricCard label="Atrasadas" value={summary.overdue} meta="Requer ação imediata" tone="stat-alert" />
+          <MetricCard label={isNetwork ? 'Execução da rede' : 'Execução da loja'} value={`${summary.execution.toFixed(1)}%`} meta="+4,2 pts esta semana" tone="stat-accent" icon={Activity} />
+          <MetricCard label="Tarefas de hoje" value={summary.tasksToday} meta={`${summary.completed} finalizadas`} icon={CheckCircle2} />
+          <MetricCard label="Em aberto" value={summary.pending} meta="Priorize as de alta" tone="stat-warn" icon={Clock3} />
+          <MetricCard label="Atrasadas" value={summary.overdue} meta="Requer ação imediata" tone="stat-alert" icon={CircleAlert} />
        </div>
        : summaryQuery.isLoading ? <LoadingBlocks rows={1} /> : null}
+      {isNetwork && <RegionalExecutionLeaderboard entries={rankingsQuery.data ?? []} monthLabel={monthLabel} isLoading={rankingsQuery.isLoading} isError={rankingsQuery.isError} onRetry={() => rankingsQuery.refetch()} />}
      <div className="dashboard-grid">
        <section className="card card-pad">
          <div className="section-heading">

@@ -1074,6 +1074,7 @@ export const GetRankingsResponseItem = zod.object({
   "position": zod.number().int(),
   "storeName": zod.string(),
   "manager": zod.string(),
+  "region": zod.string().describe('Store region used to group regional rankings.'),
   "execution": zod.number().int().describe('Legacy execution percentage retained for compatibility; not used to rank stores.'),
   "tasksCompleted": zod.number().int().describe('Number of tasks completed within the selected completion-date range.'),
   "points": zod.number().int().describe('Total speed points from completed tasks in the selected completion-date range.'),
