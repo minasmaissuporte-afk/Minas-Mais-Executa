@@ -37,7 +37,9 @@ export function RegionalExecutionLeaderboard({
             {regions.length > 0 && <div className="regional-ranking-grid">
               {regions.map(({ regionNumber, supervisorName, stores }) => <article className="regional-ranking-card" key={supervisorName} data-testid={`regional-ranking-${regionNumber}`}>
                 <header className="regional-ranking-card-head">
-                  <span className="regional-ranking-region-tag">Região {regionNumber}</span>
+                  <span className="regional-ranking-region-tag">
+                    <span>Região</span><strong>{regionNumber}</strong>
+                  </span>
                   <span className="regional-ranking-supervisor"><UserRound size={16} aria-hidden="true" /><span><small>SUPERVISOR</small><strong>{supervisorName}</strong></span></span>
                   <span className="regional-ranking-store-count">{stores.length} {stores.length === 1 ? 'loja' : 'lojas'}</span>
                 </header>

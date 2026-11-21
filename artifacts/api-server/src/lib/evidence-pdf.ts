@@ -44,20 +44,21 @@ export function createEvidencePdf(title: string, totalPhotos: number) {
         const pageHeight = document.page.height;
         document.save().rect(0, 0, pageWidth, pageHeight).fill("#000000").restore();
         document.save().rect(0, 0, pageWidth, 190).fill("#000000")
-          .roundedRect(28, 22, 4, 38, 2).fill("#df3037")
-          .roundedRect(28, 64, 3, 21, 1.5).fill("#ff8589").restore();
-        document.font("Helvetica-BoldOblique").fontSize(30).fillColor("#ffffff")
-          .text("MINAS MAIS EXECUTA", 42, 22, { width: pageWidth - 70, height: 38, characterSpacing: 0.8 });
+          .roundedRect(28, 23, 4, 44, 2).fill("#df3037")
+          .roundedRect(28, 71, 4, 17, 2).fill("#ff8589")
+          .moveTo(42, 62).lineTo(215, 62).lineWidth(1.5).strokeColor("#df3037").stroke()
+          .moveTo(42, 125).lineTo(pageWidth - 28, 125).lineWidth(0.6).strokeColor("#454545").stroke()
+          .restore();
+        document.font("Helvetica-BoldOblique").fontSize(33).fillColor("#ffffff")
+          .text("MINAS MAIS EXECUTA", 42, 21, { width: pageWidth - 70, height: 40, characterSpacing: 0.7 });
         document.font("Helvetica-BoldOblique").fontSize(18).fillColor("#ff8589")
-          .text("A excelência em execução!", 42, 63, { width: pageWidth - 70, height: 24 });
+          .text("A excelência em execução!", 42, 69, { width: pageWidth - 70, height: 23 });
         document.font("Helvetica-Bold").fontSize(13).fillColor("#ffffff")
-          .text("Nada é tão bom que não possa melhorar!", 42, 88, { width: pageWidth - 70, height: 19 });
-        document.save().lineWidth(0.5).strokeColor("#454545")
-          .moveTo(28, 118).lineTo(pageWidth - 28, 118).stroke().restore();
+          .text("Nada é tão bom que não possa melhorar!", 42, 96, { width: pageWidth - 70, height: 18 });
         document.font("Helvetica-Bold").fontSize(title.length > 95 ? 12 : 14).fillColor("#ffffff")
-          .text(title, 28, 131, { width: pageWidth - 56, height: 32, ellipsis: true, lineGap: 2 });
+          .text(title, 28, 137, { width: pageWidth - 56, height: 28, ellipsis: true, lineGap: 2 });
         document.font("Helvetica").fontSize(9).fillColor("#c5cfdb")
-          .text(`RELATÓRIO FOTOGRÁFICO  /  ${totalPhotos} fotos`, 28, 171, { width: pageWidth - 56, height: 14 });
+          .text(`RELATÓRIO FOTOGRÁFICO  /  ${totalPhotos} fotos`, 28, 173, { width: pageWidth - 56, height: 12 });
         document.save().lineWidth(0.5).strokeColor("#454545")
           .moveTo(28, pageHeight - 40).lineTo(pageWidth - 28, pageHeight - 40).stroke().restore();
         document.font("Helvetica").fontSize(8).fillColor("#a8b0bb")
