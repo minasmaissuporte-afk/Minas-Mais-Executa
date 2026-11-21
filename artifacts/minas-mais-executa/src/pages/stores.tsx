@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { getGetRankingsQueryKey, getListStoresQueryKey, useGetRankings, useListStores } from '@workspace/api-client-react';
 import { EmptyState, ErrorState, formatDurationMinutes, LoadingBlocks, SearchEmpty, TrendIcon } from '@/components/ui-kit';
 import { SupervisorPointsRanking } from '@/components/supervisor-points-ranking';
-import { groupStoresByRegion } from '@/lib/store-region-ranking';
+import { groupStoresBySupervisor } from '@/lib/store-region-ranking';
 
 function toDateInputValue(date: Date) {
   const year = date.getFullYear();
@@ -70,7 +70,7 @@ export default function StoresPage() {
     (!rankingSupervisor || store.supervisor === rankingSupervisor),
   ), [stores, rankingRegion, rankingSupervisor]);
   const regionalRankings = useMemo(
-    () => groupStoresByRegion(regionalStores, orderedRankings, search),
+    () => groupStoresBySupervisor(regionalStores, orderedRankings, search),
     [regionalStores, orderedRankings, search],
   );
   const rangeLabel = validRankingRange ? periodLabel(rankingRange.fromDate, rankingRange.toDate) : 'período inválido';
@@ -100,9 +100,9 @@ export default function StoresPage() {
           onChange={(event) => setRankingRange((range) => ({ ...range, toDate: event.target.value }))}
           aria-label="Data final do ranking" data-testid="input-ranking-to-date" />
       </label>
-      <label className="ranking-filter">Região
-        <select className="select" value={rankingRegion} onChange={(event) => setRankingRegion(event.target.value)} data-testid="select-ranking-region" aria-label="Filtrar por região">
-          <option value="">Todas as regiões</option>
+      <label className="ranking-filter">Localização
+        <select className="select" value={rankingRegion} onChange={(event) => setRankingRegion(event.target.value)} data-testid="select-ranking-region" aria-label="Filtrar por localização da loja">
+          <option value="">Todas as localizações</option>
           {regions.map((region) => <option key={region} value={region}>{region}</option>)}
         </select>
       </label>
@@ -191,7 +191,7 @@ export default function StoresPage() {
         <div>
           <span className="stores-ranking-kicker"><UsersRound size={14} aria-hidden="true" /> Comparativo local</span>
           <h2 id="regional-stores-title">Ranking por região</h2>
-          <p>Cada loja compete apenas com as unidades da sua região.</p>
+          <p>As lojas são agrupadas pelo supervisor responsável, não pela localização.</p>
         </div>
         <span className="regional-stores-count">{regionalStores.length} {regionalStores.length === 1 ? 'loja' : 'lojas'} no recorte</span>
       </div>
@@ -207,9 +207,12 @@ export default function StoresPage() {
                 ? <div className="stores-ranking-loading"><LoadingBlocks rows={3} /></div>
                 : regionalRankings.length
                   ? <div className="regional-stores-groups">
-                    {regionalRankings.map(({ region, stores: regionStores }) => <section className="regional-store-group" key={region} data-testid={`regional-group-${region}`}>
+                    {regionalRankings.map(({ region, supervisorName, stores: regionStores }) => <section className="regional-store-group" key={region} data-testid={`regional-group-${region}`}>
                       <div className="regional-store-group-heading">
-                        <h3>{region}</h3>
+                        <div className="regional-store-group-title">
+                          <h3>{region}</h3>
+                          <span className="regional-store-group-supervisor">Supervisor · {supervisorName}</span>
+                        </div>
                         <span>{regionStores.length} {regionStores.length === 1 ? 'unidade' : 'unidades'}</span>
                       </div>
                       <div className="table-scroll regional-stores-desktop">

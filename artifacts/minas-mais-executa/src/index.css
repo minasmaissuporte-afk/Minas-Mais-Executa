@@ -775,3 +775,87 @@ html,body,#root{max-width:100%}body{overflow-x:hidden}
   .regional-stores-mobile{display:flex;flex-direction:column;gap:7px;margin:0;padding:9px;list-style:none}
 }
 @media(prefers-reduced-motion:reduce){.regional-store-group{animation:none}}
+
+/* White canvas around dark ranking boards keeps each region and podium distinct. */
+.regional-ranking-section{
+  border:1px solid #d9e0e5;
+  border-radius:15px;
+  color:#17232d;
+  background:#fff;
+  box-shadow:0 8px 24px #102a3a12;
+}
+.regional-ranking-heading h2{color:#17232d}
+.regional-ranking-heading p{color:#65727d}
+.regional-ranking-card{background:#0d1b27}
+.supervisor-ranking-section{
+  border-color:#344252;
+  border-top-color:#d7b957;
+  color:#f8fafc;
+  background:radial-gradient(ellipse at 100% 0%,#273247 0%,transparent 48%),linear-gradient(145deg,#090d12 0%,#131c26 100%);
+  box-shadow:0 10px 26px #07101c24;
+}
+.supervisor-ranking-section::before{display:block}
+.supervisor-ranking-heading h3{color:#f8fafc}
+.supervisor-ranking-heading p{color:#a3afbd}
+.supervisor-ranking-summary>div{border-color:#344252;background:#0d141b}
+.supervisor-ranking-summary>div:last-child{border-color:#4c8d81;background:#143b3a}
+.supervisor-ranking-standings-heading{border-top-color:#ffffff20}
+.supervisor-ranking-standings-heading h4{color:#f4f7f8}
+.supervisor-ranking-standings-heading span{color:#aebbc4}
+.supervisor-ranking-empty{border-color:#526372;color:#c4ced8;background:#0d141b}
+.regional-stores-section{
+  padding:18px;
+  border:1px solid #d9e0e5;
+  border-radius:15px;
+  background:#fff;
+  box-shadow:0 8px 24px #102a3a12;
+}
+.regional-stores-count{color:#46545f;background:#fff}
+.regional-store-group{background:#0d141b}
+.regional-stores-table{color:#eef3f6}
+.regional-stores-table th{color:#b5c2cb;background:#17232d}
+.regional-stores-table td{border-top-color:#2c3a45;color:#e4ebef}
+.regional-stores-table .store-city{color:#a8b5be}
+.regional-stores-table .podium-1{background:linear-gradient(90deg,#3b3219,#17212a 78%)}
+.regional-stores-table .podium-2{background:linear-gradient(90deg,#303941,#17212a 78%)}
+.regional-stores-table .podium-3{background:linear-gradient(90deg,#39281e,#17212a 78%)}
+.regional-store-mobile-row{border-color:#34434f;color:#e4ebef;background:#111b24}
+.regional-mobile-position{color:#c4cfd6}
+.regional-mobile-store strong{color:#f3f6f8}
+.regional-mobile-store>span,.regional-mobile-store small{color:#aab7c0}
+.regional-mobile-detail{border-top-color:#34434f;color:#b7c3cb}
+.regional-store-mobile-row.podium-1{border-color:#c49d2e;background:linear-gradient(105deg,#392f19,#111b24 82%)}
+.regional-store-mobile-row.podium-2{border-color:#9ba7b2;background:linear-gradient(105deg,#303a43,#111b24 82%)}
+.regional-store-mobile-row.podium-3{border-color:#b8774e;background:linear-gradient(105deg,#3a291f,#111b24 82%)}
+@media(max-width:700px){
+  .regional-ranking-section{padding:13px 11px}
+  .supervisor-ranking-section{padding:13px 10px}
+  .regional-stores-section{padding:14px 11px}
+}
+
+/* Regional boards use deep teal; the supervisor board keeps its black palette. */
+.regional-ranking-card{border-color:#2b766e;background:linear-gradient(155deg,#10413d,#123632 72%,#102e30)}
+.regional-ranking-card-head{border-bottom-color:#ffffff1c;background:linear-gradient(115deg,#14564e,#17675b)}
+.regional-ranking-place-1{border-color:#b89b4f;background:linear-gradient(180deg,#49401f,#173b36);box-shadow:inset 0 2px #e2c45d,0 4px 12px #e2c45d1c}
+.regional-ranking-place-2{border-color:#778692;background:linear-gradient(180deg,#344448,#173b36);box-shadow:inset 0 2px #c5cdd4}
+.regional-ranking-place-3{border-color:#8a644b;background:linear-gradient(180deg,#3b3226,#173b36);box-shadow:inset 0 2px #c68d67}
+.regional-ranking-subtotal{background:#10322f}
+.regional-store-group{border-color:#2b766e;background:linear-gradient(155deg,#10413d,#123632 72%,#102e30)}
+.regional-store-group-heading{border-bottom-color:#ffffff20;background:linear-gradient(105deg,#14564e,#17675b)}
+.regional-store-group-title{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px}
+.regional-store-group-supervisor{padding:0!important;border:0!important;color:#b6e5da!important;background:transparent!important;font-family:var(--app-font-sans)!important;font-size:10px!important}
+.regional-stores-table{color:#eef5f3}
+.regional-stores-table th{color:#c3ddd8;background:#174a45}
+.regional-stores-table td{border-top-color:#ffffff20;color:#eaf2f0}
+.regional-stores-table .store-city{color:#b0c8c3}
+.regional-stores-table .podium-1{background:linear-gradient(90deg,#49401f,#17413c 78%)}
+.regional-stores-table .podium-2{background:linear-gradient(90deg,#344448,#17413c 78%)}
+.regional-stores-table .podium-3{background:linear-gradient(90deg,#3b3226,#17413c 78%)}
+.regional-store-mobile-row{border-color:#2b766e;color:#eaf2f0;background:#123b37}
+.regional-mobile-position{color:#c8dcd7}
+.regional-mobile-store strong{color:#f3f7f6}
+.regional-mobile-store>span,.regional-mobile-store small{color:#b6cbc6}
+.regional-mobile-detail{border-top-color:#ffffff24;color:#c4d6d1}
+.regional-store-mobile-row.podium-1{border-color:#c49d2e;background:linear-gradient(105deg,#49401f,#123b37 82%)}
+.regional-store-mobile-row.podium-2{border-color:#9ba7b2;background:linear-gradient(105deg,#344448,#123b37 82%)}
+.regional-store-mobile-row.podium-3{border-color:#b8774e;background:linear-gradient(105deg,#3b3226,#123b37 82%)}
