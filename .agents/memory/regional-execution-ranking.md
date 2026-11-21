@@ -5,7 +5,7 @@ description: Requisito do painel para exibir as lojas líderes por região no m�
 
 O painel de análise deve apresentar as três lojas mais bem pontuadas por supervisor, considerando o mês vigente. O cabeçalho identifica cada grupo como “Região N” junto ao nome do supervisor; não usar a localização geográfica da loja para separar os grupos.
 
-Na aba Lojas, apresentar o ranking completo das unidades por pontos no período e filtros escolhidos, seguido ao final pela soma e classificação dos supervisores. Preservar o destaque de ouro, prata, bronze e cobre para os quatro primeiros.
+Na aba Lojas, manter o ranking geral da rede e também exibir um ranking completo separado por região, com todas as lojas ordenadas dentro da própria região. Ao final, manter a soma e classificação dos supervisores. Os filtros de período, região e supervisor se aplicam aos rankings; não substituir o ranking geral pela visão regional.
 
 Os três primeiros lugares devem usar cores distintas de pódio: ouro, prata e bronze, com apresentação moderna.
 
@@ -13,6 +13,6 @@ Após as listas das regiões, exiba um ranking de supervisores com a soma dos po
 
 No quadro geral, mantenha os nomes dos supervisores legíveis, diferencie visualmente cada medalha metálica e destaque o rótulo compacto da região em verde-água sem aumentar sua caixa.
 
-**Why:** O usuário pediu um quadro padronizado para comparar as lojas líderes e os supervisores pela soma dos pontos de todas as lojas de cada região, com pódios identificados por metais, e também pediu esses rankings na aba Lojas.
+**Why:** O usuário pediu comparações gerais e regionais sem perder nenhuma loja da lista, além da soma de pontos por supervisor com pódios identificados por metais.
 
-**How to apply:** Agrupar as lojas pelo supervisor cadastrado, manter o nome dele visível, usar a pontuação de execução já definida no produto e explicitar o período. Na aba Lojas, manter os filtros de datas, região e supervisor vinculados tanto ao ranking completo das lojas quanto aos totais do ranking de supervisores.
+**How to apply:** No painel inicial, mostrar as três lojas líderes de cada grupo regional identificado pelo supervisor cadastrado. Na aba Lojas, preservar o ranking geral da rede, adicionar uma classificação regional completa com posições independentes dentro de cada região e manter o ranking de supervisores ao final, todos usando a pontuação já definida e o período selecionado.

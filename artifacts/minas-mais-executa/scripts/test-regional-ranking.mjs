@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 const { currentMonthRankingRange, rankSupervisorsByPoints, topRegionalRankings } = await import('../src/lib/regional-ranking.ts');
+const { groupStoresByRegion } = await import('../src/lib/store-region-ranking.ts');
 
 assert.deepEqual(currentMonthRankingRange('2026-11-21'), { fromDate: '2026-11-01', toDate: '2026-11-21' });
 
@@ -53,4 +54,37 @@ assert.deepEqual(supervisorRanking.map(({ supervisorName, points, storeCount, aw
   ['Christiano', 120, 1, 'cobre'],
 ]);
 assert.ok(supervisorRanking.every(({ points }) => points > 0), 'Supervisors with no points must not receive a podium rank.');
+
+const store = (id, name, region, supervisor = 'Supervisor compartilhado') => ({
+  id, name, region, supervisor, city: `Cidade ${id}`, manager: `Gerente ${id}`, execution: 0,
+});
+const regionalStores = [
+  store('a', 'Unidade A', 'Centro'),
+  store('b', 'Unidade B', 'Centro'),
+  store('c', 'Unidade C', 'Centro'),
+  store('d', 'Unidade D', 'Centro'),
+  store('e', 'Unidade E', 'Centro'),
+  store('f', 'Unidade F', 'Norte'),
+];
+const regionalEntries = [
+  { ...entry('Supervisor compartilhado', 'Unidade A', 25), position: 4 },
+  { ...entry('Supervisor compartilhado', 'Unidade B', 80), position: 1 },
+  { ...entry('Supervisor compartilhado', 'Unidade C', 50), position: 2 },
+  { ...entry('Supervisor compartilhado', 'Unidade D', 0, 0), position: 5 },
+  { ...entry('Supervisor compartilhado', 'Unidade F', 120), position: 1 },
+];
+const storeRegions = groupStoresByRegion(regionalStores, regionalEntries);
+assert.deepEqual(storeRegions.map(({ region }) => region), ['Centro', 'Norte']);
+assert.deepEqual(storeRegions[0].stores.map(({ store: item, position }) => [item.name, position]), [
+  ['Unidade B', 1],
+  ['Unidade C', 2],
+  ['Unidade A', 3],
+  ['Unidade D', 4],
+  ['Unidade E', 5],
+]);
+assert.deepEqual(storeRegions[1].stores.map(({ store: item, position }) => [item.name, position]), [['Unidade F', 1]]);
+assert.equal(storeRegions[0].stores[4].entry, undefined, 'Stores absent from the period ranking remain listed without fabricated metrics.');
+assert.deepEqual(groupStoresByRegion(regionalStores, regionalEntries, 'Cidade f').map(({ region, stores: items }) => [region, items.map(({ store: item }) => item.name)]), [
+  ['Norte', ['Unidade F']],
+]);
 console.log('Regional execution leaderboard tests passed.');

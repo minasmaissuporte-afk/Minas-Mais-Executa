@@ -1,8 +1,9 @@
-import { MapPin, Medal, Search, Store as StoreIcon, Trophy } from 'lucide-react';
+import { MapPin, Medal, Search, Store as StoreIcon, Trophy, UsersRound } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { getGetRankingsQueryKey, getListStoresQueryKey, useGetRankings, useListStores } from '@workspace/api-client-react';
 import { EmptyState, ErrorState, formatDurationMinutes, LoadingBlocks, SearchEmpty, TrendIcon } from '@/components/ui-kit';
 import { SupervisorPointsRanking } from '@/components/supervisor-points-ranking';
+import { groupStoresByRegion } from '@/lib/store-region-ranking';
 
 function toDateInputValue(date: Date) {
   const year = date.getFullYear();
@@ -64,6 +65,14 @@ export default function StoresPage() {
       return `${entry.storeName} ${entry.manager} ${entry.supervisorName} ${store?.city ?? ''} ${store?.region ?? ''}`.toLocaleLowerCase('pt-BR').includes(term);
     });
   }, [orderedRankings, search, storeByName]);
+  const regionalStores = useMemo(() => stores.filter((store) =>
+    (!rankingRegion || store.region === rankingRegion) &&
+    (!rankingSupervisor || store.supervisor === rankingSupervisor),
+  ), [stores, rankingRegion, rankingSupervisor]);
+  const regionalRankings = useMemo(
+    () => groupStoresByRegion(regionalStores, orderedRankings, search),
+    [regionalStores, orderedRankings, search],
+  );
   const rangeLabel = validRankingRange ? periodLabel(rankingRange.fromDate, rankingRange.toDate) : 'período inválido';
 
   return <div className="content stores-page">
@@ -177,7 +186,68 @@ export default function StoresPage() {
                 : <EmptyState title="Ranking indisponível" copy="Não há tarefas concluídas nesse período." />}
     </section>
 
-    {!rankingsQuery.isError && validRankingRange && !rankingsQuery.isLoading && rankings.length > 0 &&
+    <section className="regional-stores-section" aria-labelledby="regional-stores-title" data-testid="stores-regional-ranking">
+      <div className="regional-stores-heading">
+        <div>
+          <span className="stores-ranking-kicker"><UsersRound size={14} aria-hidden="true" /> Comparativo local</span>
+          <h2 id="regional-stores-title">Ranking por região</h2>
+          <p>Cada loja compete apenas com as unidades da sua região.</p>
+        </div>
+        <span className="regional-stores-count">{regionalStores.length} {regionalStores.length === 1 ? 'loja' : 'lojas'} no recorte</span>
+      </div>
+      {!validRankingRange
+        ? <EmptyState title="Período inválido" copy="Escolha uma data inicial igual ou anterior à data final." />
+        : storesQuery.isLoading
+          ? <div className="stores-ranking-loading"><LoadingBlocks rows={3} /></div>
+          : storesQuery.isError
+            ? <ErrorState onRetry={() => storesQuery.refetch()} />
+            : rankingsQuery.isError
+              ? <ErrorState onRetry={() => rankingsQuery.refetch()} />
+              : rankingsQuery.isLoading
+                ? <div className="stores-ranking-loading"><LoadingBlocks rows={3} /></div>
+                : regionalRankings.length
+                  ? <div className="regional-stores-groups">
+                    {regionalRankings.map(({ region, stores: regionStores }) => <section className="regional-store-group" key={region} data-testid={`regional-group-${region}`}>
+                      <div className="regional-store-group-heading">
+                        <h3>{region}</h3>
+                        <span>{regionStores.length} {regionStores.length === 1 ? 'unidade' : 'unidades'}</span>
+                      </div>
+                      <div className="table-scroll regional-stores-desktop">
+                        <table className="data-table regional-stores-table">
+                          <caption className="sr-only">Ranking das lojas da região {region}</caption>
+                          <thead><tr><th scope="col">Posição</th><th scope="col">Loja</th><th scope="col">Gerente</th><th scope="col">Supervisor</th><th scope="col">Tarefas</th><th scope="col">Pontos</th><th scope="col">Tempo médio</th><th scope="col">Tendência</th></tr></thead>
+                          <tbody>{regionStores.map(({ store, entry, position }) => <tr key={store.id} className={podiumClass(position)} data-testid={`regional-row-${store.id}`}>
+                            <td><span className="store-rank-medal" aria-label={`${position}º lugar`}>{position <= 3 ? <Medal size={14} aria-hidden="true" /> : String(position).padStart(2, '0')}</span></td>
+                            <td><strong className="store-name">{store.name}</strong>{store.city && <span className="store-city"><MapPin size={10} aria-hidden="true" />{store.city}</span>}</td>
+                            <td>{entry?.manager || store.manager || 'Não definido'}</td>
+                            <td>{entry?.supervisorName || store.supervisor || 'Não definido'}</td>
+                            <td>{entry ? entry.tasksCompleted : '—'}</td>
+                            <td><span className="score">{entry ? `${entry.points.toLocaleString('pt-BR')} pts` : 'Sem dados'}</span></td>
+                            <td>{entry ? formatDurationMinutes(entry.averageExecutionMinutes) : '—'}</td>
+                            <td>{entry
+                              ? <span className={`store-trend trend-${entry.trend}`} aria-label={`Tendência ${entry.trend}`}><TrendIcon trend={entry.trend} /><span>{entry.trend === 'up' ? 'Em alta' : entry.trend === 'down' ? 'Em queda' : 'Estável'}</span></span>
+                              : <span className="regional-no-data">Sem dados</span>}</td>
+                          </tr>)}</tbody>
+                        </table>
+                      </div>
+                      <ol className="regional-stores-mobile" aria-label={`Ranking de lojas da região ${region}`}>
+                        {regionStores.map(({ store, entry, position }) => <li className={`regional-store-mobile-row ${podiumClass(position)}`} key={`${store.id}-mobile`} data-testid={`regional-mobile-row-${store.id}`}>
+                          <div className="regional-mobile-position"><span className="store-rank-medal" aria-hidden="true">{position <= 3 ? <Medal size={14} /> : String(position).padStart(2, '0')}</span><span>{position}º lugar</span></div>
+                          <div className="regional-mobile-store"><strong>{store.name}</strong><span>{store.manager || 'Gerente não definido'} · {store.supervisor || 'Supervisor não definido'}</span><small><MapPin size={10} aria-hidden="true" />{store.city}{store.city && store.region ? ' · ' : ''}{store.region}</small></div>
+                          <div className="regional-mobile-score"><strong>{entry ? entry.points.toLocaleString('pt-BR') : '—'}</strong><small>{entry ? 'pontos' : 'sem dados'}</small></div>
+                          <div className="regional-mobile-detail">
+                            <span>{entry ? `${entry.tasksCompleted} tarefas` : 'Tarefas —'}</span>
+                            <span>{entry ? `média ${formatDurationMinutes(entry.averageExecutionMinutes)}` : 'Tempo —'}</span>
+                            {entry && <span className={`store-trend trend-${entry.trend}`}><TrendIcon trend={entry.trend} />{entry.trend === 'up' ? 'Em alta' : entry.trend === 'down' ? 'Em queda' : 'Estável'}</span>}
+                          </div>
+                        </li>)}
+                      </ol>
+                    </section>)}
+                  </div>
+                  : <div className="stores-ranking-empty"><SearchEmpty title="Nenhuma loja encontrada" copy="Ajuste a busca ou os filtros para ver outras unidades." /></div>}
+    </section>
+
+    {!rankingsQuery.isError && validRankingRange && !rankingsQuery.isLoading &&
       <SupervisorPointsRanking entries={rankings} periodLabel={rangeLabel} />}
   </div>;
 }

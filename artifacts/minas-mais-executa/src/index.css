@@ -553,3 +553,56 @@ html,body,#root{max-width:100%}body{overflow-x:hidden}
  .stores-ranking-mobile{display:flex;flex-direction:column;gap:8px;margin:0;padding:10px;list-style:none}
 }
 @media(prefers-reduced-motion:reduce){.supervisor-ranking-section{animation:none}.stores-ranking-table tbody tr,.stores-ranking-mobile-row{transition:none}}
+
+/* Regional tables keep the operational density of the network board, with a distinct local podium. */
+.regional-stores-section{margin-top:26px}
+.regional-stores-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:0 0 13px}
+.regional-stores-heading h2{margin:5px 0 3px;font-family:var(--app-font-display);font-size:22px;letter-spacing:-.045em}
+.regional-stores-heading p{margin:0;color:hsl(var(--muted-foreground));font-size:11px;line-height:1.5}
+.regional-stores-count{flex:0 0 auto;padding:7px 10px;border:1px solid hsl(var(--border));border-radius:7px;color:hsl(var(--muted-foreground));background:hsl(var(--card));font-family:var(--app-font-mono);font-size:9px}
+.regional-stores-groups{display:flex;flex-direction:column;gap:14px}
+.regional-store-group{overflow:hidden;border:1px solid hsl(var(--border));border-radius:13px;background:hsl(var(--card));box-shadow:var(--shadow-soft);animation:stores-rank-reveal .28s ease-out both}
+.regional-store-group-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 15px;border-bottom:1px solid hsl(var(--border));background:linear-gradient(100deg,hsl(166 29% 93%),hsl(43 38% 99%) 70%)}
+.regional-store-group-heading h3{margin:0;color:hsl(211 38% 23%);font-family:var(--app-font-display);font-size:15px;font-weight:700;letter-spacing:-.025em}
+.regional-store-group-heading span{color:hsl(var(--muted-foreground));font-family:var(--app-font-mono);font-size:9px}
+.regional-stores-table{min-width:850px}
+.regional-stores-table th{padding:10px 12px}
+.regional-stores-table td{padding:10px 12px;white-space:nowrap}
+.regional-stores-table td:nth-child(2){min-width:145px;white-space:normal}
+.regional-stores-table td:nth-child(5),.regional-stores-table td:nth-child(6),.regional-stores-table td:nth-child(7){font-family:var(--app-font-mono);font-variant-numeric:tabular-nums}
+.regional-stores-table .store-city{display:flex;align-items:center;gap:3px}
+.regional-stores-table .podium-1{background:linear-gradient(90deg,hsl(44 83% 93%),hsl(44 70% 98%) 75%)}
+.regional-stores-table .podium-2{background:linear-gradient(90deg,hsl(210 17% 93%),hsl(210 15% 98%) 75%)}
+.regional-stores-table .podium-3{background:linear-gradient(90deg,hsl(25 60% 92%),hsl(25 48% 98%) 75%)}
+.regional-stores-table .podium-1 .store-rank-medal,.regional-stores-table .podium-1 .score{color:var(--stores-gold)}
+.regional-stores-table .podium-2 .store-rank-medal,.regional-stores-table .podium-2 .score{color:var(--stores-silver)}
+.regional-stores-table .podium-3 .store-rank-medal,.regional-stores-table .podium-3 .score{color:var(--stores-bronze)}
+.regional-no-data{color:hsl(var(--muted-foreground));font-size:9px}
+.regional-stores-mobile{display:none}
+.regional-store-mobile-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 10px;padding:12px;border:1px solid hsl(var(--border));border-radius:10px;background:hsl(var(--card))}
+.regional-mobile-position{grid-column:1/-1;display:flex;align-items:center;gap:7px;color:hsl(var(--muted-foreground));font-family:var(--app-font-mono);font-size:9px}
+.regional-mobile-store{min-width:0;display:flex;flex-direction:column;gap:3px}
+.regional-mobile-store strong{overflow:hidden;color:hsl(var(--foreground));font-size:12px;text-overflow:ellipsis}
+.regional-mobile-store>span{overflow:hidden;color:hsl(var(--muted-foreground));font-size:9px;text-overflow:ellipsis;white-space:nowrap}
+.regional-mobile-store small{display:flex;align-items:center;gap:3px;color:hsl(var(--muted-foreground));font-size:9px}
+.regional-mobile-score{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-family:var(--app-font-mono)}
+.regional-mobile-score strong{font-size:16px}
+.regional-mobile-score small{color:hsl(var(--muted-foreground));font-size:8px}
+.regional-store-mobile-row.podium-1{border-color:hsl(44 55% 70%);background:linear-gradient(115deg,hsl(47 85% 94%),hsl(42 53% 98%))}
+.regional-store-mobile-row.podium-2{border-color:hsl(210 15% 77%);background:linear-gradient(115deg,hsl(210 19% 94%),hsl(210 15% 98%))}
+.regional-store-mobile-row.podium-3{border-color:hsl(25 45% 73%);background:linear-gradient(115deg,hsl(25 57% 94%),hsl(25 45% 98%))}
+.regional-store-mobile-row.podium-1 .regional-mobile-score strong{color:var(--stores-gold)}
+.regional-store-mobile-row.podium-2 .regional-mobile-score strong{color:var(--stores-silver)}
+.regional-store-mobile-row.podium-3 .regional-mobile-score strong{color:var(--stores-bronze)}
+.regional-mobile-detail{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:7px 13px;padding-top:8px;border-top:1px solid hsl(var(--border));color:hsl(var(--muted-foreground));font-size:9px}
+.regional-mobile-detail .store-trend{font-size:9px}
+@media(max-width:700px){
+  .regional-stores-section{margin-top:22px}
+  .regional-stores-heading{align-items:flex-start;flex-direction:column;gap:9px}
+  .regional-stores-heading h2{font-size:20px}
+  .regional-stores-count{align-self:flex-start}
+  .regional-store-group-heading{padding:11px 12px}
+  .regional-stores-desktop{display:none}
+  .regional-stores-mobile{display:flex;flex-direction:column;gap:7px;margin:0;padding:9px;list-style:none}
+}
+@media(prefers-reduced-motion:reduce){.regional-store-group{animation:none}}
