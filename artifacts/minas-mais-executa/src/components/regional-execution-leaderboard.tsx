@@ -1,4 +1,4 @@
-import { MapPin, Trophy } from 'lucide-react';
+import { Trophy, UserRound } from 'lucide-react';
 import type { RankingEntry } from '@workspace/api-client-react';
 import { EmptyState, ErrorState, LoadingBlocks } from '@/components/ui-kit';
 import { topRegionalRankings } from '@/lib/regional-ranking';
@@ -32,11 +32,11 @@ export function RegionalExecutionLeaderboard({
         ? <LoadingBlocks rows={1} />
         : regions.length
           ? <div className="regional-ranking-grid">
-            {regions.map(({ region, stores }) => <article className="regional-ranking-card" key={region} data-testid={`regional-ranking-${region}`}>
+            {regions.map(({ regionNumber, supervisorName, stores }) => <article className="regional-ranking-card" key={supervisorName} data-testid={`regional-ranking-${regionNumber}`}>
               <header className="regional-ranking-card-head">
-                <MapPin size={15} aria-hidden="true" />
-                <h3>{region}</h3>
-                <span>{stores.length} {stores.length === 1 ? 'loja' : 'lojas'}</span>
+                <span className="regional-ranking-region-tag">Região {regionNumber}</span>
+                <span className="regional-ranking-supervisor"><UserRound size={15} aria-hidden="true" /><span><small>SUPERVISOR</small><strong>{supervisorName}</strong></span></span>
+                <span className="regional-ranking-store-count">{stores.length} {stores.length === 1 ? 'loja' : 'lojas'}</span>
               </header>
               <ol className="regional-ranking-list">
                 {stores.map((store, index) => <li className={`regional-ranking-item regional-ranking-place-${index + 1}`} key={store.storeName}>

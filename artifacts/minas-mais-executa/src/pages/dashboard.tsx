@@ -44,7 +44,7 @@ export default function DashboardPage({ member }: { member: CurrentMember }) {
   const monthLabel = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' })
     .format(new Date(`${rankingRange.fromDate}T12:00:00.000Z`));
   return <div className="content">
-    <div className="page-head"><div><div className="eyebrow">{isNetwork ? 'Pulso da rede' : 'Acompanhamento de hoje'}</div><h1 className="page-title">{isNetwork ? 'A operação, sem ruído.' : `Bom dia, ${firstName}.`}</h1><p className="page-intro">{isNetwork ? <>Acompanhe a execução das <strong>{summary?.storesCount ?? 0} lojas</strong> e encontre o próximo ponto de atenção.</> : <>Sua loja está em ritmo de execução. <strong>{summary?.pending ?? 0} tarefas</strong> pedem atenção antes do fim do dia.</>}</p></div><Link className="button button-primary" href="/tasks" data-testid="link-open-tasks"><ListChecks size={15} /> Abrir tarefas</Link></div>
+    <div className="page-head"><div><div className="eyebrow">{isNetwork ? 'Pulso da rede' : 'Acompanhamento de hoje'}</div><h1 className="page-title">{isNetwork ? 'Excelência na execução!' : `Bom dia, ${firstName}.`}</h1><p className="page-intro">{isNetwork ? <>Acompanhe a execução das <strong>{summary?.storesCount ?? 0} lojas</strong> e encontre o próximo ponto de atenção.</> : <>Sua loja está em ritmo de execução. <strong>{summary?.pending ?? 0} tarefas</strong> pedem atenção antes do fim do dia.</>}</p></div><Link className="button button-primary" href="/tasks" data-testid="link-open-tasks"><ListChecks size={15} /> Abrir tarefas</Link></div>
      {summaryQuery.isError && <ErrorState onRetry={() => summaryQuery.refetch()} />}
      {summary
        ? <div className="stats-grid">

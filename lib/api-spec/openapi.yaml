@@ -1326,7 +1326,7 @@ components:
                 type: integer
     RankingEntry:
       type: object
-      required: [position, storeName, manager, region, execution, tasksCompleted, points, averageExecutionMinutes, trend, groupName, supervisorName]
+      required: [position, storeName, manager, execution, tasksCompleted, points, averageExecutionMinutes, trend, groupName, supervisorName]
       properties:
         position:
           type: integer
@@ -1334,9 +1334,6 @@ components:
           type: string
         manager:
           type: string
-        region:
-          type: string
-          description: Store region used to group regional rankings.
         execution:
           type: integer
           description: Legacy execution percentage retained for compatibility; not used to rank stores.

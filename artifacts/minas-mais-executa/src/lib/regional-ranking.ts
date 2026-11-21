@@ -5,21 +5,25 @@ export function currentMonthRankingRange(today: string) {
 }
 
 export function topRegionalRankings(entries: RankingEntry[]) {
-  const byRegion = new Map<string, RankingEntry[]>();
+  const bySupervisor = new Map<string, { supervisorName: string; stores: RankingEntry[] }>();
 
   entries
-    .filter((entry) => entry.tasksCompleted > 0)
+    .filter((entry) => entry.tasksCompleted > 0 && entry.supervisorName.trim() && entry.supervisorName.trim().toLocaleLowerCase('pt-BR') !== 'sem supervisor')
     .forEach((entry) => {
-      const region = entry.region.trim() || 'Sem região';
-      byRegion.set(region, [...(byRegion.get(region) ?? []), entry]);
+      const supervisorName = entry.supervisorName.trim().replace(/\s+/g, ' ');
+      const key = supervisorName.toLocaleLowerCase('pt-BR');
+      const group = bySupervisor.get(key) ?? { supervisorName, stores: [] };
+      group.stores.push(entry);
+      bySupervisor.set(key, group);
     });
 
-  return [...byRegion.entries()]
-    .map(([region, stores]) => ({
-      region,
+  return [...bySupervisor.values()]
+    .sort((first, second) => first.supervisorName.localeCompare(second.supervisorName, 'pt-BR'))
+    .map(({ supervisorName, stores }, index) => ({
+      regionNumber: index + 1,
+      supervisorName,
       stores: stores
         .sort((first, second) => second.points - first.points || first.storeName.localeCompare(second.storeName, 'pt-BR'))
         .slice(0, 3),
-    }))
-    .sort((first, second) => first.region.localeCompare(second.region, 'pt-BR'));
+    }));
 }

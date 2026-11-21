@@ -218,7 +218,11 @@ export function TaskGroupRow({ tasks, onDelete, selectedTaskIds = new Set<string
             : statuses.has('pending')
               ? 'pending'
               : 'completed';
-  const resultStatus = tasks.every((task) => task.status === 'completed') ? 'completed' : 'open';
+  const resultStatus = tasks.every((task) => task.status === 'completed')
+    ? 'completed'
+    : groupStatus === 'pending_review'
+      ? 'pending_review'
+      : 'open';
   return <div className={`task-group-card task-row-result result-${resultStatus}`}>
     <details className="task-group" open={expanded} onToggle={(event) => onExpandedChange?.(event.currentTarget.open)} data-testid={`group-task-${groupId ?? first.batchGroupId ?? first.id}`}>
      <summary className={`task-row task-row-result result-${resultStatus} task-group-summary task-status-${groupStatus}`}>

@@ -9,4 +9,4 @@ Na fila de execução da tela inicial, só ficam grupos incompletos: qualquer lo
 
 **Why:** Um resumo genérico como `in_progress` ocultava que uma unidade aguardava conferência do supervisor, impedindo o admin de identificar o card amarelo.
 
-**How to apply:** Mantenha a prioridade geral de `rejected` e `pending_review` nos resumos de grupos. A fila inicial aplica a regra própria acima para destacar execução que ainda falta antes da conferência.
+**How to apply:** Mantenha a prioridade geral de `rejected` e `pending_review` nos resumos de grupos. A fila inicial aplica a regra própria acima para destacar execução que ainda falta antes da conferência. Quando o grupo estiver aguardando aprovação, pinte também o contorno e a área externa/rodapé do cartão de amarelo, sem deixar uma faixa rosa do estado aberto.

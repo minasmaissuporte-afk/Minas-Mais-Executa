@@ -2263,7 +2263,6 @@ router.get("/rankings", async (req, res) => {
       return {
         storeName: store.name,
         manager: store.manager,
-        region: store.region,
         execution: currentMetrics.execution,
         tasksCompleted: currentMetrics.tasksCompleted,
         points: currentMetrics.points,
