@@ -13,6 +13,8 @@ Após as listas das regiões, exiba um ranking de supervisores com a soma dos po
 
 Use os modelos visuais enviados pelo usuário: pódio das três lojas destacadas por região; no ranking de supervisores, resumo de pontos/lojas/lojas com tarefa concluída, pódio dos três primeiros e lista completa com barras proporcionais à pontuação do líder e diferença em pontos. Rotule percentuais de conclusão como proporção de lojas com pelo menos uma tarefa concluída.
 
+Na classificação completa da aba Lojas, mantenha cada região dentro de um quadro visual independente e destaque ouro, prata e bronze nas três primeiras unidades. Separe os quatro supervisores medalhistas num quadro de destaques antes da classificação completa.
+
 No quadro geral, mantenha os nomes dos supervisores legíveis, diferencie visualmente cada medalha metálica e destaque o rótulo compacto da região em verde-água sem aumentar sua caixa.
 
 **Why:** O usuário pediu comparações gerais e regionais sem perder nenhuma loja da lista, além da soma de pontos por supervisor com pódios identificados por metais e enviou exemplos visuais para orientar esses quadros.

@@ -38,18 +38,31 @@ export function SupervisorPointsRanking({
     </div>
     {leaderPoints > 0
       ? <>
-        <ol className="supervisor-ranking-podium" aria-label="Pódio dos supervisores">
-          {supervisors.slice(0, 3).map(({ supervisorName, points, position, award }) => <li
-            className={`supervisor-podium-card supervisor-award-${award ?? 'other'} supervisor-podium-place-${position}`}
-            key={supervisorName}
-            data-testid={`supervisor-podium-${position}`}
-          >
-            <span className="supervisor-podium-place">{position}º lugar</span>
-            <span className="supervisor-podium-medal"><Medal size={18} aria-hidden="true" />{award}</span>
-            <strong className="supervisor-podium-name">{supervisorName}</strong>
-            <span className="supervisor-podium-points">{formatPoints(points)} <small>pts</small></span>
-          </li>)}
-        </ol>
+        <section className="supervisor-ranking-highlights" aria-labelledby="supervisor-ranking-highlights-title">
+          <div className="supervisor-ranking-highlights-heading">
+            <Trophy size={16} aria-hidden="true" />
+            <div>
+              <h4 id="supervisor-ranking-highlights-title">Supervisores em destaque</h4>
+              <span>Os quatro primeiros do período</span>
+            </div>
+          </div>
+          <ol className="supervisor-ranking-podium" aria-label="Quatro supervisores em destaque">
+            {supervisors.slice(0, 4).map(({ supervisorName, points, position, award }) => <li
+              className={`supervisor-podium-card supervisor-award-${award ?? 'other'} supervisor-podium-place-${position}`}
+              key={supervisorName}
+              data-testid={`supervisor-podium-${position}`}
+            >
+              <span className="supervisor-podium-place">{position}º lugar</span>
+              <span className="supervisor-podium-medal"><Medal size={18} aria-hidden="true" />{award}</span>
+              <strong className="supervisor-podium-name">{supervisorName}</strong>
+              <span className="supervisor-podium-points">{formatPoints(points)} <small>pts</small></span>
+            </li>)}
+          </ol>
+        </section>
+        <div className="supervisor-ranking-standings-heading">
+          <h4>Classificação completa</h4>
+          <span>{supervisors.length} {supervisors.length === 1 ? 'supervisor' : 'supervisores'}</span>
+        </div>
         <ol className="supervisor-ranking-list" aria-label="Classificação completa de supervisores">
           {supervisors.map(({ supervisorName, points, storeCount, storesWithCompletions, position, award }) => {
             const key = supervisorName.toLocaleLowerCase('pt-BR');
