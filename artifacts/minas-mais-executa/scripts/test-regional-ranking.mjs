@@ -42,6 +42,7 @@ const supervisorRanking = rankSupervisorsByPoints([
   entry('Jhonathan', 'Loja Sul 1', 240),
   entry('Edson', 'Loja Leste 1', 180),
   entry('Christiano', 'Loja Oeste 1', 120),
+  entry('Supervisor sem pontos', 'Loja sem tarefas concluídas', 0, 0),
   entry('Sem supervisor', 'Loja sem supervisor', 999),
 ]);
 
@@ -51,4 +52,5 @@ assert.deepEqual(supervisorRanking.map(({ supervisorName, points, storeCount, aw
   ['Edson', 180, 1, 'bronze'],
   ['Christiano', 120, 1, 'cobre'],
 ]);
+assert.ok(supervisorRanking.every(({ points }) => points > 0), 'Supervisors with no points must not receive a podium rank.');
 console.log('Regional execution leaderboard tests passed.');

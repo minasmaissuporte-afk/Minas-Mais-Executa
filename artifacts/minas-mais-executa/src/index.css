@@ -478,3 +478,78 @@ html,body,#root{max-width:100%}body{overflow-x:hidden}
 @media (prefers-reduced-motion:reduce){
   .regional-ranking-item,.supervisor-ranking-row{transition:none}
 }
+
+/* Stores: a scan-first leaderboard with an intentional mobile translation. */
+.stores-page{--stores-gold:#a77a12;--stores-silver:#68737d;--stores-bronze:#995b34}
+.stores-count{display:flex;align-items:center;gap:9px;padding:11px 14px}
+.stores-count>svg{color:hsl(var(--primary))}
+.stores-count-number{font-family:var(--app-font-mono);font-size:12px;font-weight:700}
+.stores-ranking-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin:26px 0 12px}
+.stores-ranking-toolbar h2{margin:5px 0 3px;font-family:var(--app-font-display);font-size:22px;letter-spacing:-.045em}
+.stores-ranking-toolbar p{margin:0;color:hsl(var(--muted-foreground));font-size:11px;line-height:1.5}
+.stores-ranking-kicker{display:flex;align-items:center;gap:6px;color:hsl(var(--primary));font-family:var(--app-font-mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.stores-ranking-kicker svg{color:hsl(var(--secondary))}
+.stores-ranking-search{max-width:360px;flex:0 1 360px}
+.stores-ranking-search .input{height:41px}
+.stores-ranking-card{overflow:hidden}
+.stores-ranking-meta{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 17px;color:hsl(var(--muted-foreground));font-size:10px;border-bottom:1px solid hsl(var(--border))}
+.stores-ranking-period{font-family:var(--app-font-mono);font-size:9px}
+.stores-ranking-table{min-width:980px}
+.stores-ranking-table th{padding:12px 13px;white-space:nowrap}
+.stores-ranking-table td{padding:12px 13px;white-space:nowrap}
+.stores-ranking-table td:nth-child(2){white-space:normal;min-width:145px}
+.stores-ranking-table td:nth-child(6),.stores-ranking-table td:nth-child(7),.stores-ranking-table td:nth-child(8){font-family:var(--app-font-mono);font-variant-numeric:tabular-nums}
+.stores-ranking-table .podium-1{background:linear-gradient(90deg,hsl(44 83% 94%),hsl(44 70% 98%) 75%)}
+.stores-ranking-table .podium-2{background:linear-gradient(90deg,hsl(210 17% 94%),hsl(210 15% 98%) 75%)}
+.stores-ranking-table .podium-3{background:linear-gradient(90deg,hsl(25 60% 94%),hsl(25 48% 98%) 75%)}
+.stores-ranking-table .podium-1 .score,.stores-ranking-table .podium-1 .store-rank-medal{color:var(--stores-gold)}
+.stores-ranking-table .podium-2 .score,.stores-ranking-table .podium-2 .store-rank-medal{color:var(--stores-silver)}
+.stores-ranking-table .podium-3 .score,.stores-ranking-table .podium-3 .store-rank-medal{color:var(--stores-bronze)}
+.store-rank-medal{width:29px;height:29px;display:inline-grid;place-items:center;border:1px solid hsl(var(--border));border-radius:8px;color:hsl(var(--muted-foreground));background:hsl(var(--card));font-family:var(--app-font-mono);font-size:9px;font-weight:800;vertical-align:middle}
+.podium-1 .store-rank-medal{border-color:hsl(44 55% 65%);background:linear-gradient(145deg,hsl(47 88% 89%),hsl(42 73% 76%));box-shadow:inset 0 1px hsl(0 0% 100%/.8)}
+.podium-2 .store-rank-medal{border-color:hsl(210 13% 74%);background:linear-gradient(145deg,hsl(210 20% 95%),hsl(210 13% 82%));box-shadow:inset 0 1px hsl(0 0% 100%/.9)}
+.podium-3 .store-rank-medal{border-color:hsl(25 45% 70%);background:linear-gradient(145deg,hsl(26 61% 91%),hsl(25 49% 77%));box-shadow:inset 0 1px hsl(0 0% 100%/.8)}
+.stores-ranking-table .store-city{display:flex;align-items:center;gap:3px}
+.store-trend{display:inline-flex;align-items:center;gap:5px;font-size:9px}
+.store-trend svg{width:14px;height:14px}
+.stores-ranking-mobile{display:none}
+.stores-ranking-loading{padding:20px}
+.stores-ranking-empty{padding:4px 16px}
+.stores-metadata-error{padding:12px 16px 0}
+.supervisor-ranking-empty{margin:0;padding:11px;border:1px solid #ffffff18;border-radius:9px;color:#c4ced8;font-size:11px}
+.supervisor-ranking-section{animation:stores-rank-reveal .28s ease-out both}
+.stores-ranking-table tbody tr{transition:background-color .16s ease}
+.stores-ranking-table tbody tr:hover{background-color:hsl(var(--accent)/.72)}
+.stores-ranking-mobile-row{transition:transform .16s ease,border-color .16s ease}
+.stores-ranking-mobile-row:hover{transform:translateY(-1px)}
+.stores-ranking-mobile-row.podium-1{border-color:hsl(44 55% 70%);background:linear-gradient(115deg,hsl(47 85% 94%),hsl(42 53% 98%))}
+.stores-ranking-mobile-row.podium-2{border-color:hsl(210 15% 77%);background:linear-gradient(115deg,hsl(210 19% 94%),hsl(210 15% 98%))}
+.stores-ranking-mobile-row.podium-3{border-color:hsl(25 45% 73%);background:linear-gradient(115deg,hsl(25 57% 94%),hsl(25 45% 98%))}
+.stores-ranking-mobile-row.podium-1 .stores-mobile-points strong{color:var(--stores-gold)}
+.stores-ranking-mobile-row.podium-2 .stores-mobile-points strong{color:var(--stores-silver)}
+.stores-ranking-mobile-row.podium-3 .stores-mobile-points strong{color:var(--stores-bronze)}
+.stores-mobile-rank{display:flex;align-items:center;gap:7px;color:hsl(var(--muted-foreground));font-family:var(--app-font-mono);font-size:9px;font-weight:700}
+.stores-mobile-main{min-width:0;display:flex;flex-direction:column;gap:4px}
+.stores-mobile-main>strong{overflow:hidden;color:hsl(var(--foreground));font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+.stores-mobile-main>span,.stores-mobile-main>small{overflow:hidden;color:hsl(var(--muted-foreground));font-size:9px;text-overflow:ellipsis;white-space:nowrap}
+.stores-mobile-main>small{display:flex;align-items:center;gap:3px}
+.stores-mobile-points{display:flex;flex-direction:column;align-items:flex-end;font-family:var(--app-font-mono)}
+.stores-mobile-points strong{font-size:15px}
+.stores-mobile-points small{color:hsl(var(--muted-foreground));font-size:8px}
+.stores-mobile-details{grid-column:2/4;display:flex;flex-wrap:wrap;gap:7px 14px;color:hsl(var(--muted-foreground));font-size:9px}
+.stores-ranking-mobile-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 10px;padding:12px;border:1px solid hsl(var(--border));border-radius:10px;background:hsl(var(--card))}
+.stores-ranking-mobile-row .stores-mobile-rank{grid-column:1/-1}
+.stores-ranking-mobile-row .stores-mobile-main{grid-column:1}
+.stores-ranking-mobile-row .stores-mobile-points{grid-column:2;grid-row:2}
+.stores-ranking-mobile-row .stores-mobile-details{grid-column:1/-1;padding-top:8px;border-top:1px solid hsl(var(--border))}
+@keyframes stores-rank-reveal{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:700px){
+ .stores-count{margin-top:15px;width:max-content}
+ .stores-ranking-toolbar{align-items:stretch;flex-direction:column;margin-top:21px}
+ .stores-ranking-toolbar h2{font-size:20px}
+ .stores-ranking-search{max-width:none;flex:1}
+ .stores-ranking-meta{align-items:flex-start;flex-direction:column;gap:4px;padding:11px 13px}
+ .stores-ranking-desktop{display:none}
+ .stores-ranking-mobile{display:flex;flex-direction:column;gap:8px;margin:0;padding:10px;list-style:none}
+}
+@media(prefers-reduced-motion:reduce){.supervisor-ranking-section{animation:none}.stores-ranking-table tbody tr,.stores-ranking-mobile-row{transition:none}}

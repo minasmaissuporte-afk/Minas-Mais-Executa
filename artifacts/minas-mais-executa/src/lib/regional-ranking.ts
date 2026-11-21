@@ -56,6 +56,7 @@ export function rankSupervisorsByPoints(entries: RankingEntry[]) {
   });
 
   return [...bySupervisor.values()]
+    .filter((supervisor) => supervisor.points > 0)
     .sort((first, second) => second.points - first.points || first.supervisorName.localeCompare(second.supervisorName, 'pt-BR'))
     .map((supervisor, index) => ({
       ...supervisor,

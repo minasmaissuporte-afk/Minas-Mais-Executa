@@ -1,7 +1,8 @@
-import { Medal, Trophy, UserRound } from 'lucide-react';
+import { Trophy, UserRound } from 'lucide-react';
 import type { RankingEntry } from '@workspace/api-client-react';
 import { EmptyState, ErrorState, LoadingBlocks } from '@/components/ui-kit';
 import { rankSupervisorsByPoints, topRegionalRankings } from '@/lib/regional-ranking';
+import { SupervisorPointsRanking } from '@/components/supervisor-points-ranking';
 
 export function RegionalExecutionLeaderboard({
   entries,
@@ -17,8 +18,7 @@ export function RegionalExecutionLeaderboard({
   onRetry: () => void;
 }) {
   const regions = topRegionalRankings(entries);
-  const supervisors = rankSupervisorsByPoints(entries);
-  const hasMonthlyPoints = supervisors.some((supervisor) => supervisor.points > 0);
+  const hasMonthlyPoints = rankSupervisorsByPoints(entries).some((supervisor) => supervisor.points > 0);
 
   return <section className="regional-ranking-section" aria-labelledby="regional-ranking-title" data-testid="regional-execution-leaderboard">
     <div className="regional-ranking-heading">
@@ -58,30 +58,7 @@ export function RegionalExecutionLeaderboard({
                 </ol>
               </article>)}
             </div>}
-            {hasMonthlyPoints && <div className="supervisor-ranking-section" aria-labelledby="supervisor-ranking-title" data-testid="supervisor-points-ranking">
-              <div className="supervisor-ranking-heading">
-                <div className="supervisor-ranking-icon"><Medal size={19} aria-hidden="true" /></div>
-                <div>
-                  <h3 id="supervisor-ranking-title">Ranking dos supervisores</h3>
-                  <p>Soma dos pontos de todas as lojas · {monthLabel}</p>
-                </div>
-              </div>
-              <ol className="supervisor-ranking-list">
-                {supervisors.map(({ supervisorName, points, storeCount, storesWithCompletions, position, award }) => <li
-                  className={`supervisor-ranking-row ${award ? `supervisor-award-${award}` : 'supervisor-award-other'}`}
-                  key={supervisorName}
-                  data-testid={`supervisor-ranking-${position}`}
-                >
-                  <span className="supervisor-ranking-position">{position}</span>
-                  <span className="supervisor-ranking-info">
-                    <strong>{supervisorName}</strong>
-                    <small>{storeCount} {storeCount === 1 ? 'loja' : 'lojas'} · {storesWithCompletions} com tarefas concluídas</small>
-                  </span>
-                  <span className="supervisor-ranking-total"><strong>{points.toLocaleString('pt-BR')}</strong><small>pts</small></span>
-                  <span className="supervisor-ranking-award"><Medal size={13} aria-hidden="true" />{award ?? `${position}º`}</span>
-                </li>)}
-              </ol>
-            </div>}
+            {hasMonthlyPoints && <SupervisorPointsRanking entries={entries} periodLabel={monthLabel} />}
           </>
           : <EmptyState icon={Trophy} title="Sem pontuação neste mês" copy="As lojas aparecerão aqui após concluírem tarefas neste mês." />}
   </section>;
