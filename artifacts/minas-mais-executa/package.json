@@ -9,8 +9,6 @@
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:pdf-controls": "node scripts/test-pdf-controls.mjs",
-    "test:ranking-pdf": "node --experimental-strip-types scripts/test-ranking-pdf.mjs",
-    "test:ranking-pdf-actions": "node scripts/test-ranking-pdf-actions.mjs",
     "test:completion-message": "node scripts/test-task-completion-message.mjs",
     "test:regional-ranking": "node --experimental-strip-types scripts/test-regional-ranking.mjs"
   },
@@ -82,8 +80,6 @@
   },
   "dependencies": {
     "@clerk/react": "^6.15.1",
-    "@clerk/themes": "^2.4.57",
-    "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.1"
+    "@clerk/themes": "^2.4.57"
   }
 }

@@ -15,22 +15,10 @@ Use paletas diferentes para os rankings: quadros de regiões/lojas em teal e qua
 
 Na classificação completa da aba Lojas, mantenha cada região dentro de um quadro visual independente e destaque ouro, prata e bronze nas três primeiras unidades. Separe os quatro supervisores medalhistas num quadro de destaques antes da classificação completa.
 
-As ações de gerar, compartilhar e baixar o PDF devem ficar no final do ranking, alinhadas à direita; não as coloque no cabeçalho.
+Não adicionar ações de gerar, compartilhar ou baixar PDFs nos quadros de ranking. A exportação de fotos em PDF continua disponível nas tarefas e é independente.
 
 No quadro geral, mantenha os nomes dos supervisores legíveis, diferencie visualmente cada medalha metálica e destaque o rótulo compacto da região em verde-água sem aumentar sua caixa.
 
-**Why:** O usuário pediu comparações gerais e regionais sem perder nenhuma loja da lista, além da soma de pontos por supervisor com pódios identificados por metais e enviou exemplos visuais para orientar esses quadros. Em 21 de novembro de 2026, esclareceu que os grupos completos devem seguir os supervisores, não a localização, e que as paletas regionais devem diferir da preta usada para supervisores; em 22 de novembro de 2026, pediu explicitamente as ações de PDF no rodapé de cada ranking.
+**Why:** O usuário pediu comparações gerais e regionais sem perder nenhuma loja da lista, além da soma de pontos por supervisor com pódios identificados por metais e enviou exemplos visuais para orientar esses quadros. Em 21 de novembro de 2026, esclareceu que os grupos completos devem seguir os supervisores, não a localização, e que as paletas regionais devem diferir da preta usada para supervisores. Em 22 de novembro de 2026, decidiu retirar os PDFs dos rankings e manter a exportação de evidências nas tarefas.
 
-**How to apply:** Derivar todos os resumos e barras de pontos/contagens reais, nunca de valores ilustrativos. No painel inicial, mostrar as três lojas líderes de cada grupo identificado pelo supervisor cadastrado. Na aba Lojas, preservar o ranking geral, agrupar cada loja pelo supervisor responsável com posições independentes e numeração “Região N”, deixar claro que o filtro de localização é geográfico e manter o ranking de supervisores ao final; todos usam a pontuação já definida e o período selecionado. Posicionar as ações de PDF após os dados de cada quadro e alinhar à direita.
-
-Para compartilhar rankings em PDF com a mesma aparência da interface em celulares, capture o quadro em trechos do tamanho de uma página, em vez de criar um canvas único muito alto. Use os deslocamentos padrão de rolagem do html2canvas, sem passar valores negativos manualmente.
-
-**Why:** Um canvas alto pode exceder limites do navegador móvel, e coordenadas negativas de rolagem deslocam o quadro capturado; páginas capturadas separadamente e offsets padrão evitam distorções.
-
-**How to apply:** Calcule os cortes em posições seguras entre cartões/linhas, capture cada fatia direto do DOM e adicione cada imagem dentro da área da página. Garanta que as ações de exportação não apareçam na captura.
-
-Ao capturar o DOM, remova animações e transições CSS no documento clonado pelo html2canvas.
-
-**Why:** O PDF enviado em 22 de novembro de 2026 mostrou páginas pretas e texto translúcido porque a animação de entrada do quadro era reiniciada na captura e seu `fill-mode` escondia o conteúdo.
-
-**How to apply:** Use a opção `onclone` para injetar uma regra de captura sem animações/transições antes de renderizar cada página; assim a captura preserva o estado final visível.
+**How to apply:** Derivar todos os resumos e barras de pontos/contagens reais, nunca de valores ilustrativos. No painel inicial, mostrar as três lojas líderes de cada grupo identificado pelo supervisor cadastrado. Na aba Lojas, preservar o ranking geral, agrupar cada loja pelo supervisor responsável com posições independentes e numeração “Região N”, deixar claro que o filtro de localização é geográfico e manter o ranking de supervisores ao final; todos usam a pontuação já definida e o período selecionado. Manter PDFs de fotos apenas nos controles das tarefas.

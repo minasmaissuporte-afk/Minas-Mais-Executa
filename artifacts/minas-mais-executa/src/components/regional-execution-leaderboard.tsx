@@ -10,14 +10,12 @@ export function RegionalExecutionLeaderboard({
   isLoading,
   isError,
   onRetry,
-  exportRange,
 }: {
   entries: RankingEntry[];
   monthLabel: string;
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
-  exportRange: { fromDate: string; toDate: string };
 }) {
   const regions = topRegionalRankings(entries);
   const hasMonthlyPoints = rankSupervisorsByPoints(entries).some((supervisor) => supervisor.points > 0);
@@ -68,7 +66,7 @@ export function RegionalExecutionLeaderboard({
               </article>)}
             </div>}
             {hasMonthlyPoints &&
-              <SupervisorPointsRanking entries={entries} periodLabel={monthLabel} exportRange={exportRange} exportTargetId="dashboard-supervisors" />}
+              <SupervisorPointsRanking entries={entries} periodLabel={monthLabel} />}
           </>
           : <EmptyState icon={Trophy} title="Sem pontuação neste mês" copy="As lojas aparecerão aqui após concluírem tarefas neste mês." />}
   </section>;

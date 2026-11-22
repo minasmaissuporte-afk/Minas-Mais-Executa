@@ -869,23 +869,7 @@ html,body,#root{max-width:100%}body{overflow-x:hidden}
 .stores-ranking-mobile-row:not(.podium-1):not(.podium-2):not(.podium-3){border-color:#b8d9d2;background:linear-gradient(115deg,#e8f5f2,#f2f9f8)}
 .stores-ranking-mobile-row:not(.podium-1):not(.podium-2):not(.podium-3) .store-rank-medal{border-color:#b8d9d2;color:#17675b;background:#dcefeb}
 .stores-ranking-mobile-row:not(.podium-1):not(.podium-2):not(.podium-3) .stores-mobile-points strong{color:#17675b}
-.ranking-pdf-control{min-width:0;display:flex;flex-direction:column;gap:5px}
-.ranking-pdf-buttons{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
-.ranking-pdf-buttons .button{min-height:32px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 9px;border:1px solid transparent;border-radius:8px;font-size:9px;font-weight:750;white-space:nowrap}
-.ranking-pdf-buttons .button:disabled{opacity:.58;cursor:not-allowed}
-.ranking-pdf-generate{color:#fff;background:#17675b;box-shadow:0 2px 5px #17675b28}
-.ranking-pdf-generate:hover:not(:disabled){background:#10574d}
-.ranking-pdf-share{border-color:#9bcfc3!important;color:#125a50;background:#e3f3ef}
-.ranking-pdf-download{border-color:#d4dce1!important;color:#34434e;background:#fff}
-.ranking-pdf-notice{max-width:360px;color:hsl(var(--muted-foreground));font-size:9px;line-height:1.4}
-.ranking-pdf-footer{display:flex;justify-content:flex-end;margin:10px 14px 14px;padding-top:11px;border-top:1px solid hsl(var(--border))}
-.ranking-pdf-footer .ranking-pdf-control{align-items:flex-end}
-.supervisor-ranking-section>.ranking-pdf-footer,.regional-stores-section>.ranking-pdf-footer{margin:14px 0 0;padding-top:12px}
-.supervisor-ranking-section>.ranking-pdf-footer{border-top-color:#ffffff20}
-.regional-stores-section>.ranking-pdf-footer{border-top-color:#d9e0e5}
 .regional-stores-heading-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:9px}
 @media(max-width:700px){
   .regional-stores-heading-actions{width:100%;justify-content:space-between}
-  .ranking-pdf-footer{margin-inline:10px}
 }
-@media(prefers-reduced-motion:reduce){.ranking-pdf-buttons .button{transition:none}}

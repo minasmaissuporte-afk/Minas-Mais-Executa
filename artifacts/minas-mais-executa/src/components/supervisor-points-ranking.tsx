@@ -1,19 +1,13 @@
 import { Medal, Trophy } from 'lucide-react';
 import type { RankingEntry } from '@workspace/api-client-react';
 import { rankSupervisorsByPoints } from '@/lib/regional-ranking';
-import { RankingPdfActions } from '@/components/ranking-pdf-actions';
-import type { RankingPdfReport } from '@/lib/ranking-pdf';
 
 export function SupervisorPointsRanking({
   entries,
   periodLabel,
-  exportRange,
-  exportTargetId,
 }: {
   entries: RankingEntry[];
   periodLabel: string;
-  exportRange?: { fromDate: string; toDate: string };
-  exportTargetId?: string;
 }) {
   const supervisors = rankSupervisorsByPoints(entries);
   const leaderPoints = supervisors[0]?.points ?? 0;
@@ -28,13 +22,8 @@ export function SupervisorPointsRanking({
     taskTotals.set(key, (taskTotals.get(key) ?? 0) + entry.tasksCompleted);
   });
   const formatPoints = (points: number) => points.toLocaleString('pt-BR');
-  const pdfReport: RankingPdfReport = {
-    title: 'Ranking dos supervisores',
-    period: periodLabel,
-    variant: 'supervisors',
-  };
 
-  return <section className="supervisor-ranking-section" aria-labelledby="supervisor-points-title" data-testid="supervisor-points-ranking" data-ranking-pdf-target={exportTargetId}>
+  return <section className="supervisor-ranking-section" aria-labelledby="supervisor-points-title" data-testid="supervisor-points-ranking">
     <div className="supervisor-ranking-heading">
       <div className="supervisor-ranking-icon"><Medal size={19} aria-hidden="true" /></div>
       <div>
@@ -107,10 +96,6 @@ export function SupervisorPointsRanking({
         <Trophy size={22} aria-hidden="true" />
         <strong>Sem pontos positivos neste período</strong>
         <span>O pódio e a classificação aparecem quando houver pontos atribuídos.</span>
-      </div>}
-    {exportRange && exportTargetId && supervisors.length > 0 &&
-      <div className="ranking-pdf-footer">
-        <RankingPdfActions report={pdfReport} targetId={exportTargetId} {...exportRange} />
       </div>}
   </section>;
 }

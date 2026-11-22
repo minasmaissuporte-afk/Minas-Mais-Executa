@@ -3,8 +3,6 @@ import { useMemo, useState } from 'react';
 import { getGetRankingsQueryKey, getListStoresQueryKey, useGetRankings, useListStores } from '@workspace/api-client-react';
 import { EmptyState, ErrorState, formatDurationMinutes, LoadingBlocks, SearchEmpty, TrendIcon } from '@/components/ui-kit';
 import { SupervisorPointsRanking } from '@/components/supervisor-points-ranking';
-import { RankingPdfActions } from '@/components/ranking-pdf-actions';
-import type { RankingPdfReport } from '@/lib/ranking-pdf';
 import { groupStoresBySupervisor } from '@/lib/store-region-ranking';
 
 function toDateInputValue(date: Date) {
@@ -76,16 +74,6 @@ export default function StoresPage() {
     [regionalStores, orderedRankings, search],
   );
   const rangeLabel = validRankingRange ? periodLabel(rankingRange.fromDate, rankingRange.toDate) : 'período inválido';
-  const overallPdfReport: RankingPdfReport = {
-    title: 'Ranking geral de lojas',
-    period: rangeLabel,
-    variant: 'stores',
-  };
-  const regionalPdfReport: RankingPdfReport = {
-    title: 'Ranking das lojas por região',
-    period: rangeLabel,
-    variant: 'regions',
-  };
 
   return <div className="content stores-page">
     <div className="page-head">
@@ -126,14 +114,13 @@ export default function StoresPage() {
       </label>
     </div>
 
-    <div className="stores-ranking-export-surface" data-ranking-pdf-target="stores-overall">
     <div className="stores-ranking-toolbar">
       <div>
         <span className="stores-ranking-kicker"><Trophy size={14} aria-hidden="true" /> Placar da rede</span>
         <h2 id="stores-ranking-title">Ranking de lojas</h2>
         <p>Pontuação total por tarefas concluídas e rapidez no período escolhido.</p>
       </div>
-      <div className="search-wrap stores-ranking-search" data-html2canvas-ignore="true">
+      <div className="search-wrap stores-ranking-search">
         <Search size={15} aria-hidden="true" />
         <input className="input" value={search} onChange={(event) => setSearch(event.target.value)}
           placeholder="Buscar loja, cidade ou responsável" aria-label="Buscar no ranking de lojas" data-testid="input-search-stores" />
@@ -197,14 +184,9 @@ export default function StoresPage() {
               : search
                 ? <div className="stores-ranking-empty"><SearchEmpty title="Nenhuma loja encontrada" copy="Tente outro nome, cidade ou responsável." /></div>
                 : <EmptyState title="Ranking indisponível" copy="Não há tarefas concluídas nesse período." />}
-      {validRankingRange && !rankingsQuery.isLoading && !rankingsQuery.isError && visibleRankings.length > 0 &&
-        <div className="ranking-pdf-footer">
-          <RankingPdfActions report={overallPdfReport} targetId="stores-overall" fromDate={rankingRange.fromDate} toDate={rankingRange.toDate} />
-        </div>}
     </section>
-    </div>
 
-    <section className="regional-stores-section" aria-labelledby="regional-stores-title" data-testid="stores-regional-ranking" data-ranking-pdf-target="stores-regions">
+    <section className="regional-stores-section" aria-labelledby="regional-stores-title" data-testid="stores-regional-ranking">
       <div className="regional-stores-heading">
         <div>
           <span className="stores-ranking-kicker"><UsersRound size={14} aria-hidden="true" /> Comparativo local</span>
@@ -268,13 +250,9 @@ export default function StoresPage() {
                     </section>)}
                   </div>
                   : <div className="stores-ranking-empty"><SearchEmpty title="Nenhuma loja encontrada" copy="Ajuste a busca ou os filtros para ver outras unidades." /></div>}
-      {validRankingRange && !storesQuery.isLoading && !storesQuery.isError && !rankingsQuery.isLoading && !rankingsQuery.isError && regionalRankings.length > 0 &&
-        <div className="ranking-pdf-footer">
-          <RankingPdfActions report={regionalPdfReport} targetId="stores-regions" fromDate={rankingRange.fromDate} toDate={rankingRange.toDate} />
-        </div>}
     </section>
 
     {!rankingsQuery.isError && validRankingRange && !rankingsQuery.isLoading &&
-      <SupervisorPointsRanking entries={rankings} periodLabel={rangeLabel} exportRange={{ fromDate: rankingRange.fromDate, toDate: rankingRange.toDate }} exportTargetId="stores-supervisors" />}
+      <SupervisorPointsRanking entries={rankings} periodLabel={rangeLabel} />}
   </div>;
 }
