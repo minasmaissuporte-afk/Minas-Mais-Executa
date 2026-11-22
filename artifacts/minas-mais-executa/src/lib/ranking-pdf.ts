@@ -40,13 +40,15 @@ export async function createRankingPdfBlob(
   const rootBounds = element.getBoundingClientRect();
   const cssWidth = Math.max(1, element.clientWidth || rootBounds.width);
   const cssHeight = Math.max(1, element.scrollHeight || rootBounds.height);
+  const orientation = cssWidth > 760 ? 'landscape' : 'portrait';
+  const maxPageHeight = getImagePageHeight(cssWidth, orientation);
   const scale = Math.min(
     2,
     2400 / cssWidth,
-    12_000 / cssHeight,
-    Math.sqrt(18_000_000 / (cssWidth * cssHeight)),
+    3200 / maxPageHeight,
+    Math.sqrt(8_000_000 / (cssWidth * maxPageHeight)),
   );
-  const scaleSafeBreaks = [
+  const safeBreaks = [
     '.stores-ranking-mobile-row',
     '.stores-ranking-table tbody tr',
     '.regional-store-group',
@@ -57,43 +59,46 @@ export async function createRankingPdfBlob(
     '.supervisor-ranking-row',
   ]
     .flatMap((selector) => Array.from(element.querySelectorAll<HTMLElement>(selector)))
-    .map((row) => Math.round((row.getBoundingClientRect().bottom - rootBounds.top) * scale))
+    .flatMap((row) => {
+      const bounds = row.getBoundingClientRect();
+      return bounds.width > 0 && bounds.height > 0 ? [bounds.bottom - rootBounds.top] : [];
+    })
     .filter((value) => value > 0);
 
-  const canvas = await html2canvas(element, {
-    backgroundColor: null,
-    scale,
-    width: cssWidth,
-    height: cssHeight,
-    windowWidth: window.innerWidth,
-    windowHeight: Math.max(window.innerHeight, Math.ceil(cssHeight)),
-    scrollX: -window.scrollX,
-    scrollY: -window.scrollY,
-    useCORS: true,
-    logging: false,
-  });
+  const slices = getRankingPdfPageSlices(Math.ceil(cssHeight), maxPageHeight, safeBreaks);
+  const pages: Array<{ image: string; height: number }> = [];
+  let imageWidth = 0;
 
-  if (!canvas.width || !canvas.height) {
+  for (const slice of slices) {
+    const canvas = await html2canvas(element, {
+      backgroundColor: null,
+      scale,
+      x: 0,
+      y: slice.top,
+      width: cssWidth,
+      height: slice.height,
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+      useCORS: true,
+      logging: false,
+    });
+    if (!canvas.width || !canvas.height) {
+      throw new Error('Não foi possível capturar uma página do ranking para gerar o PDF.');
+    }
+    imageWidth ||= canvas.width;
+    pages.push({ image: canvas.toDataURL('image/jpeg', 0.94), height: canvas.height });
+  }
+
+  if (!pages.length || !imageWidth) {
     throw new Error('Não foi possível capturar o ranking para gerar o PDF.');
   }
 
-  const orientation = cssWidth > 760 ? 'landscape' : 'portrait';
-  const pdf = await createRankingPdfFromImages({
-    pages: getRankingPdfPageSlices(canvas.height, getImagePageHeight(canvas.width, orientation), scaleSafeBreaks)
-      .map((slice) => {
-        const pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = slice.height;
-        const context = pageCanvas.getContext('2d');
-        if (!context) throw new Error('Não foi possível preparar as páginas do PDF.');
-        context.drawImage(canvas, 0, slice.top, canvas.width, slice.height, 0, 0, canvas.width, slice.height);
-        return { image: pageCanvas.toDataURL('image/jpeg', 0.94), height: slice.height };
-      }),
-    imageWidth: canvas.width,
+  return createRankingPdfFromImages({
+    pages,
+    imageWidth,
     orientation,
     report,
   });
-  return pdf;
 }
 
 function getImagePageHeight(imageWidth: number, orientation: 'portrait' | 'landscape') {

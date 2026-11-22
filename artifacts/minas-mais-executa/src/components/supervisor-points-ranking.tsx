@@ -41,8 +41,6 @@ export function SupervisorPointsRanking({
         <h3 id="supervisor-points-title">Ranking dos supervisores</h3>
         <p>Soma dos pontos das lojas no período · {periodLabel}</p>
       </div>
-      {exportRange && exportTargetId && supervisors.length > 0 &&
-        <RankingPdfActions report={pdfReport} targetId={exportTargetId} {...exportRange} />}
     </div>
     <div className="supervisor-ranking-summary" aria-label="Resumo do período">
       <div><small>Total pontuado</small><strong>{totalPoints.toLocaleString('pt-BR')}</strong></div>
@@ -109,6 +107,10 @@ export function SupervisorPointsRanking({
         <Trophy size={22} aria-hidden="true" />
         <strong>Sem pontos positivos neste período</strong>
         <span>O pódio e a classificação aparecem quando houver pontos atribuídos.</span>
+      </div>}
+    {exportRange && exportTargetId && supervisors.length > 0 &&
+      <div className="ranking-pdf-footer">
+        <RankingPdfActions report={pdfReport} targetId={exportTargetId} {...exportRange} />
       </div>}
   </section>;
 }

@@ -144,8 +144,6 @@ export default function StoresPage() {
       <div className="stores-ranking-meta">
         <span>{validRankingRange ? `${visibleRankings.length} ${visibleRankings.length === 1 ? 'loja classificada' : 'lojas classificadas'}` : 'Confira o período selecionado'}</span>
         <span className="stores-ranking-period">{rangeLabel}</span>
-        {validRankingRange && !rankingsQuery.isLoading && !rankingsQuery.isError && visibleRankings.length > 0 &&
-          <RankingPdfActions report={overallPdfReport} targetId="stores-overall" fromDate={rankingRange.fromDate} toDate={rankingRange.toDate} />}
       </div>
       {storesQuery.isError && <div className="stores-metadata-error"><ErrorState onRetry={() => storesQuery.refetch()} /></div>}
       {!validRankingRange
@@ -199,6 +197,10 @@ export default function StoresPage() {
               : search
                 ? <div className="stores-ranking-empty"><SearchEmpty title="Nenhuma loja encontrada" copy="Tente outro nome, cidade ou responsável." /></div>
                 : <EmptyState title="Ranking indisponível" copy="Não há tarefas concluídas nesse período." />}
+      {validRankingRange && !rankingsQuery.isLoading && !rankingsQuery.isError && visibleRankings.length > 0 &&
+        <div className="ranking-pdf-footer">
+          <RankingPdfActions report={overallPdfReport} targetId="stores-overall" fromDate={rankingRange.fromDate} toDate={rankingRange.toDate} />
+        </div>}
     </section>
     </div>
 
@@ -211,8 +213,6 @@ export default function StoresPage() {
         </div>
         <div className="regional-stores-heading-actions">
           <span className="regional-stores-count">{regionalStores.length} {regionalStores.length === 1 ? 'loja' : 'lojas'} no recorte</span>
-          {validRankingRange && !storesQuery.isLoading && !storesQuery.isError && !rankingsQuery.isLoading && !rankingsQuery.isError && regionalRankings.length > 0 &&
-            <RankingPdfActions report={regionalPdfReport} targetId="stores-regions" fromDate={rankingRange.fromDate} toDate={rankingRange.toDate} />}
         </div>
       </div>
       {!validRankingRange
@@ -268,6 +268,10 @@ export default function StoresPage() {
                     </section>)}
                   </div>
                   : <div className="stores-ranking-empty"><SearchEmpty title="Nenhuma loja encontrada" copy="Ajuste a busca ou os filtros para ver outras unidades." /></div>}
+      {validRankingRange && !storesQuery.isLoading && !storesQuery.isError && !rankingsQuery.isLoading && !rankingsQuery.isError && regionalRankings.length > 0 &&
+        <div className="ranking-pdf-footer">
+          <RankingPdfActions report={regionalPdfReport} targetId="stores-regions" fromDate={rankingRange.fromDate} toDate={rankingRange.toDate} />
+        </div>}
     </section>
 
     {!rankingsQuery.isError && validRankingRange && !rankingsQuery.isLoading &&

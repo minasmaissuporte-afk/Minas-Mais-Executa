@@ -878,14 +878,14 @@ html,body,#root{max-width:100%}body{overflow-x:hidden}
 .ranking-pdf-share{border-color:#9bcfc3!important;color:#125a50;background:#e3f3ef}
 .ranking-pdf-download{border-color:#d4dce1!important;color:#34434e;background:#fff}
 .ranking-pdf-notice{max-width:360px;color:hsl(var(--muted-foreground));font-size:9px;line-height:1.4}
-.stores-ranking-meta .ranking-pdf-control{margin-left:auto}
+.ranking-pdf-footer{display:flex;justify-content:flex-end;margin:10px 14px 14px;padding-top:11px;border-top:1px solid hsl(var(--border))}
+.ranking-pdf-footer .ranking-pdf-control{align-items:flex-end}
+.supervisor-ranking-section>.ranking-pdf-footer,.regional-stores-section>.ranking-pdf-footer{margin:14px 0 0;padding-top:12px}
+.supervisor-ranking-section>.ranking-pdf-footer{border-top-color:#ffffff20}
+.regional-stores-section>.ranking-pdf-footer{border-top-color:#d9e0e5}
 .regional-stores-heading-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:9px}
-.supervisor-ranking-heading .ranking-pdf-control{margin-left:auto;align-items:flex-end}
 @media(max-width:700px){
-  .stores-ranking-meta .ranking-pdf-control{margin-left:0}
   .regional-stores-heading-actions{width:100%;justify-content:space-between}
-  .regional-stores-heading-actions .ranking-pdf-control{align-items:flex-start}
-  .supervisor-ranking-heading{flex-wrap:wrap}
-  .supervisor-ranking-heading .ranking-pdf-control{width:100%;margin-left:48px;align-items:flex-start}
+  .ranking-pdf-footer{margin-inline:10px}
 }
 @media(prefers-reduced-motion:reduce){.ranking-pdf-buttons .button{transition:none}}

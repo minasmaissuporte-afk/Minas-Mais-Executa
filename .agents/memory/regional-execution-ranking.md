@@ -21,8 +21,8 @@ No quadro geral, mantenha os nomes dos supervisores legíveis, diferencie visual
 
 **How to apply:** Derivar todos os resumos e barras de pontos/contagens reais, nunca de valores ilustrativos. No painel inicial, mostrar as três lojas líderes de cada grupo identificado pelo supervisor cadastrado. Na aba Lojas, preservar o ranking geral, agrupar cada loja pelo supervisor responsável com posições independentes e numeração “Região N”, deixar claro que o filtro de localização é geográfico e manter o ranking de supervisores ao final; todos usam a pontuação já definida e o período selecionado.
 
-Para compartilhar rankings em PDF com a mesma aparência da interface, capture o quadro renderizado e recorte o canvas em imagens separadas por página antes de montar o PDF. Não reposicione uma imagem alta com coordenadas negativas para simular recortes.
+Para compartilhar rankings em PDF com a mesma aparência da interface em celulares, capture o quadro em trechos do tamanho de uma página, em vez de criar um canvas único muito alto. Use os deslocamentos padrão de rolagem do html2canvas, sem passar valores negativos manualmente.
 
-**Why:** A inspeção de PDFs gerados mostrou que leitores comuns repetem/recortam incorretamente uma imagem alta posicionada fora dos limites da página; páginas com imagens previamente recortadas preservam cada trecho.
+**Why:** Um canvas alto pode exceder limites do navegador móvel, e coordenadas negativas de rolagem deslocam o quadro capturado; páginas capturadas separadamente e offsets padrão evitam distorções.
 
-**How to apply:** Calcule as quebras em posições seguras entre cartões/linhas, crie um canvas por trecho e adicione cada imagem dentro da área da página. Garanta que a ação de exportação não apareça na própria captura.
+**How to apply:** Calcule os cortes em posições seguras entre cartões/linhas, capture cada fatia direto do DOM e adicione cada imagem dentro da área da página. Garanta que as ações de exportação não apareçam na captura.
