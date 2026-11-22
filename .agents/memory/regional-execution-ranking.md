@@ -20,3 +20,9 @@ No quadro geral, mantenha os nomes dos supervisores legíveis, diferencie visual
 **Why:** O usuário pediu comparações gerais e regionais sem perder nenhuma loja da lista, além da soma de pontos por supervisor com pódios identificados por metais e enviou exemplos visuais para orientar esses quadros. Em 21 de novembro de 2026, esclareceu que os grupos completos devem seguir os supervisores, não a localização, e que as paletas regionais devem diferir da preta usada para supervisores.
 
 **How to apply:** Derivar todos os resumos e barras de pontos/contagens reais, nunca de valores ilustrativos. No painel inicial, mostrar as três lojas líderes de cada grupo identificado pelo supervisor cadastrado. Na aba Lojas, preservar o ranking geral, agrupar cada loja pelo supervisor responsável com posições independentes e numeração “Região N”, deixar claro que o filtro de localização é geográfico e manter o ranking de supervisores ao final; todos usam a pontuação já definida e o período selecionado.
+
+Para compartilhar rankings em PDF com a mesma aparência da interface, capture o quadro renderizado e recorte o canvas em imagens separadas por página antes de montar o PDF. Não reposicione uma imagem alta com coordenadas negativas para simular recortes.
+
+**Why:** A inspeção de PDFs gerados mostrou que leitores comuns repetem/recortam incorretamente uma imagem alta posicionada fora dos limites da página; páginas com imagens previamente recortadas preservam cada trecho.
+
+**How to apply:** Calcule as quebras em posições seguras entre cartões/linhas, crie um canvas por trecho e adicione cada imagem dentro da área da página. Garanta que a ação de exportação não apareça na própria captura.

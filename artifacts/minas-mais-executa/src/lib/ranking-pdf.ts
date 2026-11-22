@@ -1,155 +1,137 @@
-export type RankingPdfColumn = {
-  key: string;
-  header: string;
-  width: number;
-};
-
-export type RankingPdfRow = Record<string, string | number> & {
-  position: number;
-};
-
-export type RankingPdfSection = {
-  heading?: string;
-  columns: RankingPdfColumn[];
-  rows: RankingPdfRow[];
-};
-
 export type RankingPdfReport = {
   title: string;
   period: string;
-  summary: string;
   variant: 'stores' | 'regions' | 'supervisors';
-  sections: RankingPdfSection[];
 };
 
-const medalColors: Record<number, [number, number, number]> = {
-  1: [255, 247, 218],
-  2: [236, 241, 245],
-  3: [250, 235, 224],
+export type RankingPdfPageSlice = {
+  top: number;
+  height: number;
 };
 
-const medalTextColors: Record<number, [number, number, number]> = {
-  1: [126, 92, 13],
-  2: [75, 88, 101],
-  3: [133, 77, 45],
-};
+export function getRankingPdfPageSlices(
+  imageHeight: number,
+  maxPageHeight: number,
+  safeBreaks: number[] = [],
+): RankingPdfPageSlice[] {
+  if (imageHeight <= 0 || maxPageHeight <= 0) return [];
+  const breaks = [...safeBreaks].filter((value) => value > 0 && value < imageHeight).sort((a, b) => a - b);
+  const pages: RankingPdfPageSlice[] = [];
+  let top = 0;
 
-export async function createRankingPdfBlob(report: RankingPdfReport): Promise<Blob> {
-  const [{ jsPDF }, { autoTable }] = await Promise.all([
-    import('jspdf'),
-    import('jspdf-autotable'),
-  ]);
-  const document = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-  const pageWidth = document.internal.pageSize.getWidth();
-  const pageHeight = document.internal.pageSize.getHeight();
-  const left = 38;
-  const right = 38;
-  const bottom = 42;
-  const tableWidth = pageWidth - left - right;
-  let nextY = 116;
-
-  for (const section of report.sections) {
-    if (!section.rows.length) continue;
-
-    if (section.heading) {
-      if (nextY + 54 > pageHeight - bottom) {
-        document.addPage();
-        nextY = 116;
-      }
-      document.setFillColor(22, 86, 78);
-      document.roundedRect(left, nextY, pageWidth - left - right, 23, 4, 4, 'F');
-      document.setFont('helvetica', 'bold');
-      document.setFontSize(9);
-      document.setTextColor(255, 255, 255);
-      document.text(section.heading, left + 10, nextY + 15);
-      nextY += 29;
-    }
-
-    autoTable(document, {
-      startY: nextY,
-      margin: { top: 116, bottom, left, right },
-      columns: section.columns.map(({ key, header }) => ({ header, dataKey: key })),
-      body: section.rows.map((row) => row),
-      theme: 'grid',
-      tableWidth,
-      styles: {
-        font: 'helvetica',
-        fontSize: report.variant === 'stores' ? 7 : 8,
-        textColor: [34, 45, 54],
-        lineColor: [220, 228, 232],
-        lineWidth: 0.45,
-        cellPadding: 4,
-        overflow: 'linebreak',
-        valign: 'middle',
-      },
-      headStyles: {
-        fillColor: report.variant === 'supervisors' ? [18, 25, 36] : [22, 86, 78],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 7,
-      },
-      alternateRowStyles: {
-        fillColor: report.variant === 'supervisors' ? [247, 249, 251] : [241, 248, 246],
-      },
-      columnStyles: Object.fromEntries(section.columns.map((column) => [
-        column.key,
-        { cellWidth: column.width * tableWidth / section.columns.reduce((total, item) => total + item.width, 0) },
-      ])),
-      didParseCell: (cell) => {
-        if (cell.section !== 'body') return;
-        const row = section.rows[cell.row.index];
-        if (!row) return;
-        if (medalColors[row.position]) {
-          cell.cell.styles.fillColor = medalColors[row.position];
-          if (cell.column.index === 0 || cell.column.index === section.columns.length - 1) {
-            cell.cell.styles.textColor = medalTextColors[row.position];
-            cell.cell.styles.fontStyle = 'bold';
-          }
-        } else if (report.variant !== 'supervisors') {
-          cell.cell.styles.fillColor = [237, 247, 245];
-        }
-      },
-    });
-
-    const finalY = (document as typeof document & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY;
-    nextY = (finalY ?? nextY) + 12;
+  while (top < imageHeight) {
+    const limit = Math.min(top + maxPageHeight, imageHeight);
+    const preferredMinimum = top + maxPageHeight * 0.55;
+    const safeEnd = breaks.filter((value) => value >= preferredMinimum && value <= limit).at(-1);
+    const end = Math.max(top + 1, Math.floor(safeEnd ?? limit));
+    pages.push({ top, height: end - top });
+    top = end;
   }
 
-  for (let page = 1; page <= document.getNumberOfPages(); page += 1) {
-    document.setPage(page);
-    document.setFillColor(13, 20, 27);
-    document.rect(0, 0, pageWidth, 104, 'F');
-    document.setFillColor(219, 48, 59);
-    document.roundedRect(28, 18, 4, 66, 2, 2, 'F');
-    document.setFont('helvetica', 'bold');
-    document.setFontSize(19);
-    document.setTextColor(248, 250, 252);
-    document.text('MINAS MAIS EXECUTA', 42, 39);
-    document.setFontSize(9);
-    document.setTextColor(245, 129, 143);
-    document.text('Excelência na execução!', 42, 57);
-    document.setFont('helvetica', 'normal');
-    document.setTextColor(222, 229, 234);
-    document.text('Nada é tão bom, que não possa melhorar!', 42, 71);
-    document.setFont('helvetica', 'bold');
-    document.setFontSize(11);
-    document.setTextColor(255, 255, 255);
-    document.text(report.title, 42, 91);
-    document.setFont('helvetica', 'normal');
-    document.setFontSize(7);
-    document.setTextColor(193, 205, 213);
-    document.text(`Período: ${report.period}  ·  ${report.summary}`, 42, 101);
+  return pages;
+}
 
-    document.setDrawColor(218, 225, 230);
-    document.setLineWidth(0.5);
-    document.line(left, pageHeight - 29, pageWidth - right, pageHeight - 29);
-    document.setFontSize(7);
-    document.setTextColor(103, 116, 127);
-    document.text('MINAS MAIS EXECUTA · Relatório de classificação', left, pageHeight - 17);
-    document.text(`Página ${page} de ${document.getNumberOfPages()}`, pageWidth - right, pageHeight - 17, { align: 'right' });
+export async function createRankingPdfBlob(
+  element: HTMLElement,
+  report: RankingPdfReport,
+): Promise<Blob> {
+  await document.fonts?.ready;
+  const { default: html2canvas } = await import('html2canvas');
+  const rootBounds = element.getBoundingClientRect();
+  const cssWidth = Math.max(1, element.clientWidth || rootBounds.width);
+  const cssHeight = Math.max(1, element.scrollHeight || rootBounds.height);
+  const scale = Math.min(
+    2,
+    2400 / cssWidth,
+    12_000 / cssHeight,
+    Math.sqrt(18_000_000 / (cssWidth * cssHeight)),
+  );
+  const scaleSafeBreaks = [
+    '.stores-ranking-mobile-row',
+    '.stores-ranking-table tbody tr',
+    '.regional-store-group',
+    '.regional-store-mobile-row',
+    '.regional-stores-table tbody tr',
+    '.regional-ranking-card',
+    '.supervisor-podium-card',
+    '.supervisor-ranking-row',
+  ]
+    .flatMap((selector) => Array.from(element.querySelectorAll<HTMLElement>(selector)))
+    .map((row) => Math.round((row.getBoundingClientRect().bottom - rootBounds.top) * scale))
+    .filter((value) => value > 0);
+
+  const canvas = await html2canvas(element, {
+    backgroundColor: null,
+    scale,
+    width: cssWidth,
+    height: cssHeight,
+    windowWidth: window.innerWidth,
+    windowHeight: Math.max(window.innerHeight, Math.ceil(cssHeight)),
+    scrollX: -window.scrollX,
+    scrollY: -window.scrollY,
+    useCORS: true,
+    logging: false,
+  });
+
+  if (!canvas.width || !canvas.height) {
+    throw new Error('Não foi possível capturar o ranking para gerar o PDF.');
   }
 
-  return document.output('blob');
+  const orientation = cssWidth > 760 ? 'landscape' : 'portrait';
+  const pdf = await createRankingPdfFromImages({
+    pages: getRankingPdfPageSlices(canvas.height, getImagePageHeight(canvas.width, orientation), scaleSafeBreaks)
+      .map((slice) => {
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = slice.height;
+        const context = pageCanvas.getContext('2d');
+        if (!context) throw new Error('Não foi possível preparar as páginas do PDF.');
+        context.drawImage(canvas, 0, slice.top, canvas.width, slice.height, 0, 0, canvas.width, slice.height);
+        return { image: pageCanvas.toDataURL('image/jpeg', 0.94), height: slice.height };
+      }),
+    imageWidth: canvas.width,
+    orientation,
+    report,
+  });
+  return pdf;
+}
+
+function getImagePageHeight(imageWidth: number, orientation: 'portrait' | 'landscape') {
+  const page = orientation === 'landscape' ? { width: 841.89, height: 595.28 } : { width: 595.28, height: 841.89 };
+  const margin = 18;
+  const imageWidthPoints = page.width - margin * 2;
+  const pointsPerPixel = imageWidthPoints / imageWidth;
+  return (page.height - margin * 2) / pointsPerPixel;
+}
+
+export async function createRankingPdfFromImages({
+  pages,
+  imageWidth,
+  orientation,
+  report,
+}: {
+  pages: Array<{ image: string; height: number }>;
+  imageWidth: number;
+  orientation: 'portrait' | 'landscape';
+  report: RankingPdfReport;
+}): Promise<Blob> {
+  const [{ jsPDF }] = await Promise.all([import('jspdf')]);
+  const pdf = new jsPDF({ orientation, unit: 'pt', format: 'a4', compress: true });
+  pdf.setProperties({ title: `${report.title} · ${report.period}`, subject: 'Ranking Minas Mais Executa' });
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 18;
+  const contentWidth = pageWidth - margin * 2;
+  const pointsPerPixel = contentWidth / imageWidth;
+
+  pages.forEach((page, index) => {
+    if (index > 0) pdf.addPage('a4', orientation);
+    const imageHeight = page.height * pointsPerPixel;
+    pdf.addImage(page.image, 'JPEG', margin, margin, contentWidth, imageHeight, `ranking-page-${index}`, 'FAST');
+  });
+
+  return pdf.output('blob');
 }
 
 export function rankingPdfFileName(title: string, fromDate: string, toDate: string) {

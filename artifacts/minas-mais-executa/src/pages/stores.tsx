@@ -76,68 +76,16 @@ export default function StoresPage() {
     [regionalStores, orderedRankings, search],
   );
   const rangeLabel = validRankingRange ? periodLabel(rankingRange.fromDate, rankingRange.toDate) : 'período inválido';
-  const overallPdfReport = useMemo<RankingPdfReport>(() => ({
+  const overallPdfReport: RankingPdfReport = {
     title: 'Ranking geral de lojas',
     period: rangeLabel,
-    summary: `${visibleRankings.length} lojas · ${rankingRegion || 'todas as localizações'} · ${rankingSupervisor || 'todos os supervisores'}`,
     variant: 'stores',
-    sections: [{
-      columns: [
-        { key: 'position', header: 'Pos.', width: 38 },
-        { key: 'store', header: 'Loja', width: 130 },
-        { key: 'manager', header: 'Gerente', width: 105 },
-        { key: 'supervisor', header: 'Supervisor', width: 110 },
-        { key: 'region', header: 'Localização', width: 72 },
-        { key: 'tasks', header: 'Tarefas', width: 48 },
-        { key: 'points', header: 'Pontos', width: 65 },
-        { key: 'average', header: 'Tempo médio', width: 76 },
-        { key: 'trend', header: 'Tendência', width: 90 },
-      ],
-      rows: visibleRankings.map((entry) => {
-        const store = storeByName.get(entry.storeName.trim().toLocaleLowerCase('pt-BR'));
-        return {
-          position: entry.position,
-          store: entry.storeName,
-          manager: entry.manager || store?.manager || 'Não definido',
-          supervisor: entry.supervisorName || store?.supervisor || 'Não definido',
-          region: store?.region || '—',
-          tasks: entry.tasksCompleted,
-          points: `${entry.points.toLocaleString('pt-BR')} pts`,
-          average: formatDurationMinutes(entry.averageExecutionMinutes),
-          trend: entry.trend === 'up' ? 'Em alta' : entry.trend === 'down' ? 'Em queda' : 'Estável',
-        };
-      }),
-    }],
-  }), [rangeLabel, visibleRankings, rankingRegion, rankingSupervisor, storeByName]);
-  const regionalPdfReport = useMemo<RankingPdfReport>(() => ({
+  };
+  const regionalPdfReport: RankingPdfReport = {
     title: 'Ranking das lojas por região',
     period: rangeLabel,
-    summary: `${regionalRankings.length} regiões · ${regionalStores.length} lojas · grupos por supervisor`,
     variant: 'regions',
-    sections: regionalRankings.map(({ region, supervisorName, stores: regionStores }) => ({
-      heading: `${region} · Supervisor ${supervisorName}`,
-      columns: [
-        { key: 'position', header: 'Pos.', width: 38 },
-        { key: 'store', header: 'Loja', width: 140 },
-        { key: 'manager', header: 'Gerente', width: 120 },
-        { key: 'supervisor', header: 'Supervisor', width: 125 },
-        { key: 'tasks', header: 'Tarefas', width: 53 },
-        { key: 'points', header: 'Pontos', width: 73 },
-        { key: 'average', header: 'Tempo médio', width: 80 },
-        { key: 'trend', header: 'Tendência', width: 95 },
-      ],
-      rows: regionStores.map(({ store, entry, position }) => ({
-        position,
-        store: store.name,
-        manager: entry?.manager || store.manager || 'Não definido',
-        supervisor: entry?.supervisorName || store.supervisor || 'Não definido',
-        tasks: entry ? entry.tasksCompleted : '—',
-        points: entry ? `${entry.points.toLocaleString('pt-BR')} pts` : 'Sem dados',
-        average: entry ? formatDurationMinutes(entry.averageExecutionMinutes) : '—',
-        trend: entry ? (entry.trend === 'up' ? 'Em alta' : entry.trend === 'down' ? 'Em queda' : 'Estável') : '—',
-      })),
-    })),
-  }), [rangeLabel, regionalRankings, regionalStores.length]);
+  };
 
   return <div className="content stores-page">
     <div className="page-head">
@@ -178,13 +126,14 @@ export default function StoresPage() {
       </label>
     </div>
 
+    <div className="stores-ranking-export-surface" data-ranking-pdf-target="stores-overall">
     <div className="stores-ranking-toolbar">
       <div>
         <span className="stores-ranking-kicker"><Trophy size={14} aria-hidden="true" /> Placar da rede</span>
         <h2 id="stores-ranking-title">Ranking de lojas</h2>
         <p>Pontuação total por tarefas concluídas e rapidez no período escolhido.</p>
       </div>
-      <div className="search-wrap stores-ranking-search">
+      <div className="search-wrap stores-ranking-search" data-html2canvas-ignore="true">
         <Search size={15} aria-hidden="true" />
         <input className="input" value={search} onChange={(event) => setSearch(event.target.value)}
           placeholder="Buscar loja, cidade ou responsável" aria-label="Buscar no ranking de lojas" data-testid="input-search-stores" />
@@ -196,7 +145,7 @@ export default function StoresPage() {
         <span>{validRankingRange ? `${visibleRankings.length} ${visibleRankings.length === 1 ? 'loja classificada' : 'lojas classificadas'}` : 'Confira o período selecionado'}</span>
         <span className="stores-ranking-period">{rangeLabel}</span>
         {validRankingRange && !rankingsQuery.isLoading && !rankingsQuery.isError && visibleRankings.length > 0 &&
-          <RankingPdfActions report={overallPdfReport} fromDate={rankingRange.fromDate} toDate={rankingRange.toDate} />}
+          <RankingPdfActions report={overallPdfReport} targetId="stores-overall" fromDate={rankingRange.fromDate} toDate={rankingRange.toDate} />}
       </div>
       {storesQuery.isError && <div className="stores-metadata-error"><ErrorState onRetry={() => storesQuery.refetch()} /></div>}
       {!validRankingRange
@@ -251,8 +200,9 @@ export default function StoresPage() {
                 ? <div className="stores-ranking-empty"><SearchEmpty title="Nenhuma loja encontrada" copy="Tente outro nome, cidade ou responsável." /></div>
                 : <EmptyState title="Ranking indisponível" copy="Não há tarefas concluídas nesse período." />}
     </section>
+    </div>
 
-    <section className="regional-stores-section" aria-labelledby="regional-stores-title" data-testid="stores-regional-ranking">
+    <section className="regional-stores-section" aria-labelledby="regional-stores-title" data-testid="stores-regional-ranking" data-ranking-pdf-target="stores-regions">
       <div className="regional-stores-heading">
         <div>
           <span className="stores-ranking-kicker"><UsersRound size={14} aria-hidden="true" /> Comparativo local</span>
@@ -262,7 +212,7 @@ export default function StoresPage() {
         <div className="regional-stores-heading-actions">
           <span className="regional-stores-count">{regionalStores.length} {regionalStores.length === 1 ? 'loja' : 'lojas'} no recorte</span>
           {validRankingRange && !storesQuery.isLoading && !storesQuery.isError && !rankingsQuery.isLoading && !rankingsQuery.isError && regionalRankings.length > 0 &&
-            <RankingPdfActions report={regionalPdfReport} fromDate={rankingRange.fromDate} toDate={rankingRange.toDate} />}
+            <RankingPdfActions report={regionalPdfReport} targetId="stores-regions" fromDate={rankingRange.fromDate} toDate={rankingRange.toDate} />}
         </div>
       </div>
       {!validRankingRange
@@ -321,6 +271,6 @@ export default function StoresPage() {
     </section>
 
     {!rankingsQuery.isError && validRankingRange && !rankingsQuery.isLoading &&
-      <SupervisorPointsRanking entries={rankings} periodLabel={rangeLabel} exportRange={{ fromDate: rankingRange.fromDate, toDate: rankingRange.toDate }} />}
+      <SupervisorPointsRanking entries={rankings} periodLabel={rangeLabel} exportRange={{ fromDate: rankingRange.fromDate, toDate: rankingRange.toDate }} exportTargetId="stores-supervisors" />}
   </div>;
 }

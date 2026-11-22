@@ -31,25 +31,13 @@ const { RankingPdfActions } = await import(output.href);
 const report = {
   title: 'Ranking geral de lojas',
   period: '01 nov. 2026 a 21 nov. 2026',
-  summary: '2 lojas',
   variant: 'stores',
-  sections: [{
-    columns: [
-      { key: 'position', header: 'Pos.', width: 55 },
-      { key: 'store', header: 'Loja', width: 500 },
-      { key: 'points', header: 'Pontos', width: 210 },
-    ],
-    rows: [
-      { position: 1, store: 'Loja Belo Horizonte', points: '740 pts' },
-      { position: 2, store: 'Loja Divinópolis', points: '700 pts' },
-    ],
-  }],
 };
 
 async function setup({ canShare = true, shareError } = {}) {
   const state = [];
   let cursor = 0;
-  const calls = { shares: [], downloads: 0 };
+  const calls = { shares: [], downloads: 0, captures: 0 };
   globalThis.rankingPdfTestState = {
     useState(initial) {
       const slot = cursor++;
@@ -67,11 +55,20 @@ async function setup({ canShare = true, shareError } = {}) {
       },
     },
   });
-  globalThis.document = undefined;
+  globalThis.document = { querySelector: () => ({}) };
   globalThis.window = undefined;
   const render = () => {
     cursor = 0;
-    return RankingPdfActions({ report, fromDate: '2026-11-01', toDate: '2026-11-21' });
+    return RankingPdfActions({
+      report,
+      targetId: 'stores-overall',
+      fromDate: '2026-11-01',
+      toDate: '2026-11-21',
+      createPdf: async () => {
+        calls.captures += 1;
+        return new Blob(['%PDF-1.4\n%%EOF'], { type: 'application/pdf' });
+      },
+    });
   };
   const find = (testId) => {
     const visit = (node) => {
@@ -95,6 +92,7 @@ for (const config of [{}, { canShare: false }]) {
   const test = await setup(config);
   test.find('button-generate-stores-ranking-pdf').props.onClick();
   await waitForGeneration(test);
+  assert.equal(test.calls.captures, 1, 'PDF should capture the selected ranking surface once');
   const notice = test.render().props.children;
   assert.ok(notice, 'PDF generation should render the available follow-up actions');
   assert.ok(test.find('button-download-stores-ranking-pdf'), `Generated report should always be downloadable; notice: ${JSON.stringify(notice)}`);

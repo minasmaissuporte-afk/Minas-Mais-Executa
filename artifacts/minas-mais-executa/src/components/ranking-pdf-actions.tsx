@@ -8,12 +8,16 @@ import {
 
 export function RankingPdfActions({
   report,
+  targetId,
   fromDate,
   toDate,
+  createPdf = createRankingPdfBlob,
 }: {
   report: RankingPdfReport;
+  targetId: string;
   fromDate: string;
   toDate: string;
+  createPdf?: (element: HTMLElement, report: RankingPdfReport) => Promise<Blob>;
 }) {
   const [busy, setBusy] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -22,13 +26,15 @@ export function RankingPdfActions({
   const [notice, setNotice] = useState('');
 
   const generatePdf = async () => {
-    if (busy || !report.sections.some((section) => section.rows.length > 0)) return;
+    if (busy) return;
     setBusy(true);
     setNotice('');
     setPreparedPdf(null);
     setCanSharePdf(false);
     try {
-      const blob = await createRankingPdfBlob(report);
+      const target = document.querySelector<HTMLElement>(`[data-ranking-pdf-target="${targetId}"]`);
+      if (!target) throw new Error('Não encontrei o quadro do ranking para gerar o PDF.');
+      const blob = await createPdf(target, report);
       if (!blob.size || blob.type !== 'application/pdf') {
         throw new Error('O arquivo PDF ficou vazio. Tente gerar novamente.');
       }
@@ -82,13 +88,13 @@ export function RankingPdfActions({
     window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
-  return <div className="ranking-pdf-control">
+  return <div className="ranking-pdf-control" data-html2canvas-ignore="true">
     <div className="ranking-pdf-buttons">
       <button
         type="button"
         className="button ranking-pdf-generate"
         onClick={() => void generatePdf()}
-        disabled={busy || !report.sections.some((section) => section.rows.length > 0)}
+        disabled={busy}
         data-testid={`button-generate-${report.variant}-ranking-pdf`}
       >
         <FileText size={15} aria-hidden="true" />

@@ -54,7 +54,7 @@ export default function DashboardPage({ member }: { member: CurrentMember }) {
           <MetricCard label="Atrasadas" value={summary.overdue} meta="Requer ação imediata" tone="stat-alert" icon={CircleAlert} />
        </div>
        : summaryQuery.isLoading ? <LoadingBlocks rows={1} /> : null}
-      {isNetwork && <RegionalExecutionLeaderboard entries={rankingsQuery.data ?? []} monthLabel={monthLabel} isLoading={rankingsQuery.isLoading} isError={rankingsQuery.isError} onRetry={() => rankingsQuery.refetch()} />}
+      {isNetwork && <RegionalExecutionLeaderboard entries={rankingsQuery.data ?? []} monthLabel={monthLabel} isLoading={rankingsQuery.isLoading} isError={rankingsQuery.isError} onRetry={() => rankingsQuery.refetch()} exportRange={rankingRange} />}
      <div className="dashboard-grid">
        <section className="card card-pad">
          <div className="section-heading">
