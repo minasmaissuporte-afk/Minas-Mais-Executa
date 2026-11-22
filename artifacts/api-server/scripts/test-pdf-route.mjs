@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { transform } from "esbuild";
 import sharp from "sharp";
-import { createEvidencePdf } from "../dist/pdf-renderer-test.mjs";
+import { createEvidencePdf, normalizeEvidencePhoto } from "../dist/pdf-renderer-test.mjs";
 
 // Execute the actual route body, with in-memory I/O adapters. No real database,
 // identities, private photos or production storage are modified by this test.
@@ -19,16 +19,26 @@ const tasks = [
 const tasksTable = {};
 const evidencesTable = {};
 
-async function request({ allowedStores, corrupt = false, scope = "task", status = "completed" }) {
+async function request({ allowedStores, corrupt = false, scope = "task", status = "completed", photoCount }) {
   let handler;
   let selectedTaskIds = [];
   const downloaded = [];
+  const storageOptions = [];
+  const logs = [];
+  let activeStreams = 0;
+  let maxActiveStreams = 0;
+  const requestTasks = tasks.map((task) => ({ ...task, status }));
   const db = {
     select: () => ({
       from: (table) => ({
-        where: async () => table === tasksTable ? tasks : selectedTaskIds.map((id) => ({
-          id: `photo-${id}`, taskId: id, objectPath: `/objects/${id}`, fileName: `${id}.jpg`,
-        })),
+        where: async () => {
+          if (table === tasksTable) return requestTasks;
+          const count = photoCount ?? selectedTaskIds.length;
+          return Array.from({ length: count }, (_, index) => {
+            const taskId = selectedTaskIds[index % selectedTaskIds.length];
+            return { id: `photo-${index}`, taskId, objectPath: `/objects/${taskId}`, fileName: `${taskId}.jpg` };
+          });
+        },
       }),
     }),
   };
@@ -36,23 +46,31 @@ async function request({ allowedStores, corrupt = false, scope = "task", status 
     router: { get: (_path, callback) => { handler = callback; } },
     seedPromise: Promise.resolve(),
     GetTaskParams: { safeParse: (params) => ({ success: true, data: params }) },
-    getTaskWithEvidence: async () => ({ ...tasks[0], status }),
     DownloadTaskEvidencePdfQueryParams: {
       safeParse: (query) => ["task", "store"].includes(query.scope)
         ? { success: true, data: query } : { success: false },
     },
-    canAccessTask: async (_req, task) => allowedStores.includes(task.storeId),
+    scopedStoreIds: async () => allowedStores,
     db, tasksTable, evidencesTable,
     eq: () => ({}), and: () => ({}),
     inArray: (_column, ids) => { selectedTaskIds = ids; return {}; },
     isNormalizedPrivateObjectPath: () => true,
     createEvidencePdf,
+    normalizeEvidencePhoto,
     objectStorageService: {
-      getObjectEntityFile: async (path) => {
+      getObjectEntityFile: async (path, options) => {
         downloaded.push(path);
+        storageOptions.push(options);
         return {
           createReadStream: async function* () {
-            yield corrupt && path.endsWith("b") ? Buffer.from("corrupt source") : validImage;
+            activeStreams += 1;
+            maxActiveStreams = Math.max(maxActiveStreams, activeStreams);
+            try {
+              await new Promise((resolve) => setTimeout(resolve, 5));
+              yield corrupt && path.endsWith("b") ? Buffer.from("corrupt source") : validImage;
+            } finally {
+              activeStreams -= 1;
+            }
           },
         };
       },
@@ -67,15 +85,22 @@ async function request({ allowedStores, corrupt = false, scope = "task", status 
     json(value) { this.body = value; return this; },
     send(value) { this.body = value; return this; },
   };
-  const log = { info() {}, error() {} };
+  const log = { info(data) { logs.push(data); }, error() {} };
   await handler({ params: { id: "a" }, query: { scope }, log }, response);
-  return { response, downloaded };
+  return { response, downloaded, storageOptions, maxActiveStreams, logs };
 }
 const all = await request({ allowedStores: ["store-a", "store-b"] });
 assert.equal(all.response.code, 200);
 assert.equal(all.response.headers["Content-Type"], "application/pdf");
 assert.ok(all.response.body.includes(Buffer.from("%%EOF")));
 assert.equal((all.response.body.toString("latin1").match(/\/Subtype\s*\/Image\b/g) ?? []).length, 2);
+const batched = await request({ allowedStores: ["store-a", "store-b"], photoCount: 7 });
+assert.equal(batched.response.code, 200);
+assert.equal((batched.response.body.toString("latin1").match(/\/Subtype\s*\/Image\b/g) ?? []).length, 7);
+assert.ok(batched.maxActiveStreams > 1, "Photo streams should be loaded concurrently");
+assert.ok(batched.maxActiveStreams <= 4, "Photo concurrency must remain bounded to four streams");
+assert.ok(batched.storageOptions.every((options) => options?.skipExistsCheck === true), "PDF reads should avoid a separate object-exists request");
+assert.equal(batched.logs[0].photos, 7);
 const scoped = await request({ allowedStores: ["store-a"] });
 assert.equal(scoped.response.code, 200);
 assert.deepEqual(scoped.downloaded, ["/objects/a"], "Out-of-scope store photos must never be downloaded");

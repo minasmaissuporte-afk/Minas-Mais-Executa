@@ -36,6 +36,9 @@ export function createEvidencePdf(title: string, totalPhotos: number) {
     document,
     async addPhoto(storeName: string, source: Buffer) {
       const image = await normalizeEvidencePhoto(source);
+      this.addPreparedPhoto(storeName, image);
+    },
+    addPreparedPhoto(storeName: string, image: Buffer) {
       const slot = count % 4;
       if (slot === 0) {
         document.addPage();

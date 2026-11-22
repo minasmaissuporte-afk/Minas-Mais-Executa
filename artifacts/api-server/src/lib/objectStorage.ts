@@ -152,7 +152,10 @@ export class ObjectStorageService {
     });
   }
 
-  async getObjectEntityFile(objectPath: string): Promise<File> {
+  async getObjectEntityFile(
+    objectPath: string,
+    options: { skipExistsCheck?: boolean } = {},
+  ): Promise<File> {
     if (!objectPath.startsWith('/objects/')) {
       throw new ObjectNotFoundError();
     }
@@ -171,9 +174,11 @@ export class ObjectStorageService {
     const { bucketName, objectName } = parseObjectPath(objectEntityPath);
     const bucket = objectStorageClient.bucket(bucketName);
     const objectFile = bucket.file(objectName);
-    const [exists] = await objectFile.exists();
-    if (!exists) {
-      throw new ObjectNotFoundError();
+    if (!options.skipExistsCheck) {
+      const [exists] = await objectFile.exists();
+      if (!exists) {
+        throw new ObjectNotFoundError();
+      }
     }
     return objectFile;
   }

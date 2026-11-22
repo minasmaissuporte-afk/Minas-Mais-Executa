@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { createEvidencePdf } from "../lib/evidence-pdf";
+import { createEvidencePdf, normalizeEvidencePhoto } from "../lib/evidence-pdf";
 import { saoPauloStartOfDay } from "../lib/business-date";
 import { and, desc, eq, gte, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import {
@@ -1442,6 +1442,7 @@ router.delete("/tasks", async (req, res) => {
 });
 
 router.get("/tasks/:id/evidence/pdf", async (req, res): Promise<void> => {
+  const requestStartedAt = performance.now();
   await seedPromise;
   const params = GetTaskParams.safeParse(req.params);
   if (!params.success) {
@@ -1454,8 +1455,13 @@ router.get("/tasks/:id/evidence/pdf", async (req, res): Promise<void> => {
     return;
   }
   const storeOnly = query.data.scope === "store";
-  const task = await getTaskWithEvidence(params.data.id);
-  if (!task || !(await canAccessTask(req, task))) {
+  const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, params.data.id));
+  if (!task) {
+    res.status(404).json({ error: "Tarefa não encontrada." });
+    return;
+  }
+  const allowedStoreIds = await scopedStoreIds(req);
+  if (allowedStoreIds !== null && !allowedStoreIds.includes(task.storeId)) {
     res.status(404).json({ error: "Tarefa não encontrada." });
     return;
   }
@@ -1466,10 +1472,9 @@ router.get("/tasks/:id/evidence/pdf", async (req, res): Promise<void> => {
   const relatedTasks = !storeOnly && task.batchGroupId
     ? await db.select().from(tasksTable).where(eq(tasksTable.batchGroupId, task.batchGroupId))
     : [task];
-  const visibleTasks = [];
-  for (const related of relatedTasks) {
-    if (await canAccessTask(req, related)) visibleTasks.push(related);
-  }
+  const visibleTasks = relatedTasks.filter((related) =>
+    allowedStoreIds === null || allowedStoreIds.includes(related.storeId),
+  );
   const taskIds = visibleTasks.map((item) => item.id);
   const photos = taskIds.length
     ? await db.select({
@@ -1505,29 +1510,72 @@ router.get("/tasks/:id/evidence/pdf", async (req, res): Promise<void> => {
   });
 
   let failedStoreName = "";
+  let sourceBytes = 0;
+  let objectAndNormalizeMs = 0;
+  let pdfWriteMs = 0;
   try {
     let rendered = 0;
-    for (const photo of photoRows) {
-      const related = taskById.get(photo.taskId);
-      if (!related || !photo.objectPath) throw new Error("Evidence is missing its task or image path");
-      failedStoreName = related.storeName;
-      const file = await objectStorageService.getObjectEntityFile(photo.objectPath);
-      const chunks: Buffer[] = [];
-      for await (const chunk of file.createReadStream()) {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    // Overlap storage and image-normalization work without retaining every full photo at once.
+    // PDFKit writes stay sequential so page order and labels remain deterministic.
+    const batchSize = 4;
+    for (let offset = 0; offset < photoRows.length; offset += batchSize) {
+      const batch = photoRows.slice(offset, offset + batchSize);
+      const loadStartedAt = performance.now();
+      const loaded = await Promise.all(batch.map(async (photo) => {
+        const related = taskById.get(photo.taskId);
+        if (!related || !photo.objectPath) {
+          return { ok: false as const, storeName: related?.storeName ?? "loja não identificada", error: new Error("Evidence is missing its task or image path") };
+        }
+        try {
+          const file = await objectStorageService.getObjectEntityFile(photo.objectPath, { skipExistsCheck: true });
+          const chunks: Buffer[] = [];
+          for await (const chunk of file.createReadStream()) {
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+          }
+          const source = Buffer.concat(chunks);
+          const image = await normalizeEvidencePhoto(source);
+          return { ok: true as const, storeName: related.storeName, sourceBytes: source.length, image };
+        } catch (error) {
+          return { ok: false as const, storeName: related.storeName, error };
+        }
+      }));
+      objectAndNormalizeMs += performance.now() - loadStartedAt;
+      const failure = loaded.find((photo) => !photo.ok);
+      if (failure && !failure.ok) {
+        failedStoreName = failure.storeName;
+        throw failure.error;
       }
-      await presentation.addPhoto(related.storeName, Buffer.concat(chunks));
-      rendered += 1;
+
+      const writeStartedAt = performance.now();
+      for (const photo of loaded) {
+        if (!photo.ok) continue;
+        failedStoreName = photo.storeName;
+        presentation.addPreparedPhoto(photo.storeName, photo.image);
+        sourceBytes += photo.sourceBytes;
+        rendered += 1;
+      }
+      pdfWriteMs += performance.now() - writeStartedAt;
     }
     if (rendered !== photoRows.length) throw new Error("Not all evidence images were rendered");
+    const finalizeStartedAt = performance.now();
     pdf.end();
     await finished;
     if (streamError) throw streamError;
     const output = Buffer.concat(pdfChunks);
+    const pdfFinalizeMs = performance.now() - finalizeStartedAt;
     if (!output.subarray(0, 5).equals(Buffer.from("%PDF-")) || !output.subarray(-1024).includes(Buffer.from("%%EOF"))) {
       throw new Error("Incomplete PDF output");
     }
-    req.log.info({ taskId: task.id, photos: rendered, bytes: output.length }, "Task evidence PDF completed");
+    req.log.info({
+      taskId: task.id,
+      photos: rendered,
+      sourceBytes,
+      bytes: output.length,
+      photoLoadAndNormalizeMs: Math.round(objectAndNormalizeMs),
+      pdfWriteMs: Math.round(pdfWriteMs),
+      pdfFinalizeMs: Math.round(pdfFinalizeMs),
+      totalMs: Math.round(performance.now() - requestStartedAt),
+    }, "Task evidence PDF completed");
     res.status(200)
       .set("Content-Type", "application/pdf")
       .set("Content-Disposition", `attachment; filename="${safeName(task.title)}-${storeOnly ? safeName(task.storeName) : "todas-as-lojas"}-evidencias.pdf"`)

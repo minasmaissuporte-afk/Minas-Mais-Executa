@@ -1,4 +1,4 @@
-const CACHE_NAME = 'minas-mais-executa-v2';
+const CACHE_NAME = 'minas-mais-executa-v3';
 
 function scopedUrl(path) {
   return new URL(path, self.registration.scope).href;

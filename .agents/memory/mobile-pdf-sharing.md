@@ -50,3 +50,9 @@ O fundo externo de todo o PDF deve ser preto, mantendo o cabeçalho e as mesmas 
 **Why:** O usuário pediu fundo preto em todo o material, com apresentação moderna e dinâmica.
 
 **How to apply:** Manter textos e identificação das lojas com contraste claro; preservar as fotos e as quatro evidências por página. A área interna de cada quadro deve continuar branca sobre a página preta.
+
+Na geração do PDF, carregar e normalizar as fotos em lotes limitados de quatro; gravar cada lote no PDF em sequência e pular a consulta de existência quando o arquivo for lido imediatamente.
+
+**Why:** PDFs de 50–130 fotos levaram de 20 a 64 segundos em produção; leituras e conversões estritamente sequenciais somavam latência de armazenamento, enquanto abrir todas as imagens juntas aumentaria o uso de memória.
+
+**How to apply:** Manter paralelismo limitado para leituras/conversões e a ordem original ao gravar no PDF. Deixar o stream de leitura detectar objetos ausentes e manter a mensagem de erro identificando a filial.
