@@ -28,3 +28,9 @@ Para compartilhar rankings em PDF com a mesma aparência da interface em celular
 **Why:** Um canvas alto pode exceder limites do navegador móvel, e coordenadas negativas de rolagem deslocam o quadro capturado; páginas capturadas separadamente e offsets padrão evitam distorções.
 
 **How to apply:** Calcule os cortes em posições seguras entre cartões/linhas, capture cada fatia direto do DOM e adicione cada imagem dentro da área da página. Garanta que as ações de exportação não apareçam na captura.
+
+Ao capturar o DOM, remova animações e transições CSS no documento clonado pelo html2canvas.
+
+**Why:** O PDF enviado em 22 de novembro de 2026 mostrou páginas pretas e texto translúcido porque a animação de entrada do quadro era reiniciada na captura e seu `fill-mode` escondia o conteúdo.
+
+**How to apply:** Use a opção `onclone` para injetar uma regra de captura sem animações/transições antes de renderizar cada página; assim a captura preserva o estado final visível.

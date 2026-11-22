@@ -88,7 +88,7 @@ export async function captureRankingPdfPages(element: HTMLElement): Promise<Rank
 
   for (const slice of slices) {
     const canvas = await html2canvas(element, {
-      backgroundColor: null,
+      backgroundColor: getCaptureBackground(element),
       scale,
       x: 0,
       y: slice.top,
@@ -98,6 +98,18 @@ export async function captureRankingPdfPages(element: HTMLElement): Promise<Rank
       windowHeight: window.innerHeight,
       useCORS: true,
       logging: false,
+      onclone: (clonedDocument) => {
+        const captureStyles = clonedDocument.createElement('style');
+        captureStyles.textContent = `
+          *, *::before, *::after {
+            animation: none !important;
+            transition: none !important;
+            scroll-behavior: auto !important;
+            caret-color: transparent !important;
+          }
+        `;
+        clonedDocument.head.appendChild(captureStyles);
+      },
     });
     if (!canvas.width || !canvas.height) {
       throw new Error('Não foi possível capturar uma página do ranking para gerar o PDF.');
@@ -115,6 +127,17 @@ export async function captureRankingPdfPages(element: HTMLElement): Promise<Rank
     imageWidth,
     orientation,
   };
+}
+
+function getCaptureBackground(element: HTMLElement) {
+  let ancestor: HTMLElement | null = element;
+  while (ancestor) {
+    const color = getComputedStyle(ancestor).backgroundColor;
+    const isTransparent = color === 'transparent' || /,\s*0(?:\.0+)?\s*\)$/.test(color);
+    if (color && !isTransparent) return color;
+    ancestor = ancestor.parentElement;
+  }
+  return '#ffffff';
 }
 
 function getImagePageHeight(imageWidth: number, orientation: 'portrait' | 'landscape') {
