@@ -9,6 +9,17 @@ export type RankingPdfPageSlice = {
   height: number;
 };
 
+export type RankingPdfPageImage = {
+  image: string;
+  height: number;
+};
+
+export type RankingPdfCapture = {
+  pages: RankingPdfPageImage[];
+  imageWidth: number;
+  orientation: 'portrait' | 'landscape';
+};
+
 export function getRankingPdfPageSlices(
   imageHeight: number,
   maxPageHeight: number,
@@ -35,6 +46,11 @@ export async function createRankingPdfBlob(
   element: HTMLElement,
   report: RankingPdfReport,
 ): Promise<Blob> {
+  const capture = await captureRankingPdfPages(element);
+  return createRankingPdfFromImages({ ...capture, report });
+}
+
+export async function captureRankingPdfPages(element: HTMLElement): Promise<RankingPdfCapture> {
   await document.fonts?.ready;
   const { default: html2canvas } = await import('html2canvas');
   const rootBounds = element.getBoundingClientRect();
@@ -57,6 +73,7 @@ export async function createRankingPdfBlob(
     '.regional-ranking-card',
     '.supervisor-podium-card',
     '.supervisor-ranking-row',
+    '[data-ranking-pdf-break]',
   ]
     .flatMap((selector) => Array.from(element.querySelectorAll<HTMLElement>(selector)))
     .flatMap((row) => {
@@ -93,12 +110,11 @@ export async function createRankingPdfBlob(
     throw new Error('Não foi possível capturar o ranking para gerar o PDF.');
   }
 
-  return createRankingPdfFromImages({
+  return {
     pages,
     imageWidth,
     orientation,
-    report,
-  });
+  };
 }
 
 function getImagePageHeight(imageWidth: number, orientation: 'portrait' | 'landscape') {

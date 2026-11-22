@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Validação de captura de ranking</title>
+    <style>
+      body { margin: 0; padding: 16px; background: #f4f5f6; font: 14px system-ui, sans-serif; }
+      #ranking { width: 320px; margin: 170px auto 0; border: 8px solid #111; border-radius: 18px; overflow: hidden; }
+      .stripe { height: 260px; }
+      .red { background: #dc2832; }
+      .green { background: #19a064; }
+      .blue { background: #1e5ac8; }
+      .yellow { background: #f0b414; }
+      #results { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px; }
+      #results img { width: 280px; max-height: 420px; object-fit: contain; border: 1px solid #cbd1d6; background: white; }
+      #status { position: sticky; top: 0; z-index: 2; padding: 8px; text-align: center; background: white; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <div id="ranking">
+      <div class="stripe red" data-ranking-pdf-break></div>
+      <div class="stripe green" data-ranking-pdf-break></div>
+      <div class="stripe blue" data-ranking-pdf-break></div>
+      <div class="stripe yellow" data-ranking-pdf-break></div>
+    </div>
+    <p id="status">Capturando...</p>
+    <div id="results"></div>
+    <script type="module">
+      import { captureRankingPdfPages } from '/src/lib/ranking-pdf.ts';
+      const status = document.querySelector('#status');
+      try {
+        const capture = await captureRankingPdfPages(document.querySelector('#ranking'));
+        for (const page of capture.pages) {
+          const image = document.createElement('img');
+          image.src = page.image;
+          document.querySelector('#results').append(image);
+        }
+        status.textContent = `OK · ${capture.pages.length} páginas · ${capture.orientation}`;
+      } catch (error) {
+        status.textContent = `ERRO · ${error instanceof Error ? error.message : String(error)}`;
+      }
+    </script>
+  </body>
+</html>
