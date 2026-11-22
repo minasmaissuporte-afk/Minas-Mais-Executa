@@ -1,13 +1,17 @@
 import { Medal, Trophy } from 'lucide-react';
 import type { RankingEntry } from '@workspace/api-client-react';
 import { rankSupervisorsByPoints } from '@/lib/regional-ranking';
+import { RankingPdfActions } from '@/components/ranking-pdf-actions';
+import type { RankingPdfReport } from '@/lib/ranking-pdf';
 
 export function SupervisorPointsRanking({
   entries,
   periodLabel,
+  exportRange,
 }: {
   entries: RankingEntry[];
   periodLabel: string;
+  exportRange?: { fromDate: string; toDate: string };
 }) {
   const supervisors = rankSupervisorsByPoints(entries);
   const leaderPoints = supervisors[0]?.points ?? 0;
@@ -22,6 +26,37 @@ export function SupervisorPointsRanking({
     taskTotals.set(key, (taskTotals.get(key) ?? 0) + entry.tasksCompleted);
   });
   const formatPoints = (points: number) => points.toLocaleString('pt-BR');
+  const pdfReport: RankingPdfReport = {
+    title: 'Ranking dos supervisores',
+    period: periodLabel,
+    summary: `${entries.length} lojas · ${formatPoints(totalPoints)} pontos totais · ${completionShare.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% das lojas com tarefa concluída`,
+    variant: 'supervisors',
+    sections: [{
+      columns: [
+        { key: 'position', header: 'Pos.', width: 42 },
+        { key: 'supervisor', header: 'Supervisor', width: 180 },
+        { key: 'stores', header: 'Lojas', width: 75 },
+        { key: 'tasks', header: 'Tarefas concluídas', width: 110 },
+        { key: 'completion', header: 'Lojas com tarefa', width: 100 },
+        { key: 'points', header: 'Pontos', width: 95 },
+        { key: 'award', header: 'Faixa', width: 90 },
+      ],
+      rows: supervisors.map(({ supervisorName, points, storeCount, storesWithCompletions, position, award }) => {
+        const key = supervisorName.toLocaleLowerCase('pt-BR');
+        const taskCount = taskTotals.get(key) ?? 0;
+        const completion = storeCount > 0 ? (storesWithCompletions / storeCount) * 100 : 0;
+        return {
+          position,
+          supervisor: supervisorName,
+          stores: storeCount,
+          tasks: taskCount,
+          completion: `${completion.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`,
+          points: `${formatPoints(points)} pts`,
+          award: award?.toLocaleUpperCase('pt-BR') ?? `${position}º lugar`,
+        };
+      }),
+    }],
+  };
 
   return <section className="supervisor-ranking-section" aria-labelledby="supervisor-points-title" data-testid="supervisor-points-ranking">
     <div className="supervisor-ranking-heading">
@@ -30,6 +65,7 @@ export function SupervisorPointsRanking({
         <h3 id="supervisor-points-title">Ranking dos supervisores</h3>
         <p>Soma dos pontos das lojas no período · {periodLabel}</p>
       </div>
+      {exportRange && supervisors.length > 0 && <RankingPdfActions report={pdfReport} {...exportRange} />}
     </div>
     <div className="supervisor-ranking-summary" aria-label="Resumo do período">
       <div><small>Total pontuado</small><strong>{totalPoints.toLocaleString('pt-BR')}</strong></div>
