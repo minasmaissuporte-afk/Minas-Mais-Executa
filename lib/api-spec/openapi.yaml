@@ -631,6 +631,35 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/RankingEntry"
+  /rankings/supervisors:
+    get:
+      operationId: getSupervisorRankings
+      tags: [rankings]
+      summary: Get network-wide supervisor rankings with aggregated metrics
+      parameters:
+        - in: query
+          name: fromDate
+          required: false
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: toDate
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Aggregated supervisor rankings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupervisorRankingSummary"
+        "400":
+          description: Invalid date range
+        "403":
+          description: Only administrators and supervisors may view the network ranking
   /storage/uploads/request-url:
     post:
       operationId: requestUploadUrl
@@ -1354,6 +1383,34 @@ components:
           description: Store ranking group defined by the operation.
         supervisorName:
           type: string
+    SupervisorRankingEntry:
+      type: object
+      required: [supervisorName, points, storeCount, storesWithCompletions, tasksCompleted]
+      properties:
+        supervisorName:
+          type: string
+        points:
+          type: integer
+        storeCount:
+          type: integer
+        storesWithCompletions:
+          type: integer
+        tasksCompleted:
+          type: integer
+    SupervisorRankingSummary:
+      type: object
+      required: [rankings, totalPoints, storeCount, storesWithCompletions]
+      properties:
+        rankings:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupervisorRankingEntry"
+        totalPoints:
+          type: integer
+        storeCount:
+          type: integer
+        storesWithCompletions:
+          type: integer
     UploadUrlInput:
       type: object
       required: [name, size, contentType]

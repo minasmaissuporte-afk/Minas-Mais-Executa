@@ -9,7 +9,8 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:pdf-runtime": "pnpm run build && node scripts/test-pdf-runtime.mjs && node scripts/test-pdf-route.mjs",
-    "test:business-date": "node --experimental-strip-types scripts/test-business-date.mjs"
+    "test:business-date": "node --experimental-strip-types scripts/test-business-date.mjs",
+    "test:supervisor-rankings": "pnpm run build && node scripts/test-supervisor-rankings.mjs"
   },
   "dependencies": {
     "@clerk/express": "^2.1.66",

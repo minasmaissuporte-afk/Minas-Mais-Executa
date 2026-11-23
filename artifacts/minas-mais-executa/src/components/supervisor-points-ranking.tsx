@@ -1,26 +1,25 @@
 import { Medal, Trophy } from 'lucide-react';
-import type { RankingEntry } from '@workspace/api-client-react';
-import { rankSupervisorsByPoints } from '@/lib/regional-ranking';
+import type { RankingEntry, SupervisorRankingSummary } from '@workspace/api-client-react';
+import { rankSupervisorsByPoints, rankSupervisorSummaries } from '@/lib/regional-ranking';
 
 export function SupervisorPointsRanking({
   entries,
+  summary,
   periodLabel,
 }: {
   entries: RankingEntry[];
+  summary?: SupervisorRankingSummary;
   periodLabel: string;
 }) {
-  const supervisors = rankSupervisorsByPoints(entries);
+  const supervisors = summary
+    ? rankSupervisorSummaries(summary.rankings)
+    : rankSupervisorsByPoints(entries);
   const leaderPoints = supervisors[0]?.points ?? 0;
-  const totalPoints = entries.reduce((total, entry) => total + entry.points, 0);
-  const storesWithCompletions = entries.filter((entry) => entry.tasksCompleted > 0).length;
-  const completionShare = entries.length ? (storesWithCompletions / entries.length) * 100 : 0;
-  const taskTotals = new Map<string, number>();
-  entries.forEach((entry) => {
-    const name = entry.supervisorName.trim().replace(/\s+/g, ' ');
-    if (!name || name.toLocaleLowerCase('pt-BR') === 'sem supervisor') return;
-    const key = name.toLocaleLowerCase('pt-BR');
-    taskTotals.set(key, (taskTotals.get(key) ?? 0) + entry.tasksCompleted);
-  });
+  const totalPoints = summary?.totalPoints ?? entries.reduce((total, entry) => total + entry.points, 0);
+  const storeCount = summary?.storeCount ?? entries.length;
+  const storesWithCompletions = summary?.storesWithCompletions
+    ?? entries.filter((entry) => entry.tasksCompleted > 0).length;
+  const completionShare = storeCount ? (storesWithCompletions / storeCount) * 100 : 0;
   const formatPoints = (points: number) => points.toLocaleString('pt-BR');
 
   return <section className="supervisor-ranking-section" aria-labelledby="supervisor-points-title" data-testid="supervisor-points-ranking">
@@ -33,7 +32,7 @@ export function SupervisorPointsRanking({
     </div>
     <div className="supervisor-ranking-summary" aria-label="Resumo do período">
       <div><small>Total pontuado</small><strong>{totalPoints.toLocaleString('pt-BR')}</strong></div>
-      <div><small>Lojas</small><strong>{entries.length.toLocaleString('pt-BR')}</strong></div>
+      <div><small>Lojas</small><strong>{storeCount.toLocaleString('pt-BR')}</strong></div>
       <div><small>Lojas com tarefa</small><strong>{completionShare.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%</strong></div>
     </div>
     {leaderPoints > 0
@@ -64,9 +63,7 @@ export function SupervisorPointsRanking({
           <span>{supervisors.length} {supervisors.length === 1 ? 'supervisor' : 'supervisores'}</span>
         </div>
         <ol className="supervisor-ranking-list" aria-label="Classificação completa de supervisores">
-          {supervisors.map(({ supervisorName, points, storeCount, storesWithCompletions, position, award }) => {
-            const key = supervisorName.toLocaleLowerCase('pt-BR');
-            const taskCount = taskTotals.get(key) ?? 0;
+          {supervisors.map(({ supervisorName, points, storeCount, storesWithCompletions, tasksCompleted, position, award }) => {
             const completionShare = storeCount > 0 ? (storesWithCompletions / storeCount) * 100 : 0;
             const relativePoints = leaderPoints > 0 ? (points / leaderPoints) * 100 : 0;
             const pointsBehind = leaderPoints - points;
@@ -78,7 +75,7 @@ export function SupervisorPointsRanking({
               <span className="supervisor-ranking-position" aria-label={`${position}º lugar`}>{String(position).padStart(2, '0')}</span>
               <span className="supervisor-ranking-info">
                 <strong>{supervisorName}</strong>
-                <small>{storeCount} {storeCount === 1 ? 'loja' : 'lojas'} · {taskCount} {taskCount === 1 ? 'tarefa concluída' : 'tarefas concluídas'} · {completionShare.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% das lojas com tarefa concluída</small>
+                <small>{storeCount} {storeCount === 1 ? 'loja' : 'lojas'} · {tasksCompleted} {tasksCompleted === 1 ? 'tarefa concluída' : 'tarefas concluídas'} · {completionShare.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% das lojas com tarefa concluída</small>
                 <span className="supervisor-ranking-bar" role="progressbar" aria-label={`${relativePoints.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% da pontuação do líder`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(relativePoints)}>
                   <span style={{ width: `${relativePoints}%` }} />
                 </span>

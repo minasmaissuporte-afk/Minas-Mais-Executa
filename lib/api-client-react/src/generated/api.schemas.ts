@@ -669,6 +669,21 @@ export interface RankingEntry {
   supervisorName: string;
 }
 
+export interface SupervisorRankingEntry {
+  supervisorName: string;
+  points: number;
+  storeCount: number;
+  storesWithCompletions: number;
+  tasksCompleted: number;
+}
+
+export interface SupervisorRankingSummary {
+  rankings: SupervisorRankingEntry[];
+  totalPoints: number;
+  storeCount: number;
+  storesWithCompletions: number;
+}
+
 export interface UploadUrlInput {
   /** @minLength 1 */
   name: string;
@@ -760,5 +775,10 @@ region?: string;
  * @minLength 1
  */
 supervisor?: string;
+};
+
+export type GetSupervisorRankingsParams = {
+fromDate?: string;
+toDate?: string;
 };
 

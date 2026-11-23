@@ -30,6 +30,7 @@ import type {
   EvidenceInput,
   GetPushPublicKey200,
   GetRankingsParams,
+  GetSupervisorRankingsParams,
   HealthStatus,
   ListTaskSummariesParams,
   ListTasksParams,
@@ -41,6 +42,7 @@ import type {
   Store,
   StoreInput,
   StoreUpdate,
+  SupervisorRankingSummary,
   Task,
   TaskComment,
   TaskCommentInput,
@@ -2541,6 +2543,90 @@ export function useGetRankings<TData = Awaited<ReturnType<typeof getRankings>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetRankingsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetSupervisorRankingsUrl = (params?: GetSupervisorRankingsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/rankings/supervisors?${stringifiedParams}` : `/api/rankings/supervisors`
+}
+
+/**
+ * @summary Get network-wide supervisor rankings with aggregated metrics
+ */
+export const getSupervisorRankings = async (params?: GetSupervisorRankingsParams, options?: Parameters<typeof customFetch>[1]): Promise<SupervisorRankingSummary> => {
+
+  return customFetch<SupervisorRankingSummary>(getGetSupervisorRankingsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSupervisorRankingsQueryKey = (params?: GetSupervisorRankingsParams,) => {
+    return [
+    `/api/rankings/supervisors`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetSupervisorRankingsQueryOptions = <TData = Awaited<ReturnType<typeof getSupervisorRankings>>, TError = ErrorType<void>>(params?: GetSupervisorRankingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSupervisorRankings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSupervisorRankingsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSupervisorRankings>>> = ({ signal }) => getSupervisorRankings(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSupervisorRankings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSupervisorRankingsQueryResult = NonNullable<Awaited<ReturnType<typeof getSupervisorRankings>>>
+export type GetSupervisorRankingsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get network-wide supervisor rankings with aggregated metrics
+ */
+
+export function useGetSupervisorRankings<TData = Awaited<ReturnType<typeof getSupervisorRankings>>, TError = ErrorType<void>>(
+ params?: GetSupervisorRankingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSupervisorRankings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSupervisorRankingsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -1,6 +1,6 @@
 import { MapPin, Medal, Search, Store as StoreIcon, Trophy, UsersRound } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { getGetRankingsQueryKey, getListStoresQueryKey, useGetRankings, useListStores } from '@workspace/api-client-react';
+import { getGetRankingsQueryKey, getGetSupervisorRankingsQueryKey, getListStoresQueryKey, useGetMe, useGetRankings, useGetSupervisorRankings, useListStores } from '@workspace/api-client-react';
 import { EmptyState, ErrorState, formatDurationMinutes, LoadingBlocks, SearchEmpty, TrendIcon } from '@/components/ui-kit';
 import { SupervisorPointsRanking } from '@/components/supervisor-points-ranking';
 import { groupStoresBySupervisor } from '@/lib/store-region-ranking';
@@ -34,8 +34,13 @@ export default function StoresPage() {
   const [rankingRange, setRankingRange] = useState(getDefaultRankingRange);
   const [rankingRegion, setRankingRegion] = useState('');
   const [rankingSupervisor, setRankingSupervisor] = useState('');
+  const meQuery = useGetMe();
   const storesQuery = useListStores({ query: { queryKey: getListStoresQueryKey() } });
   const validRankingRange = Boolean(rankingRange.fromDate && rankingRange.toDate && rankingRange.fromDate <= rankingRange.toDate);
+  const supervisorRankingParams = {
+    fromDate: rankingRange.fromDate,
+    toDate: rankingRange.toDate,
+  };
   const rankingParams = {
     fromDate: rankingRange.fromDate,
     toDate: rankingRange.toDate,
@@ -48,8 +53,15 @@ export default function StoresPage() {
       enabled: validRankingRange,
     },
   });
+  const supervisorRankingsQuery = useGetSupervisorRankings(supervisorRankingParams, {
+    query: {
+      queryKey: getGetSupervisorRankingsQueryKey(supervisorRankingParams),
+      enabled: validRankingRange && meQuery.data?.role === 'supervisor',
+    },
+  });
   const stores = storesQuery.data ?? [];
   const rankings = rankingsQuery.data ?? [];
+  const isSupervisor = meQuery.data?.role === 'supervisor';
   const storeByName = useMemo(() => new Map(stores.map((store) => [store.name.trim().toLocaleLowerCase('pt-BR'), store])), [stores]);
   const regions = useMemo(() => [...new Set(stores.map((store) => store.region).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [stores]);
   const supervisors = useMemo(() => [...new Set(stores.map((store) => store.supervisor).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [stores]);
@@ -252,7 +264,13 @@ export default function StoresPage() {
                   : <div className="stores-ranking-empty"><SearchEmpty title="Nenhuma loja encontrada" copy="Ajuste a busca ou os filtros para ver outras unidades." /></div>}
     </section>
 
-    {!rankingsQuery.isError && validRankingRange && !rankingsQuery.isLoading &&
-      <SupervisorPointsRanking entries={rankings} periodLabel={rangeLabel} />}
+    {!meQuery.isLoading && !rankingsQuery.isError && validRankingRange && !rankingsQuery.isLoading &&
+      (isSupervisor
+        ? supervisorRankingsQuery.isError
+          ? <ErrorState onRetry={() => supervisorRankingsQuery.refetch()} />
+          : supervisorRankingsQuery.isLoading
+            ? <div className="stores-ranking-loading"><LoadingBlocks rows={2} /></div>
+            : <SupervisorPointsRanking entries={rankings} summary={supervisorRankingsQuery.data} periodLabel={rangeLabel} />
+        : <SupervisorPointsRanking entries={rankings} periodLabel={rangeLabel} />)}
   </div>;
 }

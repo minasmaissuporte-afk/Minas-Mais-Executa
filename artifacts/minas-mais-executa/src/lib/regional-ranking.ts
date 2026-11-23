@@ -1,4 +1,4 @@
-import type { RankingEntry } from '@workspace/api-client-react';
+import type { RankingEntry, SupervisorRankingEntry } from '@workspace/api-client-react';
 
 export function currentMonthRankingRange(today: string) {
   return { fromDate: `${today.slice(0, 7)}-01`, toDate: today };
@@ -36,6 +36,7 @@ export function rankSupervisorsByPoints(entries: RankingEntry[]) {
     points: number;
     storeCount: number;
     storesWithCompletions: number;
+    tasksCompleted: number;
   }>();
 
   entries.forEach((entry) => {
@@ -48,14 +49,20 @@ export function rankSupervisorsByPoints(entries: RankingEntry[]) {
       points: 0,
       storeCount: 0,
       storesWithCompletions: 0,
+      tasksCompleted: 0,
     };
     group.points += entry.points;
     group.storeCount += 1;
+    group.tasksCompleted += entry.tasksCompleted;
     if (entry.tasksCompleted > 0) group.storesWithCompletions += 1;
     bySupervisor.set(key, group);
   });
 
-  return [...bySupervisor.values()]
+  return rankSupervisorSummaries([...bySupervisor.values()]);
+}
+
+export function rankSupervisorSummaries(supervisors: SupervisorRankingEntry[]) {
+  return supervisors
     .filter((supervisor) => supervisor.points > 0)
     .sort((first, second) => second.points - first.points || first.supervisorName.localeCompare(second.supervisorName, 'pt-BR'))
     .map((supervisor, index) => ({

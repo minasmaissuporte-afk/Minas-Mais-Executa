@@ -1,6 +1,6 @@
 import { Activity, ArrowUpRight, CheckCircle2, CircleAlert, Clock3, ListChecks, Target } from 'lucide-react';
 import { useMemo } from 'react';
-import { useGetActivity, useGetDashboardSummary, useGetRankings, useListTaskSummaries, getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getGetRankingsQueryKey, getListTaskSummariesQueryKey } from '@workspace/api-client-react';
+import { useGetActivity, useGetDashboardSummary, useGetRankings, useGetSupervisorRankings, useListTaskSummaries, getGetActivityQueryKey, getGetDashboardSummaryQueryKey, getGetRankingsQueryKey, getGetSupervisorRankingsQueryKey, getListTaskSummariesQueryKey } from '@workspace/api-client-react';
 import type { CurrentMember } from '@workspace/api-client-react';
 import { todayInput } from '@/lib/demo-data';
 import { currentMonthRankingRange } from '@/lib/regional-ranking';
@@ -16,6 +16,12 @@ export default function DashboardPage({ member }: { member: CurrentMember }) {
   const activityQuery = useGetActivity({ query: { queryKey: getGetActivityQueryKey() } });
   const tasksQuery = useListTaskSummaries({ dateTo: todayInput }, { query: { queryKey: getListTaskSummariesQueryKey({ dateTo: todayInput }), refetchInterval: 30000 } });
   const rankingsQuery = useGetRankings(rankingRange, { query: { queryKey: getGetRankingsQueryKey(rankingRange), enabled: isNetwork } });
+  const supervisorRankingsQuery = useGetSupervisorRankings(rankingRange, {
+    query: {
+      queryKey: getGetSupervisorRankingsQueryKey(rankingRange),
+      enabled: member.role === 'supervisor',
+    },
+  });
   const summary = summaryQuery.data;
   const taskRows = useMemo(() => {
     const dueTasks = (tasksQuery.data ?? [])
@@ -54,7 +60,17 @@ export default function DashboardPage({ member }: { member: CurrentMember }) {
           <MetricCard label="Atrasadas" value={summary.overdue} meta="Requer ação imediata" tone="stat-alert" icon={CircleAlert} />
        </div>
        : summaryQuery.isLoading ? <LoadingBlocks rows={1} /> : null}
-       {isNetwork && <RegionalExecutionLeaderboard entries={rankingsQuery.data ?? []} monthLabel={monthLabel} isLoading={rankingsQuery.isLoading} isError={rankingsQuery.isError} onRetry={() => rankingsQuery.refetch()} />}
+       {isNetwork && <RegionalExecutionLeaderboard
+         entries={rankingsQuery.data ?? []}
+         supervisorSummary={member.role === 'supervisor' ? supervisorRankingsQuery.data : undefined}
+         monthLabel={monthLabel}
+         isLoading={rankingsQuery.isLoading || (member.role === 'supervisor' && supervisorRankingsQuery.isLoading)}
+         isError={rankingsQuery.isError || (member.role === 'supervisor' && supervisorRankingsQuery.isError)}
+         onRetry={() => {
+           void rankingsQuery.refetch();
+           if (member.role === 'supervisor') void supervisorRankingsQuery.refetch();
+         }}
+       />}
      <div className="dashboard-grid">
        <section className="card card-pad">
          <div className="section-heading">

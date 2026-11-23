@@ -1,24 +1,29 @@
 import { Crown, Trophy, UserRound } from 'lucide-react';
-import type { RankingEntry } from '@workspace/api-client-react';
+import type { RankingEntry, SupervisorRankingSummary } from '@workspace/api-client-react';
 import { EmptyState, ErrorState, LoadingBlocks } from '@/components/ui-kit';
-import { rankSupervisorsByPoints, topRegionalRankings } from '@/lib/regional-ranking';
+import { rankSupervisorSummaries, rankSupervisorsByPoints, topRegionalRankings } from '@/lib/regional-ranking';
 import { SupervisorPointsRanking } from '@/components/supervisor-points-ranking';
 
 export function RegionalExecutionLeaderboard({
   entries,
+  supervisorSummary,
   monthLabel,
   isLoading,
   isError,
   onRetry,
 }: {
   entries: RankingEntry[];
+  supervisorSummary?: SupervisorRankingSummary;
   monthLabel: string;
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
 }) {
   const regions = topRegionalRankings(entries);
-  const hasMonthlyPoints = rankSupervisorsByPoints(entries).some((supervisor) => supervisor.points > 0);
+  const supervisorRankings = supervisorSummary
+    ? rankSupervisorSummaries(supervisorSummary.rankings)
+    : rankSupervisorsByPoints(entries);
+  const hasMonthlyPoints = supervisorRankings.some((supervisor) => supervisor.points > 0);
 
   return <section className="regional-ranking-section" aria-labelledby="regional-ranking-title" data-testid="regional-execution-leaderboard">
     <div className="regional-ranking-heading">
@@ -66,7 +71,7 @@ export function RegionalExecutionLeaderboard({
               </article>)}
             </div>}
             {hasMonthlyPoints &&
-              <SupervisorPointsRanking entries={entries} periodLabel={monthLabel} />}
+              <SupervisorPointsRanking entries={entries} summary={supervisorSummary} periodLabel={monthLabel} />}
           </>
           : <EmptyState icon={Trophy} title="Sem pontuação neste mês" copy="As lojas aparecerão aqui após concluírem tarefas neste mês." />}
   </section>;

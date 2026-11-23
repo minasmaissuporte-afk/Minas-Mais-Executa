@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-const { currentMonthRankingRange, rankSupervisorsByPoints, topRegionalRankings } = await import('../src/lib/regional-ranking.ts');
+const { currentMonthRankingRange, rankSupervisorSummaries, rankSupervisorsByPoints, topRegionalRankings } = await import('../src/lib/regional-ranking.ts');
 const { groupStoresBySupervisor } = await import('../src/lib/store-region-ranking.ts');
 
 assert.deepEqual(currentMonthRankingRange('2026-11-21'), { fromDate: '2026-11-01', toDate: '2026-11-21' });
@@ -54,6 +54,15 @@ assert.deepEqual(supervisorRanking.map(({ supervisorName, points, storeCount, aw
   ['Christiano', 120, 1, 'cobre'],
 ]);
 assert.ok(supervisorRanking.every(({ points }) => points > 0), 'Supervisors with no points must not receive a podium rank.');
+const aggregateRanking = rankSupervisorSummaries([
+  { supervisorName: 'Jhonathan', points: 160, storeCount: 2, storesWithCompletions: 2, tasksCompleted: 2 },
+  { supervisorName: 'Ana Paula', points: 290, storeCount: 4, storesWithCompletions: 3, tasksCompleted: 5 },
+  { supervisorName: 'Sem pontos', points: 0, storeCount: 1, storesWithCompletions: 0, tasksCompleted: 0 },
+]);
+assert.deepEqual(aggregateRanking.map(({ supervisorName, points, storeCount, tasksCompleted, award }) => [supervisorName, points, storeCount, tasksCompleted, award]), [
+  ['Ana Paula', 290, 4, 5, 'ouro'],
+  ['Jhonathan', 160, 2, 2, 'prata'],
+]);
 
 const store = (id, name, region, supervisor = 'Supervisor compartilhado') => ({
   id, name, region, supervisor, city: `Cidade ${id}`, manager: `Gerente ${id}`, execution: 0,

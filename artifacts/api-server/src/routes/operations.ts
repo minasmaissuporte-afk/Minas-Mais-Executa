@@ -31,6 +31,8 @@ import {
   UpdateTaskParams,
   ReviewTaskBody,
   ReviewTaskParams,
+  GetSupervisorRankingsQueryParams,
+  GetSupervisorRankingsResponse,
 } from "@workspace/api-zod";
 import {
   activityTable,
@@ -2208,6 +2210,109 @@ router.delete("/team-members/:id/permanent", async (req, res) => {
     return;
   }
   res.status(204).send();
+});
+
+router.get("/rankings/supervisors", async (req, res): Promise<void> => {
+  await seedPromise;
+  if (actor(req).role !== "admin" && actor(req).role !== "supervisor") {
+    res.status(403).json({ error: "Somente supervisores e administração podem ver o ranking da rede." });
+    return;
+  }
+
+  const rawFromDate = req.query.fromDate;
+  const rawToDate = req.query.toDate;
+  if ((rawFromDate !== undefined && !isDateInput(rawFromDate))
+    || (rawToDate !== undefined && !isDateInput(rawToDate))) {
+    res.status(400).json({ error: "Informe datas válidas no formato AAAA-MM-DD." });
+    return;
+  }
+  const parsedQuery = GetSupervisorRankingsQueryParams.safeParse({
+    fromDate: typeof rawFromDate === "string" ? new Date(`${rawFromDate}T00:00:00.000Z`) : undefined,
+    toDate: typeof rawToDate === "string" ? new Date(`${rawToDate}T00:00:00.000Z`) : undefined,
+  });
+  if (!parsedQuery.success) {
+    res.status(400).json({ error: "Informe datas válidas no formato AAAA-MM-DD." });
+    return;
+  }
+  const toDate = rawToDate === undefined
+    ? dateInputInSaoPaulo(new Date())
+    : parsedQuery.data.toDate!.toISOString().slice(0, 10);
+  const fromDate = rawFromDate === undefined
+    ? addDaysToDateInput(toDate, -29)
+    : parsedQuery.data.fromDate!.toISOString().slice(0, 10);
+  if (fromDate > toDate) {
+    res.status(400).json({ error: "A data inicial deve ser anterior ou igual à data final." });
+    return;
+  }
+
+  const stores = await db.select({
+    id: storesTable.id,
+    supervisor: storesTable.supervisor,
+  }).from(storesTable);
+  const storeIds = stores.map((store) => store.id);
+  const completionTasks = storeIds.length
+    ? await db
+      .select({
+        storeId: tasksTable.storeId,
+        status: tasksTable.status,
+        completedAt: tasksTable.completedAt,
+        createdAt: tasksTable.createdAt,
+      })
+      .from(tasksTable)
+      .where(and(
+        inArray(tasksTable.storeId, storeIds),
+        eq(tasksTable.status, "completed"),
+        gte(tasksTable.completedAt, saoPauloStartOfDay(fromDate)),
+        lt(tasksTable.completedAt, saoPauloStartOfDay(addDaysToDateInput(toDate, 1))),
+      ))
+    : [];
+
+  const completedByStore = new Map<string, typeof completionTasks>();
+  completionTasks.forEach((task) => {
+    const existing = completedByStore.get(task.storeId) ?? [];
+    existing.push(task);
+    completedByStore.set(task.storeId, existing);
+  });
+  const supervisorTotals = new Map<string, {
+    supervisorName: string;
+    points: number;
+    storeCount: number;
+    storesWithCompletions: number;
+    tasksCompleted: number;
+  }>();
+  let totalPoints = 0;
+  let storesWithCompletions = 0;
+
+  stores.forEach((store) => {
+    const metrics = rankingMetrics(completedByStore.get(store.id) ?? [], []);
+    totalPoints += metrics.points;
+    if (metrics.tasksCompleted > 0) storesWithCompletions += 1;
+
+    const supervisorName = store.supervisor.trim().replace(/\s+/g, " ");
+    if (!supervisorName || supervisorName.toLocaleLowerCase("pt-BR") === "sem supervisor") return;
+    const key = supervisorName.toLocaleLowerCase("pt-BR");
+    const total = supervisorTotals.get(key) ?? {
+      supervisorName,
+      points: 0,
+      storeCount: 0,
+      storesWithCompletions: 0,
+      tasksCompleted: 0,
+    };
+    total.points += metrics.points;
+    total.storeCount += 1;
+    total.tasksCompleted += metrics.tasksCompleted;
+    if (metrics.tasksCompleted > 0) total.storesWithCompletions += 1;
+    supervisorTotals.set(key, total);
+  });
+
+  const response = {
+    rankings: [...supervisorTotals.values()]
+      .sort((first, second) => second.points - first.points || first.supervisorName.localeCompare(second.supervisorName, "pt-BR")),
+    totalPoints,
+    storeCount: stores.length,
+    storesWithCompletions,
+  };
+  res.json(GetSupervisorRankingsResponse.parse(response));
 });
 
 router.get("/rankings", async (req, res) => {

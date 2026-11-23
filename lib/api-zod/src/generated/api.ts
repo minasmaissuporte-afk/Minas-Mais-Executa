@@ -1086,6 +1086,28 @@ export const GetRankingsResponse = zod.array(GetRankingsResponseItem)
 
 
 /**
+ * @summary Get network-wide supervisor rankings with aggregated metrics
+ */
+export const GetSupervisorRankingsQueryParams = zod.object({
+  "fromDate": zod.date().optional(),
+  "toDate": zod.date().optional()
+})
+
+export const GetSupervisorRankingsResponse = zod.object({
+  "rankings": zod.array(zod.object({
+  "supervisorName": zod.string(),
+  "points": zod.number().int(),
+  "storeCount": zod.number().int(),
+  "storesWithCompletions": zod.number().int(),
+  "tasksCompleted": zod.number().int()
+})),
+  "totalPoints": zod.number().int(),
+  "storeCount": zod.number().int(),
+  "storesWithCompletions": zod.number().int()
+})
+
+
+/**
  * @summary Request a private evidence upload URL
  */
 
